@@ -6,57 +6,50 @@ const whatsappMessage = encodeURIComponent(
 );
 ---
 
-<nav class="fixed top-0 left-0 right-0 bg-[#1a1a1a] shadow-lg z-50">
+<nav
+  id="navbar"
+  class="fixed top-0 left-0 right-0 z-50 transition-all duration-300 backdrop-blur-md bg-black/30"
+>
   <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-    <div class="flex justify-between items-center h-16">
-      <!-- Logo -->
-      <a href="/" class="flex items-center space-x-2 group">
-        <div
-          class="w-10 h-10 bg-gradient-to-br from-[#9e2a2b] to-[#d4af37] rounded-full flex items-center justify-center"
-        >
-          <span class="text-white font-bold text-xl">B</span>
-        </div>
-        <div class="hidden sm:block">
-          <span
-            class="text-white font-bold text-lg group-hover:text-[#d4af37] transition-colors"
-          >
-            Brasargent
-          </span>
-          <p class="text-[#d4a574] text-xs">Rodizio</p>
-        </div>
+    <div class="flex justify-between items-center h-20">
+      <!-- Logo a la izquierda con margen -->
+      <a href="/" class="flex items-center group ml-8">
+        <img
+          src="/img/logo/logo-SF.png"
+          alt="Brasargent Rodizio Logo"
+          class="h-24 w-auto object-contain"
+        />
       </a>
 
-      <!-- Links de navegación (Desktop) -->
-      <div class="hidden md:flex items-center space-x-8">
+      <!-- Todos los botones a la derecha (Desktop) -->
+      <div class="hidden md:flex items-center gap-8">
         <a
           href="#inicio"
-          class="text-white hover:text-[#d4af37] transition-colors font-medium"
+          class="nav-link text-white hover:text-[#d4af37] transition-colors font-medium"
         >
           Inicio
         </a>
         <a
           href="#menu"
-          class="text-white hover:text-[#d4af37] transition-colors font-medium"
+          class="nav-link text-white hover:text-[#d4af37] transition-colors font-medium"
         >
           Menú
         </a>
         <a
           href="#contacto"
-          class="text-white hover:text-[#d4af37] transition-colors font-medium"
+          class="nav-link text-white hover:text-[#d4af37] transition-colors font-medium"
         >
           Contacto
         </a>
+        <a
+          href={`https://wa.me/${whatsappNumber}?text=${whatsappMessage}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          class="bg-gradient-to-r from-[#9e2a2b] to-[#d4af37] text-white px-6 py-2 rounded-full font-semibold hover:shadow-lg hover:scale-105 transition-all duration-300"
+        >
+          Reservar Mesa
+        </a>
       </div>
-
-      <!-- CTA Reservar -->
-      <a
-        href={`https://wa.me/${whatsappNumber}?text=${whatsappMessage}`}
-        target="_blank"
-        rel="noopener noreferrer"
-        class="bg-gradient-to-r from-[#9e2a2b] to-[#d4af37] text-white px-6 py-2 rounded-full font-semibold hover:shadow-lg hover:scale-105 transition-all duration-300"
-      >
-        Reservar Mesa
-      </a>
 
       <!-- Botón menú móvil -->
       <button
@@ -109,12 +102,13 @@ const whatsappMessage = encodeURIComponent(
 </nav>
 
 <!-- Espaciador para compensar navbar fija -->
-<div class="h-16"></div>
+<div class="h-20"></div>
 
 <script>
   // Toggle menú móvil
   const mobileMenuBtn = document.getElementById("mobile-menu-btn");
   const mobileMenu = document.getElementById("mobile-menu");
+  const navbar = document.getElementById("navbar");
 
   mobileMenuBtn?.addEventListener("click", () => {
     mobileMenu?.classList.toggle("hidden");
@@ -126,6 +120,33 @@ const whatsappMessage = encodeURIComponent(
     link.addEventListener("click", () => {
       mobileMenu?.classList.add("hidden");
     });
+  });
+
+  // Cambiar fondo del navbar y color de letras al hacer scroll
+  const navLinks = document.querySelectorAll(".nav-link");
+
+  window.addEventListener("scroll", () => {
+    if (window.scrollY > 50) {
+      // Scroll hacia abajo: plomo claro con blur y letras negras
+      navbar?.classList.remove("bg-black/30");
+      navbar?.classList.add("bg-gray-200/95", "shadow-lg");
+
+      // Cambiar letras a negro
+      navLinks.forEach((link) => {
+        link.classList.remove("text-white");
+        link.classList.add("text-black");
+      });
+    } else {
+      // Arriba: transparente con blur y letras blancas
+      navbar?.classList.add("bg-black/30");
+      navbar?.classList.remove("bg-gray-200/95", "shadow-lg");
+
+      // Cambiar letras a blanco
+      navLinks.forEach((link) => {
+        link.classList.add("text-white");
+        link.classList.remove("text-black");
+      });
+    }
   });
 
   // Smooth scroll para todos los enlaces con #

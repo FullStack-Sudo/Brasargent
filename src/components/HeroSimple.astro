@@ -10,14 +10,15 @@ const whatsappMessage = encodeURIComponent(
   id="inicio"
   class="relative h-[90vh] min-h-[600px] flex items-center justify-center overflow-hidden"
 >
-  <!-- Imagen de fondo -->
-  <!-- CAMBIAR: Reemplaza '/hero-bg.jpg' con tu imagen de parrilla real -->
+  <!-- Video de fondo de YouTube -->
   <div class="absolute inset-0 z-0">
-    <img
-      src="/hero-bg.jpg"
-      alt="Parrilla Brasargent"
-      class="w-full h-full object-cover"
-    />
+    <!-- YouTube iframe como fondo -->
+    <iframe
+      class="absolute top-1/2 left-1/2 w-[300%] h-[300%] -translate-x-1/2 -translate-y-1/2 pointer-events-none"
+      src="https://www.youtube.com/embed/Rz44dRvbFPM?autoplay=1&mute=1&loop=1&playlist=Rz44dRvbFPM&controls=0&showinfo=0&rel=0&modestbranding=1&playsinline=1"
+      title="Brasargent Rodizio Background"
+      frameborder="0"
+      allow="autoplay; encrypted-media"></iframe>
     <!-- Overlay oscuro para mejorar legibilidad del texto -->
     <div
       class="absolute inset-0 bg-gradient-to-b from-black/60 via-black/50 to-black/70"
@@ -31,10 +32,10 @@ const whatsappMessage = encodeURIComponent(
     <h1
       class="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold text-white mb-6 leading-tight"
     >
-      El mejor <span
+      <span
         class="bg-gradient-to-r from-[#9e2a2b] to-[#d4af37] bg-clip-text text-transparent"
-        >Rodizio</span
-      > del País
+        >El mejor Rodizio del País</span
+      >
     </h1>
 
     <!-- Subtítulo -->

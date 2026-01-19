@@ -1,7 +1,7 @@
 @import "tailwindcss";
 
-/* Google Fonts */
-@import url("https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600;700;800&family=Inter:wght@300;400;500;600;700&display=swap");
+/* Google Fonts - Lato, Montserrat, Roboto */
+@import url("https://fonts.googleapis.com/css2?family=Lato:ital,wght@0,100;0,300;0,400;0,700;0,900;1,100;1,300;1,400;1,700;1,900&family=Montserrat:ital,wght@0,100..900;1,100..900&family=Roboto:ital,wght@0,100;0,300;0,400;0,500;0,700;0,900;1,100;1,300;1,400;1,500;1,700;1,900&display=swap");
 
 /* Variables CSS - Paleta Brasargent */
 :root {
@@ -21,8 +21,8 @@
   );
 
   /* Tipografía */
-  --font-heading: "Playfair Display", serif;
-  --font-body: "Inter", sans-serif;
+  --font-heading: "Montserrat", sans-serif;
+  --font-body: "Roboto", sans-serif;
 
   /* Sombras */
   --shadow-glow: 0 4px 20px rgba(212, 175, 55, 0.3);
