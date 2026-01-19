@@ -1,11 +1,291 @@
 ---
-import Welcome from '../components/Welcome.astro';
-import Layout from '../layouts/Layout.astro';
-
-// Welcome to Astro! Wondering what to do next? Check out the Astro documentation at https://docs.astro.build
-// Don't want to use any of this? Delete everything in this file, the `assets`, `components`, and `layouts` directories, and start fresh.
+import Layout from "../layouts/Layout.astro";
+import Navbar from "../components/Navbar.astro";
+import Hero from "../components/Hero.astro";
+import Features from "../components/Features.astro";
+import Footer from "../components/Footer.astro";
 ---
 
 <Layout>
-	<Welcome />
+  <Navbar />
+  <Hero />
+  <Features />
+
+  <!-- Sección "Experiencia Brasargent" -->
+  <section
+    class="py-24 bg-[var(--color-carbon)] text-white relative overflow-hidden"
+  >
+    <div class="absolute inset-0 opacity-10 wood-texture"></div>
+    <div class="max-w-7xl mx-auto px-6 relative z-10">
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
+        <!-- Imagen -->
+        <div class="order-2 lg:order-1">
+          <div class="relative rounded-2xl overflow-hidden shadow-2xl">
+            <img
+              src="/grill-master.jpg"
+              alt="Maestro parrillero Brasargent"
+              class="w-full h-[500px] object-cover parallax"
+            />
+            <div
+              class="absolute inset-0 bg-gradient-to-t from-[var(--color-carbon)] to-transparent"
+            >
+            </div>
+          </div>
+        </div>
+
+        <!-- Contenido -->
+        <div class="order-1 lg:order-2">
+          <h2 class="text-white mb-6">
+            La Experiencia <span class="text-gradient">Brasargent</span>
+          </h2>
+          <p class="text-white/80 text-lg mb-6 leading-relaxed">
+            En Brasargent Rodizio, cada corte cuenta una historia. Nuestros
+            maestros parrilleros han perfeccionado el arte de la parrilla
+            brasileña-argentina, combinando técnicas tradicionales con la pasión
+            por la excelencia.
+          </p>
+          <p class="text-white/80 text-lg mb-8 leading-relaxed">
+            Desde el momento en que cruzas nuestra puerta, te sumergirás en una
+            experiencia gastronómica única donde el aroma de las brasas, la
+            calidez del servicio y la calidad incomparable de nuestros cortes
+            premium se unen para crear momentos inolvidables.
+          </p>
+
+          <!-- Stats -->
+          <div class="grid grid-cols-3 gap-6 mb-8">
+            <div class="text-center">
+              <div class="text-4xl font-bold text-[var(--color-gold)] mb-2">
+                15+
+              </div>
+              <div class="text-white/70 text-sm">Cortes Premium</div>
+            </div>
+            <div class="text-center">
+              <div class="text-4xl font-bold text-[var(--color-gold)] mb-2">
+                100%
+              </div>
+              <div class="text-white/70 text-sm">Calidad Garantizada</div>
+            </div>
+            <div class="text-center">
+              <div class="text-4xl font-bold text-[var(--color-gold)] mb-2">
+                5★
+              </div>
+              <div class="text-white/70 text-sm">Experiencia</div>
+            </div>
+          </div>
+
+          <a href="/menu" class="btn-primary"> Explorar Menú Completo </a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Galería Preview -->
+  <section class="py-24 bg-white">
+    <div class="max-w-7xl mx-auto px-6">
+      <!-- Header -->
+      <div class="text-center mb-16">
+        <h2 class="mb-4">
+          Galería de <span class="text-gradient">Sabores</span>
+        </h2>
+        <p class="text-xl text-[var(--color-carbon)]/70 max-w-2xl mx-auto">
+          Un vistazo a la pasión y dedicación que ponemos en cada plato
+        </p>
+      </div>
+
+      <!-- Grid de imágenes -->
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-12">
+        <div
+          class="gallery-item relative overflow-hidden rounded-2xl h-80 group cursor-pointer"
+        >
+          <img
+            src="/hero-bg.jpg"
+            alt="Parrilla en acción"
+            class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+          />
+          <div
+            class="absolute inset-0 bg-gradient-to-t from-[var(--color-carbon)] to-transparent opacity-60 group-hover:opacity-80 transition-opacity"
+          >
+          </div>
+          <div class="absolute bottom-6 left-6 text-white">
+            <h3 class="text-2xl font-bold mb-2">Parrilla en Acción</h3>
+            <p class="text-white/80">El arte del fuego perfecto</p>
+          </div>
+        </div>
+
+        <div
+          class="gallery-item relative overflow-hidden rounded-2xl h-80 group cursor-pointer"
+        >
+          <img
+            src="/meat-cuts.jpg"
+            alt="Cortes premium"
+            class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+          />
+          <div
+            class="absolute inset-0 bg-gradient-to-t from-[var(--color-carbon)] to-transparent opacity-60 group-hover:opacity-80 transition-opacity"
+          >
+          </div>
+          <div class="absolute bottom-6 left-6 text-white">
+            <h3 class="text-2xl font-bold mb-2">Cortes Premium</h3>
+            <p class="text-white/80">Selección exclusiva</p>
+          </div>
+        </div>
+
+        <div
+          class="gallery-item relative overflow-hidden rounded-2xl h-80 group cursor-pointer"
+        >
+          <img
+            src="/grill-master.jpg"
+            alt="Maestro parrillero"
+            class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+          />
+          <div
+            class="absolute inset-0 bg-gradient-to-t from-[var(--color-carbon)] to-transparent opacity-60 group-hover:opacity-80 transition-opacity"
+          >
+          </div>
+          <div class="absolute bottom-6 left-6 text-white">
+            <h3 class="text-2xl font-bold mb-2">Maestría Culinaria</h3>
+            <p class="text-white/80">Pasión en cada corte</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="text-center">
+        <a href="/galeria" class="btn-primary"> Ver Galería Completa </a>
+      </div>
+    </div>
+  </section>
+
+  <!-- Ubicación y Contacto -->
+  <section class="py-24 bg-gradient-to-b from-[var(--color-cream)] to-white">
+    <div class="max-w-7xl mx-auto px-6">
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
+        <!-- Mapa -->
+        <div class="rounded-2xl overflow-hidden shadow-2xl h-[400px]">
+          <iframe
+            src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3799.7!2d-63.1812!3d-17.7833!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x0%3A0x0!2zMTfCsDQ2JzU5LjkiUyA2M8KwMTAnNTIuMyJX!5e0!3m2!1ses!2sbo!4v1234567890"
+            width="100%"
+            height="100%"
+            style="border:0;"
+            allowfullscreen=""
+            loading="lazy"
+            title="Ubicación Brasargent Rodizio"></iframe>
+        </div>
+
+        <!-- Info de contacto -->
+        <div>
+          <h2 class="mb-6">
+            Visítanos en <span class="text-gradient">Patio Design</span>
+          </h2>
+          <p class="text-xl text-[var(--color-carbon)]/70 mb-8">
+            Estamos ubicados en el corazón de Santa Cruz de la Sierra, listos
+            para ofrecerte una experiencia gastronómica inolvidable.
+          </p>
+
+          <div class="space-y-6 mb-10">
+            <div class="flex items-start gap-4">
+              <div
+                class="w-12 h-12 bg-gradient-to-br from-[var(--color-terracotta)] to-[var(--color-gold)] rounded-full flex items-center justify-center flex-shrink-0"
+              >
+                <svg
+                  class="w-6 h-6 text-white"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"
+                  ></path>
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                </svg>
+              </div>
+              <div>
+                <h4 class="font-bold text-lg mb-1">Dirección</h4>
+                <p class="text-[var(--color-carbon)]/70">
+                  Patio Design, Av. Busch 3er anillo<br />Santa Cruz de la
+                  Sierra, Bolivia
+                </p>
+              </div>
+            </div>
+
+            <div class="flex items-start gap-4">
+              <div
+                class="w-12 h-12 bg-gradient-to-br from-[var(--color-terracotta)] to-[var(--color-gold)] rounded-full flex items-center justify-center flex-shrink-0"
+              >
+                <svg
+                  class="w-6 h-6 text-white"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"
+                  ></path>
+                </svg>
+              </div>
+              <div>
+                <h4 class="font-bold text-lg mb-1">Reservas</h4>
+                <a
+                  href="tel:78555886"
+                  class="text-[var(--color-terracotta)] hover:text-[var(--color-gold)] transition-colors text-xl font-semibold"
+                  >78555886</a
+                >
+              </div>
+            </div>
+
+            <div class="flex items-start gap-4">
+              <div
+                class="w-12 h-12 bg-gradient-to-br from-[var(--color-terracotta)] to-[var(--color-gold)] rounded-full flex items-center justify-center flex-shrink-0"
+              >
+                <svg
+                  class="w-6 h-6 text-white"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                </svg>
+              </div>
+              <div>
+                <h4 class="font-bold text-lg mb-1">Horarios</h4>
+                <p class="text-[var(--color-carbon)]/70">
+                  Lun - Jue: 12:00 - 23:00<br />Vie - Sáb: 12:00 - 00:00<br
+                  />Domingo: 12:00 - 22:00
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <a href="/contacto" class="btn-primary"> Hacer una Reserva </a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <Footer />
 </Layout>
+
+<script>
+  // Parallax effect
+  window.addEventListener("scroll", () => {
+    const parallaxElements = document.querySelectorAll(".parallax");
+    parallaxElements.forEach((el) => {
+      const scrolled = window.pageYOffset;
+      const rate = scrolled * -0.3;
+      (el as HTMLElement).style.transform = `translate3d(0, ${rate}px, 0)`;
+    });
+  });
+</script>

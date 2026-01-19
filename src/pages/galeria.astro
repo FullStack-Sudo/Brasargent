@@ -1,0 +1,295 @@
+---
+import Layout from '../layouts/Layout.astro';
+import Navbar from '../components/Navbar.astro';
+import Footer from '../components/Footer.astro';
+
+const galleryImages = [
+  { src: '/hero-bg.jpg', title: 'Parrilla en Acción', category: 'grill' },
+  { src: '/meat-cuts.jpg', title: 'Cortes Premium', category: 'food' },
+  { src: '/grill-master.jpg', title: 'Maestro Parrillero', category: 'team' },
+  { src: '/platter.jpg', title: 'Plato de Carnes', category: 'food' },
+  { src: '/restaurant.jpg', title: 'Ambiente del Restaurante', category: 'ambiance' },
+  { src: '/sides.jpg', title: 'Buffet de Guarniciones', category: 'food' },
+];
+---
+
+<Layout 
+  title="Galería - Brasargent Rodizio"
+  description="Explora nuestra galería de fotos: parrilla en acción, cortes premium, ambiente acogedor y más. Descubre la experiencia Brasargent."
+>
+  <Navbar />
+  
+  <!-- Hero de Galería -->
+  <section class="relative h-[50vh] flex items-center justify-center overflow-hidden brasas-overlay">
+    <div class="absolute inset-0 z-0">
+      <img 
+        src="/restaurant.jpg" 
+        alt="Restaurante Brasargent" 
+        class="w-full h-full object-cover"
+      />
+    </div>
+
+    <div class="relative z-10 text-center px-6 max-w-4xl mx-auto">
+      <h1 class="text-white mb-6">
+        Nuestra <span class="text-gradient">Galería</span>
+      </h1>
+      <p class="text-white/90 text-xl md:text-2xl">
+        Momentos que capturan la pasión por la parrilla
+      </p>
+    </div>
+  </section>
+
+  <!-- Filtros -->
+  <section class="py-12 bg-[var(--color-cream)]">
+    <div class="max-w-7xl mx-auto px-6">
+      <div class="flex justify-center gap-4 flex-wrap">
+        <button class="filter-btn active" data-filter="all">
+          Todas
+        </button>
+        <button class="filter-btn" data-filter="food">
+          🍖 Comida
+        </button>
+        <button class="filter-btn" data-filter="grill">
+          🔥 Parrilla
+        </button>
+        <button class="filter-btn" data-filter="ambiance">
+          🏠 Ambiente
+        </button>
+        <button class="filter-btn" data-filter="team">
+          👨‍🍳 Equipo
+        </button>
+      </div>
+    </div>
+  </section>
+
+  <!-- Grid de Galería -->
+  <section class="py-24 bg-gradient-to-b from-[var(--color-cream)] to-white">
+    <div class="max-w-7xl mx-auto px-6">
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8" id="gallery-grid">
+        {galleryImages.map((image, index) => (
+          <div 
+            class="gallery-item relative overflow-hidden rounded-2xl h-96 group cursor-pointer shadow-lg"
+            data-category={image.category}
+            data-index={index}
+          >
+            <img 
+              src={image.src} 
+              alt={image.title} 
+              class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+            />
+            <div class="absolute inset-0 bg-gradient-to-t from-[var(--color-carbon)] via-[var(--color-carbon)]/50 to-transparent opacity-60 group-hover:opacity-90 transition-opacity duration-300"></div>
+            <div class="absolute bottom-0 left-0 right-0 p-6 text-white transform translate-y-4 group-hover:translate-y-0 transition-transform duration-300">
+              <h3 class="text-2xl font-bold mb-2">{image.title}</h3>
+              <div class="h-1 w-16 bg-gradient-to-r from-[var(--color-terracotta)] to-[var(--color-gold)] rounded-full"></div>
+            </div>
+            <!-- Overlay de zoom -->
+            <div class="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+              <div class="w-16 h-16 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center">
+                <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v6m3-3H7"></path>
+                </svg>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <!-- Empty State -->
+      <div id="empty-state" class="hidden text-center py-20">
+        <div class="text-6xl mb-4">🔍</div>
+        <h3 class="text-2xl font-bold text-[var(--color-carbon)] mb-2">No se encontraron imágenes</h3>
+        <p class="text-[var(--color-carbon)]/70">Intenta con otro filtro</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Lightbox Modal -->
+  <div id="lightbox" class="fixed inset-0 bg-black/95 z-50 hidden items-center justify-center p-4">
+    <button id="close-lightbox" class="absolute top-6 right-6 text-white hover:text-[var(--color-gold)] transition-colors z-10">
+      <svg class="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+      </svg>
+    </button>
+    
+    <button id="prev-image" class="absolute left-6 text-white hover:text-[var(--color-gold)] transition-colors">
+      <svg class="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
+      </svg>
+    </button>
+    
+    <button id="next-image" class="absolute right-6 text-white hover:text-[var(--color-gold)] transition-colors">
+      <svg class="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+      </svg>
+    </button>
+
+    <div class="max-w-6xl max-h-[90vh] w-full">
+      <img id="lightbox-image" src="" alt="" class="w-full h-full object-contain rounded-lg" />
+      <h3 id="lightbox-title" class="text-white text-2xl font-bold text-center mt-6"></h3>
+    </div>
+  </div>
+
+  <!-- CTA Final -->
+  <section class="py-20 bg-[var(--color-carbon)] text-white text-center">
+    <div class="max-w-4xl mx-auto px-6">
+      <h2 class="text-white mb-6">
+        ¿Listo para Vivir la <span class="text-gradient">Experiencia?</span>
+      </h2>
+      <p class="text-white/80 text-xl mb-8">
+        Reserva tu mesa y descubre por qué somos el mejor rodizio del país
+      </p>
+      <a href="tel:78555886" class="btn-primary">
+        Reservar Mesa
+      </a>
+    </div>
+  </section>
+
+  <Footer />
+</Layout>
+
+<script>
+  // Filter functionality
+  const filterBtns = document.querySelectorAll('.filter-btn');
+  const galleryItems = document.querySelectorAll('.gallery-item');
+  const emptyState = document.getElementById('empty-state');
+
+  filterBtns.forEach(btn => {
+    btn.addEventListener('click', () => {
+      const filter = btn.getAttribute('data-filter');
+      
+      // Update active button
+      filterBtns.forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      
+      // Filter items
+      let visibleCount = 0;
+      galleryItems.forEach(item => {
+        const category = item.getAttribute('data-category');
+        if (filter === 'all' || category === filter) {
+          item.style.display = 'block';
+          visibleCount++;
+        } else {
+          item.style.display = 'none';
+        }
+      });
+
+      // Show/hide empty state
+      if (visibleCount === 0) {
+        emptyState?.classList.remove('hidden');
+      } else {
+        emptyState?.classList.add('hidden');
+      }
+    });
+  });
+
+  // Lightbox functionality
+  const lightbox = document.getElementById('lightbox');
+  const lightboxImage = document.getElementById('lightbox-image') as HTMLImageElement;
+  const lightboxTitle = document.getElementById('lightbox-title');
+  const closeLightbox = document.getElementById('close-lightbox');
+  const prevImage = document.getElementById('prev-image');
+  const nextImage = document.getElementById('next-image');
+  
+  let currentIndex = 0;
+  const images = Array.from(galleryItems);
+
+  galleryItems.forEach((item, index) => {
+    item.addEventListener('click', () => {
+      currentIndex = index;
+      showLightbox();
+    });
+  });
+
+  function showLightbox() {
+    const currentItem = images[currentIndex];
+    const img = currentItem.querySelector('img');
+    const title = currentItem.querySelector('h3');
+    
+    if (img && lightboxImage && title && lightboxTitle) {
+      lightboxImage.src = img.src;
+      lightboxImage.alt = img.alt;
+      lightboxTitle.textContent = title.textContent;
+      lightbox?.classList.remove('hidden');
+      lightbox?.classList.add('flex');
+    }
+  }
+
+  closeLightbox?.addEventListener('click', () => {
+    lightbox?.classList.add('hidden');
+    lightbox?.classList.remove('flex');
+  });
+
+  prevImage?.addEventListener('click', () => {
+    currentIndex = (currentIndex - 1 + images.length) % images.length;
+    showLightbox();
+  });
+
+  nextImage?.addEventListener('click', () => {
+    currentIndex = (currentIndex + 1) % images.length;
+    showLightbox();
+  });
+
+  // Close lightbox with Escape key
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+      lightbox?.classList.add('hidden');
+      lightbox?.classList.remove('flex');
+    }
+    if (e.key === 'ArrowLeft') {
+      currentIndex = (currentIndex - 1 + images.length) % images.length;
+      showLightbox();
+    }
+    if (e.key === 'ArrowRight') {
+      currentIndex = (currentIndex + 1) % images.length;
+      showLightbox();
+    }
+  });
+
+  // Close lightbox when clicking outside image
+  lightbox?.addEventListener('click', (e) => {
+    if (e.target === lightbox) {
+      lightbox.classList.add('hidden');
+      lightbox.classList.remove('flex');
+    }
+  });
+</script>
+
+<style>
+  .filter-btn {
+    padding: 0.75rem 2rem;
+    border-radius: 50px;
+    font-weight: 600;
+    background: white;
+    color: var(--color-carbon);
+    border: 2px solid var(--color-wood);
+    transition: all 0.3s ease;
+    cursor: pointer;
+  }
+
+  .filter-btn.active {
+    background: var(--gradient-fire);
+    color: white;
+    border-color: transparent;
+    box-shadow: var(--shadow-brasas);
+  }
+
+  .filter-btn:hover:not(.active) {
+    background: var(--color-cream);
+    transform: translateY(-2px);
+  }
+
+  .gallery-item {
+    animation: fadeInUp 0.6s ease-out;
+  }
+
+  @keyframes fadeInUp {
+    from {
+      opacity: 0;
+      transform: translateY(30px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+</style>

@@ -1,0 +1,217 @@
+@import "tailwindcss";
+
+/* Google Fonts */
+@import url("https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600;700;800&family=Inter:wght@300;400;500;600;700&display=swap");
+
+/* Variables CSS - Paleta Brasargent */
+:root {
+  /* Colores principales */
+  --color-carbon: #1a1a1a;
+  --color-terracotta: #9e2a2b;
+  --color-wood: #d4a574;
+  --color-cream: #fffaf0;
+  --color-gold: #d4af37;
+
+  /* Gradientes */
+  --gradient-fire: linear-gradient(135deg, #9e2a2b 0%, #d4af37 100%);
+  --gradient-overlay: linear-gradient(
+    180deg,
+    rgba(26, 26, 26, 0.7) 0%,
+    rgba(26, 26, 26, 0.4) 100%
+  );
+
+  /* Tipografía */
+  --font-heading: "Playfair Display", serif;
+  --font-body: "Inter", sans-serif;
+
+  /* Sombras */
+  --shadow-glow: 0 4px 20px rgba(212, 175, 55, 0.3);
+  --shadow-card: 0 10px 40px rgba(0, 0, 0, 0.2);
+  --shadow-brasas: 0 8px 32px rgba(158, 42, 43, 0.4);
+}
+
+/* Reset y Base */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+  overflow-x: hidden;
+}
+
+body {
+  font-family: var(--font-body);
+  background-color: var(--color-cream);
+  color: var(--color-carbon);
+  line-height: 1.6;
+  overflow-x: hidden;
+}
+
+/* Tipografía */
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-family: var(--font-heading);
+  font-weight: 700;
+  line-height: 1.2;
+  color: var(--color-carbon);
+}
+
+h1 {
+  font-size: clamp(2.5rem, 5vw, 4.5rem);
+  font-weight: 800;
+}
+
+h2 {
+  font-size: clamp(2rem, 4vw, 3.5rem);
+}
+
+h3 {
+  font-size: clamp(1.5rem, 3vw, 2.5rem);
+}
+
+/* Animaciones personalizadas */
+@keyframes grill-pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 20px rgba(158, 42, 43, 0.3);
+  }
+  50% {
+    box-shadow: 0 0 40px rgba(158, 42, 43, 0.6);
+  }
+}
+
+@keyframes float {
+  0%,
+  100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -1000px 0;
+  }
+  100% {
+    background-position: 1000px 0;
+  }
+}
+
+/* Utilidades personalizadas */
+.text-gradient {
+  background: var(--gradient-fire);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.btn-primary {
+  background: var(--gradient-fire);
+  color: white;
+  padding: 1rem 2.5rem;
+  border-radius: 50px;
+  font-weight: 600;
+  font-size: 1.1rem;
+  border: none;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: var(--shadow-brasas);
+  text-decoration: none;
+  display: inline-block;
+}
+
+.btn-primary:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 12px 40px rgba(158, 42, 43, 0.5);
+}
+
+.btn-secondary {
+  background: transparent;
+  color: white;
+  padding: 1rem 2.5rem;
+  border-radius: 50px;
+  font-weight: 600;
+  font-size: 1.1rem;
+  border: 2px solid white;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  text-decoration: none;
+  display: inline-block;
+}
+
+.btn-secondary:hover {
+  background: white;
+  color: var(--color-carbon);
+  transform: translateY(-3px);
+}
+
+/* Efectos de hover con "alma" */
+.card-hover {
+  transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.card-hover:hover {
+  transform: translateY(-10px) scale(1.02);
+  box-shadow: var(--shadow-card);
+}
+
+/* Parallax sutil */
+.parallax {
+  transition: transform 0.3s ease-out;
+}
+
+/* Textura de madera sutil */
+.wood-texture {
+  background-image:
+    linear-gradient(90deg, rgba(212, 165, 116, 0.1) 1px, transparent 1px),
+    linear-gradient(rgba(212, 165, 116, 0.1) 1px, transparent 1px);
+  background-size: 20px 20px;
+}
+
+/* Overlay de brasas */
+.brasas-overlay {
+  position: relative;
+}
+
+.brasas-overlay::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: var(--gradient-overlay);
+  z-index: 1;
+}
+
+.brasas-overlay > * {
+  position: relative;
+  z-index: 2;
+}
+
+/* Scrollbar personalizado */
+::-webkit-scrollbar {
+  width: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--color-cream);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--color-terracotta);
+  border-radius: 5px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-gold);
+}

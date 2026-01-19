@@ -1,0 +1,402 @@
+---
+import Layout from "../layouts/Layout.astro";
+import Navbar from "../components/Navbar.astro";
+import Footer from "../components/Footer.astro";
+
+const menuCategories = {
+  cortes: [
+    {
+      name: "Picanha",
+      description: "El rey de la parrilla brasileña, jugoso y lleno de sabor",
+      badge: "Más Pedido",
+      price: "Incluido",
+    },
+    {
+      name: "Costilla de Res",
+      description: "Costillas tiernas con hueso, cocidas a la perfección",
+      badge: "Recomendación del Chef",
+      price: "Incluido",
+    },
+    {
+      name: "Lomo",
+      description: "Corte premium, suave y delicado",
+      price: "Incluido",
+    },
+    {
+      name: "Chorizo Argentino",
+      description: "Auténtico chorizo con especias tradicionales",
+      price: "Incluido",
+    },
+    {
+      name: "Pollo a la Parrilla",
+      description: "Muslos y pechugas marinados con hierbas",
+      price: "Incluido",
+    },
+    {
+      name: "Corazón de Res",
+      description: "Delicia tradicional, tierno y sabroso",
+      price: "Incluido",
+    },
+    {
+      name: "Cupim",
+      description: "Corte brasileño de la joroba, extremadamente jugoso",
+      badge: "Especialidad",
+      price: "Incluido",
+    },
+    {
+      name: "Fraldinha",
+      description: "Falda de res, perfecta para amantes de la carne jugosa",
+      price: "Incluido",
+    },
+  ],
+  guarniciones: [
+    {
+      name: "Ensalada Buffet",
+      description: "Variedad de ensaladas frescas y aderezos",
+      price: "Incluido",
+    },
+    {
+      name: "Arroz Blanco",
+      description: "Arroz tradicional perfectamente cocido",
+      price: "Incluido",
+    },
+    {
+      name: "Frijoles Negros",
+      description: "Frijoles brasileños con especias",
+      price: "Incluido",
+    },
+    {
+      name: "Yuca Frita",
+      description: "Yuca crujiente por fuera, suave por dentro",
+      price: "Incluido",
+    },
+    {
+      name: "Plátano Frito",
+      description: "Plátano maduro caramelizado",
+      price: "Incluido",
+    },
+    {
+      name: "Pan de Ajo",
+      description: "Pan artesanal con mantequilla de ajo",
+      price: "Incluido",
+    },
+  ],
+  bebidas: [
+    {
+      name: "Refrescos",
+      description: "Coca-Cola, Sprite, Fanta",
+      price: "Bs. 15",
+    },
+    {
+      name: "Jugos Naturales",
+      description: "Naranja, Piña, Maracuyá",
+      price: "Bs. 20",
+    },
+    {
+      name: "Cerveza Nacional",
+      description: "Paceña, Huari, Taquiña",
+      price: "Bs. 25",
+    },
+    {
+      name: "Cerveza Importada",
+      description: "Corona, Heineken, Stella Artois",
+      price: "Bs. 35",
+    },
+    {
+      name: "Vino de la Casa",
+      description: "Tinto o Blanco",
+      price: "Bs. 120/botella",
+    },
+    { name: "Agua Mineral", description: "Con o sin gas", price: "Bs. 10" },
+  ],
+};
+---
+
+<Layout
+  title="Menú - Brasargent Rodizio"
+  description="Descubre nuestra selección de cortes premium, guarniciones tradicionales y bebidas. Experiencia rodizio auténtica en Santa Cruz."
+>
+  <Navbar />
+
+  <!-- Hero del Menú -->
+  <section
+    class="relative h-[60vh] flex items-center justify-center overflow-hidden brasas-overlay"
+  >
+    <div class="absolute inset-0 z-0">
+      <img
+        src="/meat-cuts.jpg"
+        alt="Cortes premium Brasargent"
+        class="w-full h-full object-cover"
+      />
+    </div>
+
+    <div class="relative z-10 text-center px-6 max-w-4xl mx-auto">
+      <h1 class="text-white mb-6">
+        Nuestro <span class="text-gradient">Menú</span>
+      </h1>
+      <p class="text-white/90 text-xl md:text-2xl mb-4">
+        Servicio continuo de cortes premium directo a tu mesa
+      </p>
+      <div
+        class="inline-block bg-[var(--color-gold)] text-[var(--color-carbon)] px-8 py-3 rounded-full font-bold text-2xl"
+      >
+        Bs. 120 por persona
+      </div>
+      <p class="text-white/80 mt-4 text-sm">
+        *Incluye todos los cortes, guarniciones y buffet de ensaladas
+      </p>
+    </div>
+  </section>
+
+  <!-- Tabs del Menú -->
+  <section class="py-24 bg-gradient-to-b from-[var(--color-cream)] to-white">
+    <div class="max-w-6xl mx-auto px-6">
+      <!-- Tab Navigation -->
+      <div class="flex justify-center mb-16 gap-4 flex-wrap">
+        <button
+          class="menu-tab active px-8 py-3 rounded-full font-semibold transition-all"
+          data-tab="cortes"
+        >
+          🥩 Cortes Premium
+        </button>
+        <button
+          class="menu-tab px-8 py-3 rounded-full font-semibold transition-all"
+          data-tab="guarniciones"
+        >
+          🍚 Guarniciones
+        </button>
+        <button
+          class="menu-tab px-8 py-3 rounded-full font-semibold transition-all"
+          data-tab="bebidas"
+        >
+          🍷 Bebidas
+        </button>
+      </div>
+
+      <!-- Tab Content: Cortes -->
+      <div id="tab-cortes" class="tab-content active">
+        <div class="text-center mb-12">
+          <h2 class="mb-4">
+            Cortes <span class="text-gradient">Premium</span>
+          </h2>
+          <p class="text-xl text-[var(--color-carbon)]/70">
+            Servidos continuamente en tu mesa por nuestros parrilleros
+          </p>
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {
+            menuCategories.cortes.map((item) => (
+              <div class="menu-item bg-white rounded-xl p-6 shadow-lg border border-[var(--color-wood)]/20 hover:shadow-xl transition-all">
+                <div class="flex justify-between items-start mb-3">
+                  <h3 class="text-2xl font-bold text-[var(--color-carbon)]">
+                    {item.name}
+                  </h3>
+                  {item.badge && (
+                    <span class="bg-gradient-to-r from-[var(--color-terracotta)] to-[var(--color-gold)] text-white text-xs px-3 py-1 rounded-full font-semibold">
+                      {item.badge}
+                    </span>
+                  )}
+                </div>
+                <p class="text-[var(--color-carbon)]/70 mb-3">
+                  {item.description}
+                </p>
+                <div class="text-[var(--color-gold)] font-bold">
+                  {item.price}
+                </div>
+              </div>
+            ))
+          }
+        </div>
+      </div>
+
+      <!-- Tab Content: Guarniciones -->
+      <div id="tab-guarniciones" class="tab-content">
+        <div class="text-center mb-12">
+          <h2 class="mb-4">
+            Guarniciones <span class="text-gradient">Tradicionales</span>
+          </h2>
+          <p class="text-xl text-[var(--color-carbon)]/70">
+            Acompañamientos perfectos para tu experiencia rodizio
+          </p>
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {
+            menuCategories.guarniciones.map((item) => (
+              <div class="menu-item bg-white rounded-xl p-6 shadow-lg border border-[var(--color-wood)]/20 hover:shadow-xl transition-all">
+                <div class="flex justify-between items-start mb-3">
+                  <h3 class="text-2xl font-bold text-[var(--color-carbon)]">
+                    {item.name}
+                  </h3>
+                </div>
+                <p class="text-[var(--color-carbon)]/70 mb-3">
+                  {item.description}
+                </p>
+                <div class="text-[var(--color-gold)] font-bold">
+                  {item.price}
+                </div>
+              </div>
+            ))
+          }
+        </div>
+      </div>
+
+      <!-- Tab Content: Bebidas -->
+      <div id="tab-bebidas" class="tab-content">
+        <div class="text-center mb-12">
+          <h2 class="mb-4">
+            Bebidas <span class="text-gradient">Selectas</span>
+          </h2>
+          <p class="text-xl text-[var(--color-carbon)]/70">
+            Complementa tu comida con nuestras bebidas
+          </p>
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {
+            menuCategories.bebidas.map((item) => (
+              <div class="menu-item bg-white rounded-xl p-6 shadow-lg border border-[var(--color-wood)]/20 hover:shadow-xl transition-all">
+                <div class="flex justify-between items-start mb-3">
+                  <h3 class="text-2xl font-bold text-[var(--color-carbon)]">
+                    {item.name}
+                  </h3>
+                </div>
+                <p class="text-[var(--color-carbon)]/70 mb-3">
+                  {item.description}
+                </p>
+                <div class="text-[var(--color-gold)] font-bold">
+                  {item.price}
+                </div>
+              </div>
+            ))
+          }
+        </div>
+      </div>
+
+      <!-- CTA -->
+      <div class="text-center mt-16">
+        <p class="text-xl mb-6">
+          ¿Listo para disfrutar de la mejor experiencia rodizio?
+        </p>
+        <a href="tel:78555886" class="btn-primary"> Reservar Mesa Ahora </a>
+      </div>
+    </div>
+  </section>
+
+  <!-- Información Adicional -->
+  <section class="py-16 bg-[var(--color-carbon)] text-white">
+    <div class="max-w-4xl mx-auto px-6 text-center">
+      <h3 class="text-3xl font-bold mb-6">Cómo Funciona el Rodizio</h3>
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-8 mt-12">
+        <div>
+          <div
+            class="w-16 h-16 bg-gradient-to-br from-[var(--color-terracotta)] to-[var(--color-gold)] rounded-full flex items-center justify-center mx-auto mb-4 text-3xl font-bold"
+          >
+            1
+          </div>
+          <h4 class="font-bold text-xl mb-2">Siéntate y Relájate</h4>
+          <p class="text-white/70">
+            Nuestro equipo te dará la bienvenida y explicará el servicio
+          </p>
+        </div>
+        <div>
+          <div
+            class="w-16 h-16 bg-gradient-to-br from-[var(--color-terracotta)] to-[var(--color-gold)] rounded-full flex items-center justify-center mx-auto mb-4 text-3xl font-bold"
+          >
+            2
+          </div>
+          <h4 class="font-bold text-xl mb-2">Servicio Continuo</h4>
+          <p class="text-white/70">
+            Los parrilleros traen los cortes directamente a tu mesa
+          </p>
+        </div>
+        <div>
+          <div
+            class="w-16 h-16 bg-gradient-to-br from-[var(--color-terracotta)] to-[var(--color-gold)] rounded-full flex items-center justify-center mx-auto mb-4 text-3xl font-bold"
+          >
+            3
+          </div>
+          <h4 class="font-bold text-xl mb-2">Come a tu Ritmo</h4>
+          <p class="text-white/70">
+            Disfruta todo lo que quieras, cuando quieras
+          </p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <Footer />
+</Layout>
+
+<script>
+  // Tab functionality
+  const tabs = document.querySelectorAll(".menu-tab");
+  const contents = document.querySelectorAll(".tab-content");
+
+  tabs.forEach((tab) => {
+    tab.addEventListener("click", () => {
+      const targetTab = tab.getAttribute("data-tab");
+
+      // Remove active class from all tabs and contents
+      tabs.forEach((t) => t.classList.remove("active"));
+      contents.forEach((c) => c.classList.remove("active"));
+
+      // Add active class to clicked tab and corresponding content
+      tab.classList.add("active");
+      document.getElementById(`tab-${targetTab}`)?.classList.add("active");
+    });
+  });
+</script>
+
+<style>
+  .menu-tab {
+    background: white;
+    color: var(--color-carbon);
+    border: 2px solid var(--color-wood);
+  }
+
+  .menu-tab.active {
+    background: var(--gradient-fire);
+    color: white;
+    border-color: transparent;
+    box-shadow: var(--shadow-brasas);
+  }
+
+  .menu-tab:hover:not(.active) {
+    background: var(--color-cream);
+    transform: translateY(-2px);
+  }
+
+  .tab-content {
+    display: none;
+    animation: fadeIn 0.5s ease-in;
+  }
+
+  .tab-content.active {
+    display: block;
+  }
+
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+      transform: translateY(20px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .menu-item {
+    animation: slideUp 0.6s ease-out;
+  }
+
+  @keyframes slideUp {
+    from {
+      opacity: 0;
+      transform: translateY(30px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+</style>

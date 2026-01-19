@@ -1,0 +1,137 @@
+---
+// Navbar con diseño moderno y elegante
+---
+
+<nav
+  id="navbar"
+  class="fixed top-0 left-0 right-0 z-50 transition-all duration-300"
+>
+  <div class="max-w-7xl mx-auto px-6 py-4">
+    <div class="flex items-center justify-between">
+      <!-- Logo -->
+      <a href="/" class="flex items-center gap-3 group">
+        <div
+          class="w-12 h-12 bg-gradient-to-br from-[var(--color-terracotta)] to-[var(--color-gold)] rounded-full flex items-center justify-center"
+        >
+          <svg
+            class="w-7 h-7 text-white"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+          </svg>
+        </div>
+        <div>
+          <h1
+            class="text-2xl font-bold text-white group-hover:text-[var(--color-gold)] transition-colors"
+          >
+            Brasargent
+          </h1>
+          <p class="text-xs text-white/80">Rodizio</p>
+        </div>
+      </a>
+
+      <!-- Desktop Menu -->
+      <div class="hidden md:flex items-center gap-8">
+        <a
+          href="/"
+          class="nav-link text-white hover:text-[var(--color-gold)] transition-colors font-medium"
+          >Inicio</a
+        >
+        <a
+          href="/menu"
+          class="nav-link text-white hover:text-[var(--color-gold)] transition-colors font-medium"
+          >Menú</a
+        >
+        <a
+          href="/galeria"
+          class="nav-link text-white hover:text-[var(--color-gold)] transition-colors font-medium"
+          >Galería</a
+        >
+        <a
+          href="/contacto"
+          class="nav-link text-white hover:text-[var(--color-gold)] transition-colors font-medium"
+          >Contacto</a
+        >
+        <a href="tel:78555886" class="btn-primary text-sm">Reservar Mesa</a>
+      </div>
+
+      <!-- Mobile Menu Button -->
+      <button id="mobile-menu-btn" class="md:hidden text-white p-2">
+        <svg
+          class="w-6 h-6"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            d="M4 6h16M4 12h16M4 18h16"></path>
+        </svg>
+      </button>
+    </div>
+  </div>
+
+  <!-- Mobile Menu -->
+  <div
+    id="mobile-menu"
+    class="hidden md:hidden bg-[var(--color-carbon)] border-t border-white/10"
+  >
+    <div class="px-6 py-4 flex flex-col gap-4">
+      <a
+        href="/"
+        class="text-white hover:text-[var(--color-gold)] transition-colors font-medium"
+        >Inicio</a
+      >
+      <a
+        href="/menu"
+        class="text-white hover:text-[var(--color-gold)] transition-colors font-medium"
+        >Menú</a
+      >
+      <a
+        href="/galeria"
+        class="text-white hover:text-[var(--color-gold)] transition-colors font-medium"
+        >Galería</a
+      >
+      <a
+        href="/contacto"
+        class="text-white hover:text-[var(--color-gold)] transition-colors font-medium"
+        >Contacto</a
+      >
+      <a href="tel:78555886" class="btn-primary text-center">Reservar Mesa</a>
+    </div>
+  </div>
+</nav>
+
+<script>
+  // Navbar scroll effect
+  const navbar = document.getElementById("navbar");
+  const mobileMenuBtn = document.getElementById("mobile-menu-btn");
+  const mobileMenu = document.getElementById("mobile-menu");
+
+  window.addEventListener("scroll", () => {
+    if (window.scrollY > 100) {
+      navbar?.classList.add("bg-[var(--color-carbon)]", "shadow-lg");
+    } else {
+      navbar?.classList.remove("bg-[var(--color-carbon)]", "shadow-lg");
+    }
+  });
+
+  // Mobile menu toggle
+  mobileMenuBtn?.addEventListener("click", () => {
+    mobileMenu?.classList.toggle("hidden");
+  });
+</script>
+
+<style>
+  #navbar {
+    backdrop-filter: blur(10px);
+  }
+</style>
