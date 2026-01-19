@@ -1,0 +1,144 @@
+---
+// Navbar minimalista fija - Logo, Menú, Contacto, Reservar
+const whatsappNumber = "59178555886"; // Número de WhatsApp con código de país
+const whatsappMessage = encodeURIComponent(
+  "Hola! Me gustaría hacer una reserva en Brasargent Rodizio",
+);
+---
+
+<nav class="fixed top-0 left-0 right-0 bg-[#1a1a1a] shadow-lg z-50">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div class="flex justify-between items-center h-16">
+      <!-- Logo -->
+      <a href="/" class="flex items-center space-x-2 group">
+        <div
+          class="w-10 h-10 bg-gradient-to-br from-[#9e2a2b] to-[#d4af37] rounded-full flex items-center justify-center"
+        >
+          <span class="text-white font-bold text-xl">B</span>
+        </div>
+        <div class="hidden sm:block">
+          <span
+            class="text-white font-bold text-lg group-hover:text-[#d4af37] transition-colors"
+          >
+            Brasargent
+          </span>
+          <p class="text-[#d4a574] text-xs">Rodizio</p>
+        </div>
+      </a>
+
+      <!-- Links de navegación (Desktop) -->
+      <div class="hidden md:flex items-center space-x-8">
+        <a
+          href="#inicio"
+          class="text-white hover:text-[#d4af37] transition-colors font-medium"
+        >
+          Inicio
+        </a>
+        <a
+          href="#menu"
+          class="text-white hover:text-[#d4af37] transition-colors font-medium"
+        >
+          Menú
+        </a>
+        <a
+          href="#contacto"
+          class="text-white hover:text-[#d4af37] transition-colors font-medium"
+        >
+          Contacto
+        </a>
+      </div>
+
+      <!-- CTA Reservar -->
+      <a
+        href={`https://wa.me/${whatsappNumber}?text=${whatsappMessage}`}
+        target="_blank"
+        rel="noopener noreferrer"
+        class="bg-gradient-to-r from-[#9e2a2b] to-[#d4af37] text-white px-6 py-2 rounded-full font-semibold hover:shadow-lg hover:scale-105 transition-all duration-300"
+      >
+        Reservar Mesa
+      </a>
+
+      <!-- Botón menú móvil -->
+      <button
+        id="mobile-menu-btn"
+        class="md:hidden text-white p-2 hover:text-[#d4af37] transition-colors"
+        aria-label="Abrir menú"
+      >
+        <svg
+          class="w-6 h-6"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            d="M4 6h16M4 12h16M4 18h16"></path>
+        </svg>
+      </button>
+    </div>
+  </div>
+
+  <!-- Menú móvil -->
+  <div
+    id="mobile-menu"
+    class="hidden md:hidden bg-[#1a1a1a] border-t border-[#d4a574]/20"
+  >
+    <div class="px-4 py-4 space-y-3">
+      <a
+        href="#inicio"
+        class="block text-white hover:text-[#d4af37] transition-colors font-medium py-2"
+      >
+        Inicio
+      </a>
+      <a
+        href="#menu"
+        class="block text-white hover:text-[#d4af37] transition-colors font-medium py-2"
+      >
+        Menú
+      </a>
+      <a
+        href="#contacto"
+        class="block text-white hover:text-[#d4af37] transition-colors font-medium py-2"
+      >
+        Contacto
+      </a>
+    </div>
+  </div>
+</nav>
+
+<!-- Espaciador para compensar navbar fija -->
+<div class="h-16"></div>
+
+<script>
+  // Toggle menú móvil
+  const mobileMenuBtn = document.getElementById("mobile-menu-btn");
+  const mobileMenu = document.getElementById("mobile-menu");
+
+  mobileMenuBtn?.addEventListener("click", () => {
+    mobileMenu?.classList.toggle("hidden");
+  });
+
+  // Cerrar menú móvil al hacer clic en un enlace
+  const mobileLinks = mobileMenu?.querySelectorAll("a");
+  mobileLinks?.forEach((link) => {
+    link.addEventListener("click", () => {
+      mobileMenu?.classList.add("hidden");
+    });
+  });
+
+  // Smooth scroll para todos los enlaces con #
+  document.querySelectorAll('a[href^="#"]').forEach((anchor) => {
+    anchor.addEventListener("click", (e) => {
+      const href = (anchor as HTMLAnchorElement).getAttribute("href");
+      if (href && href !== "#") {
+        e.preventDefault();
+        const target = document.querySelector(href);
+        if (target) {
+          target.scrollIntoView({ behavior: "smooth", block: "start" });
+        }
+      }
+    });
+  });
+</script>

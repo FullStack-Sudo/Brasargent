@@ -39,22 +39,22 @@
       <!-- Desktop Menu -->
       <div class="hidden md:flex items-center gap-8">
         <a
-          href="/"
+          href="#inicio"
           class="nav-link text-white hover:text-[var(--color-gold)] transition-colors font-medium"
           >Inicio</a
         >
         <a
-          href="/menu"
+          href="#menu"
           class="nav-link text-white hover:text-[var(--color-gold)] transition-colors font-medium"
           >Menú</a
         >
         <a
-          href="/galeria"
+          href="#galeria"
           class="nav-link text-white hover:text-[var(--color-gold)] transition-colors font-medium"
           >Galería</a
         >
         <a
-          href="/contacto"
+          href="#contacto"
           class="nav-link text-white hover:text-[var(--color-gold)] transition-colors font-medium"
           >Contacto</a
         >
@@ -86,22 +86,22 @@
   >
     <div class="px-6 py-4 flex flex-col gap-4">
       <a
-        href="/"
+        href="#inicio"
         class="text-white hover:text-[var(--color-gold)] transition-colors font-medium"
         >Inicio</a
       >
       <a
-        href="/menu"
+        href="#menu"
         class="text-white hover:text-[var(--color-gold)] transition-colors font-medium"
         >Menú</a
       >
       <a
-        href="/galeria"
+        href="#galeria"
         class="text-white hover:text-[var(--color-gold)] transition-colors font-medium"
         >Galería</a
       >
       <a
-        href="/contacto"
+        href="#contacto"
         class="text-white hover:text-[var(--color-gold)] transition-colors font-medium"
         >Contacto</a
       >
@@ -127,6 +127,29 @@
   // Mobile menu toggle
   mobileMenuBtn?.addEventListener("click", () => {
     mobileMenu?.classList.toggle("hidden");
+  });
+
+  // Smooth scroll para todos los enlaces de navegación
+  document.querySelectorAll('a[href^="#"]').forEach((anchor) => {
+    anchor.addEventListener("click", (e) => {
+      const href = (anchor as HTMLAnchorElement).getAttribute("href");
+      if (href && href !== "#") {
+        e.preventDefault();
+        const targetId = href.substring(1);
+        const targetElement = document.getElementById(targetId);
+
+        if (targetElement) {
+          // Cerrar menú móvil si está abierto
+          mobileMenu?.classList.add("hidden");
+
+          // Scroll suave al elemento
+          targetElement.scrollIntoView({
+            behavior: "smooth",
+            block: "start",
+          });
+        }
+      }
+    });
   });
 </script>
 

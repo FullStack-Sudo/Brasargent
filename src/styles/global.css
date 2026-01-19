@@ -39,6 +39,7 @@
 
 html {
   scroll-behavior: smooth;
+  scroll-padding-top: 80px; /* Altura del navbar */
   overflow-x: hidden;
 }
 

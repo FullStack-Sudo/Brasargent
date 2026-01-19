@@ -1,0 +1,60 @@
+---
+// Layout minimalista sin sidebar - Solo nav y footer
+import "../styles/global.css";
+
+interface Props {
+  title?: string;
+  description?: string;
+}
+
+const {
+  title = "Brasargent Rodizio - El mejor Rodizio del País",
+  description = "Cortes premium de carne servidos continuamente en tu mesa. Reserva ahora en Patio Design, Santa Cruz.",
+} = Astro.props;
+---
+
+<!doctype html>
+<html lang="es" class="scroll-smooth">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+
+    <!-- SEO -->
+    <title>{title}</title>
+    <meta name="description" content={description} />
+    <meta
+      name="keywords"
+      content="rodizio, parrilla, carne, brasargent, santa cruz, restaurante"
+    />
+
+    <!-- Open Graph -->
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    <meta property="og:type" content="website" />
+
+    <!-- Tailwind CSS (ya configurado en tu proyecto) -->
+    <style>
+      /* Paleta de colores Brasargent */
+      :root {
+        --color-carbon: #1a1a1a;
+        --color-terracotta: #9e2a2b;
+        --color-wood: #d4a574;
+        --color-cream: #fffaf0;
+        --color-gold: #d4af37;
+      }
+
+      body {
+        font-family:
+          -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+          "Helvetica Neue", Arial, sans-serif;
+        background-color: var(--color-cream);
+        color: var(--color-carbon);
+      }
+    </style>
+  </head>
+  <body class="antialiased">
+    <!-- Contenido de la página -->
+    <slot />
+  </body>
+</html>
