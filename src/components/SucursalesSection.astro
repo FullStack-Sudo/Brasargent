@@ -1,0 +1,313 @@
+---
+// Componente de Sucursales con diseño futurista
+const sucursales = [
+  {
+    name: "Brasargent Churrasqueria",
+    rating: 4.3,
+    reviews: "1.2K",
+    price: "Bs 100-120",
+    type: "Restaurante",
+    address: "Av. Beni",
+    hours: "Abre a las 11:30 a. m.",
+    status: "Cerrado",
+    testimonial: "Atención adecuada.",
+    image: "/img/sucursales/churrasqueria.webp",
+  },
+  {
+    name: "Brasargent Rodizio",
+    rating: 4.5,
+    reviews: "1.3K",
+    price: "",
+    type: "Bufé",
+    address: "C. 12 Oeste",
+    hours: "Abre a las 11 a. m.",
+    status: "Cerrado",
+    testimonial:
+      "Un lugar muy acogedor y con amplio estacionamiento subterráneo.",
+    image: "/img/sucursales/rodizio.webp",
+    featured: true,
+  },
+  {
+    name: "Brasargent Express - IC Norte",
+    rating: 3.9,
+    reviews: "78",
+    price: "",
+    type: "Carne",
+    address: "6QGW+R9P",
+    hours: "Abre a las 11:30 a. m.",
+    status: "Cerrado",
+    testimonial: "La comida y guarniciones son buenas, la espera es tardada",
+    image: "/img/sucursales/icNorte.webp",
+  },
+  {
+    name: "Brasargent - Las Brisas",
+    rating: 3.9,
+    reviews: "100",
+    price: "",
+    type: "Restaurante",
+    address: "7R2F+C7H",
+    hours: "",
+    status: "",
+    testimonial: "Muy buena opción",
+    image: "/img/sucursales/brisas.webp",
+  },
+  {
+    name: "Brasargent Express Ventura",
+    rating: 3.5,
+    reviews: "40",
+    price: "",
+    type: "Restaurante",
+    address: "6RW2+78H Ventura Mall",
+    hours: "Abre a las 11 a. m.",
+    status: "Cerrado",
+    testimonial: "Los domingos la fila es de una hora.",
+    image: "/img/sucursales/ventura.webp",
+  },
+  {
+    name: "Brasargent Express Belen",
+    rating: 3.3,
+    reviews: "21",
+    price: "Bs 40-60",
+    type: "Restaurante",
+    address: "7R8J+R8F, Av. Cristo Redentor",
+    hours: "Abre a las 11 a. m.",
+    status: "Cerrado",
+    testimonial: "",
+    services: ["Consumo en el lugar", "Para llevar"],
+    image: "/img/sucursales/belen.webp",
+  },
+];
+---
+
+<section
+  id="sucursales"
+  class="relative py-24 bg-gradient-to-br from-gray-100 via-gray-50 to-white overflow-hidden"
+>
+  <!-- Efectos de fondo futuristas -->
+  <div class="absolute inset-0 opacity-10">
+    <div
+      class="absolute top-20 left-10 w-96 h-96 bg-[#d4af37] rounded-full filter blur-[120px] animate-pulse"
+    >
+    </div>
+    <div
+      class="absolute bottom-20 right-10 w-96 h-96 bg-[#9e2a2b] rounded-full filter blur-[120px] animate-pulse"
+      style="animation-delay: 1s;"
+    >
+    </div>
+  </div>
+
+  <!-- Grid pattern overlay -->
+  <div
+    class="absolute inset-0 opacity-5"
+    style="background-image: linear-gradient(#d4af37 1px, transparent 1px), linear-gradient(90deg, #d4af37 1px, transparent 1px); background-size: 50px 50px;"
+  >
+  </div>
+
+  <div class="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <!-- Header -->
+    <div class="text-center mb-16 space-y-4">
+      <div class="inline-block">
+        <span
+          class="text-[#d4af37] text-sm font-semibold tracking-[0.3em] uppercase bg-[#d4af37]/10 px-6 py-2 rounded-full border border-[#d4af37]/30 backdrop-blur-sm"
+        >
+          Nuestras Ubicaciones
+        </span>
+      </div>
+      <h2 class="text-5xl md:text-6xl font-bold text-gray-900">
+        Encuentra tu
+        <span
+          class="bg-gradient-to-r from-[#d4af37] via-[#f4d03f] to-[#d4af37] bg-clip-text text-transparent animate-gradient"
+        >
+          Brasargent
+        </span>
+        más cercano
+      </h2>
+      <p
+        class="text-center text-gray-800 text-lg max-w-2xl mx-auto font-medium leading-relaxed"
+      >
+        Visítanos en cualquiera de nuestras sucursales y disfruta de la mejor
+        experiencia gastronómica.
+      </p>
+    </div>
+
+    <!-- Grid de Sucursales - Grid cuadrado centrado -->
+    <div class="flex justify-center">
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {
+          sucursales.map((sucursal) => (
+            <div class="group relative w-full max-w-sm bg-white rounded-2xl overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-300">
+              {/* Imagen de la sucursal */}
+              <div class="relative h-56 overflow-hidden">
+                <img
+                  src={sucursal.image}
+                  alt={sucursal.name}
+                  class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                />
+                {/* Badge de destacado */}
+                {sucursal.featured && (
+                  <div class="absolute top-4 right-4 bg-gradient-to-r from-[#d4af37] to-[#f4d03f] text-black text-xs font-bold px-4 py-2 rounded-full shadow-lg">
+                    ⭐ DESTACADO
+                  </div>
+                )}
+                {/* Overlay oscuro en la imagen */}
+                <div class="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent" />
+              </div>
+
+              {/* Contenido de la card */}
+              <div class="p-6">
+                {/* Nombre y rating */}
+                <h3 class="text-2xl font-bold text-gray-900 mb-3">
+                  {sucursal.name}
+                </h3>
+
+                <div class="flex items-center gap-2 mb-3">
+                  <div class="flex items-center gap-1">
+                    <span class="text-[#d4af37] text-lg">★</span>
+                    <span class="text-gray-900 font-semibold">
+                      {sucursal.rating}
+                    </span>
+                    <span class="text-gray-500 text-sm">
+                      ({sucursal.reviews})
+                    </span>
+                  </div>
+                  {sucursal.price && (
+                    <span class="text-[#d4af37] font-semibold ml-auto">
+                      {sucursal.price}
+                    </span>
+                  )}
+                </div>
+
+                {/* Tipo */}
+                <p class="text-gray-600 text-sm mb-4">{sucursal.type}</p>
+
+                {/* Dirección */}
+                <div class="flex items-start gap-2 mb-3">
+                  <svg
+                    class="w-5 h-5 text-[#d4af37] mt-0.5 shrink-0"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"
+                    />
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"
+                    />
+                  </svg>
+                  <p class="text-gray-700 text-sm">{sucursal.address}</p>
+                </div>
+
+                {/* Horario */}
+                {sucursal.hours && (
+                  <div class="flex items-center gap-2 mb-4">
+                    <svg
+                      class="w-5 h-5 text-[#d4af37]"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+                      />
+                    </svg>
+                    <div class="text-sm">
+                      {sucursal.status && (
+                        <span class="text-red-500 font-semibold">
+                          {sucursal.status}
+                        </span>
+                      )}
+                      <span class="text-gray-600"> · {sucursal.hours}</span>
+                    </div>
+                  </div>
+                )}
+
+                {/* Testimonial */}
+                {sucursal.testimonial && (
+                  <p class="text-gray-600 italic text-sm mb-4 line-clamp-2">
+                    "{sucursal.testimonial}"
+                  </p>
+                )}
+
+                {/* Botón */}
+                <a
+                  href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(sucursal.name + " " + sucursal.address)}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  class="block w-full text-center bg-gradient-to-r from-[#9e2a2b] to-[#d4af37] text-white font-semibold py-3 rounded-xl hover:shadow-lg hover:shadow-[#d4af37]/30 transition-all duration-300 hover:scale-105"
+                >
+                  Ver en Google Maps
+                </a>
+              </div>
+            </div>
+          ))
+        }
+      </div>
+    </div>
+    <br />
+    <br />
+    <br />
+    <br />
+    {/* CTA Final */}
+    <div class="mt-16 text-center">
+      <div
+        class="inline-block bg-white/80 backdrop-blur-xl rounded-2xl border border-gray-200 shadow-lg p-8"
+      >
+        <h3 class="text-2x1 font-bold text-gray-900 mb-4">
+          <br />
+          <br />
+          ¿No encuentras tu sucursal más cercana?
+        </h3>
+        <p class="text-gray-600 mb-6">
+          Contáctanos y te ayudaremos a encontrar la mejor opción para ti
+        </p>
+        <a
+          href="/#contacto"
+          class="inline-block bg-gradient-to-r from-[#9e2a2b] to-[#d4af37] text-white font-semibold px-8 py-4 rounded-full hover:shadow-lg hover:shadow-[#d4af37]/30 transition-all duration-300 hover:scale-105"
+        >
+          Contáctanos
+        </a>
+      </div>
+    </div>
+  </div>
+  <br />
+  <br />
+  <br />
+  <br />
+</section>
+
+<style>
+  @keyframes gradient {
+    0%,
+    100% {
+      background-position: 0% 50%;
+    }
+    50% {
+      background-position: 100% 50%;
+    }
+  }
+
+  .animate-gradient {
+    background-size: 200% auto;
+    animation: gradient 3s ease infinite;
+  }
+
+  @keyframes pulse {
+    0%,
+    100% {
+      opacity: 0.2;
+    }
+    50% {
+      opacity: 0.3;
+    }
+  }
+</style>

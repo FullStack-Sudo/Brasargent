@@ -12,39 +12,50 @@ const whatsappMessage = encodeURIComponent(
 >
   <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
     <div class="flex justify-between items-center h-20">
-      <!-- Logo a la izquierda con margen -->
-      <a href="/" class="flex items-center group ml-8">
+      <!-- Logo dinámico con alternancia -->
+      <a href="/" class="flex items-center group ml-8 relative">
         <img
+          id="logo-primary"
           src="/img/logo/logo-SF.png"
           alt="Brasargent Rodizio Logo"
-          class="h-24 w-auto object-contain"
+          class="h-24 w-auto object-contain transition-opacity duration-1000 absolute"
+        />
+        <img
+          id="logo-secondary"
+          src="/img/logo/logoRojo-SF.png"
+          alt="Brasargent Rodizio Logo"
+          class="h-24 w-auto object-contain transition-opacity duration-1000 opacity-0"
         />
       </a>
 
       <!-- Todos los botones a la derecha (Desktop) -->
       <div class="hidden md:flex items-center gap-8">
         <a
-          href="#inicio"
-          class="nav-link text-white hover:text-[#d4af37] transition-colors font-medium"
+          href="/#inicio"
+          class="nav-link text-white hover:text-[#3f371f] transition-colors font-medium"
         >
           Inicio
         </a>
         <a
-          href="#menu"
-          class="nav-link text-white hover:text-[#d4af37] transition-colors font-medium"
+          href="/#menu"
+          class="nav-link text-white hover:text-[#3f371f] transition-colors font-medium"
         >
           Menú
         </a>
         <a
-          href="#contacto"
-          class="nav-link text-white hover:text-[#d4af37] transition-colors font-medium"
+          href="/#contacto"
+          class="nav-link text-white hover:text-[#3f371f] transition-colors font-medium"
         >
           Contacto
         </a>
         <a
-          href={`https://wa.me/${whatsappNumber}?text=${whatsappMessage}`}
-          target="_blank"
-          rel="noopener noreferrer"
+          href="/sucursales"
+          class="nav-link text-white hover:text-[#3f371f] transition-colors font-medium"
+        >
+          Sucursales
+        </a>
+        <a
+          href="/#contacto"
           class="bg-gradient-to-r from-[#9e2a2b] to-[#d4af37] text-white px-6 py-2 rounded-full font-semibold hover:shadow-lg hover:scale-105 transition-all duration-300"
         >
           Reservar Mesa
@@ -80,22 +91,28 @@ const whatsappMessage = encodeURIComponent(
   >
     <div class="px-4 py-4 space-y-3">
       <a
-        href="#inicio"
+        href="/#inicio"
         class="block text-white hover:text-[#d4af37] transition-colors font-medium py-2"
       >
         Inicio
       </a>
       <a
-        href="#menu"
+        href="/#menu"
         class="block text-white hover:text-[#d4af37] transition-colors font-medium py-2"
       >
         Menú
       </a>
       <a
-        href="#contacto"
+        href="/#contacto"
         class="block text-white hover:text-[#d4af37] transition-colors font-medium py-2"
       >
         Contacto
+      </a>
+      <a
+        href="/sucursales"
+        class="block text-white hover:text-[#d4af37] transition-colors font-medium py-2"
+      >
+        Sucursales
       </a>
     </div>
   </div>
@@ -105,6 +122,25 @@ const whatsappMessage = encodeURIComponent(
 <div class="h-20"></div>
 
 <script>
+  // Alternancia dinámica del logo
+  const logoPrimary = document.getElementById("logo-primary");
+  const logoSecondary = document.getElementById("logo-secondary");
+  let isShowingPrimary = true;
+
+  function alternateLogo() {
+    if (isShowingPrimary) {
+      logoPrimary?.classList.add("opacity-0");
+      logoSecondary?.classList.remove("opacity-0");
+    } else {
+      logoPrimary?.classList.remove("opacity-0");
+      logoSecondary?.classList.add("opacity-0");
+    }
+    isShowingPrimary = !isShowingPrimary;
+  }
+
+  // Alternar cada 3 segundos
+  setInterval(alternateLogo, 3000);
+
   // Toggle menú móvil
   const mobileMenuBtn = document.getElementById("mobile-menu-btn");
   const mobileMenu = document.getElementById("mobile-menu");
