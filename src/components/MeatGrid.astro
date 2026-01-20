@@ -1,45 +1,26 @@
 ---
-// Carrusel 3D de cortes premium
+// Carrusel infinito de platos
 const whatsappNumber = "59178555886";
 
-const cortes = [
-  {
-    nombre: "Picaña",
-    descripcion: "El rey de la parrilla brasileña, jugoso y lleno de sabor",
-    imagen: "/meat-cuts.jpg",
-    destacado: true,
-  },
-  {
-    nombre: "Costilla de Res",
-    descripcion: "Costillas tiernas con hueso, cocidas a la perfección",
-    imagen: "/meat-cuts.jpg",
-    destacado: true,
-  },
-  {
-    nombre: "Lomo",
-    descripcion: "Corte premium, suave y delicado",
-    imagen: "/meat-cuts.jpg",
-    destacado: false,
-  },
-  {
-    nombre: "Chorizo Argentino",
-    descripcion: "Auténtico chorizo con especias tradicionales",
-    imagen: "/meat-cuts.jpg",
-    destacado: false,
-  },
-  {
-    nombre: "Pollo a la Parrilla",
-    descripcion: "Muslos y pechugas marinados con hierbas",
-    imagen: "/meat-cuts.jpg",
-    destacado: false,
-  },
-  {
-    nombre: "Cerdo Especial",
-    descripcion: "Cortes selectos de cerdo con marinado secreto",
-    imagen: "/meat-cuts.jpg",
-    destacado: false,
-  },
+// Array con todas las imágenes de platos
+const platosImages = [
+  "/img/platos/1.webp",
+  "/img/platos/2.webp",
+  "/img/platos/3.webp",
+  "/img/platos/4.webp",
+  "/img/platos/5.webp",
+  "/img/platos/6.webp",
+  "/img/platos/7.webp",
+  "/img/platos/8.webp",
+  "/img/platos/9.webp",
+  "/img/platos/10.webp",
+  "/img/platos/11.webp",
+  "/img/platos/12.webp",
+  "/img/platos/13.webp",
 ];
+
+// Duplicamos el array para crear el efecto infinito
+const allImages = [...platosImages, ...platosImages];
 ---
 
 <section id="menu" class="py-16 sm:py-20 lg:py-24 bg-gradient-to-b from-white to-gray-50 overflow-hidden">
@@ -48,239 +29,59 @@ const cortes = [
     <!-- Header de la sección -->
     <div class="text-center mb-12 sm:mb-16">
       <h2 class="text-3xl sm:text-4xl lg:text-5xl font-bold text-[#1a1a1a] mb-4">
-        Nuestros <span class="bg-gradient-to-r from-[#9e2a2b] to-[#d4af37] bg-clip-text text-transparent">Cortes Premium</span>
+        Nuestros <span class="bg-gradient-to-r from-[#9e2a2b] to-[#d4af37] bg-clip-text text-transparent">Platos Premium</span>
       </h2>
-      <p class="text-lg sm:text-xl text-gray-600 max-w-2xl mx-auto">
-        Servidos continuamente en tu mesa por nuestros maestros parrilleros
-      </p>
+      <br>
     </div>
 
-    <!-- Carrusel 3D Container -->
+    <!-- Carrusel Infinito -->
     <div class="relative">
-      <!-- Carrusel Wrapper con perspectiva -->
-      <div class="carousel-container relative h-[600px] md:h-[650px]" style="perspective: 2000px;">
-        <div id="carousel-track" class="absolute inset-0 flex items-center justify-center transition-transform duration-700 ease-out" style="transform-style: preserve-3d;">
-          {cortes.map((corte, index) => (
-            <div 
-              class="carousel-card absolute w-[85%] sm:w-[400px] md:w-[450px] transition-all duration-700 ease-out"
-              data-index={index}
-              style="transform-style: preserve-3d;"
-            >
-              <div class="bg-white rounded-3xl overflow-hidden shadow-2xl border border-gray-200 h-full">
-                <!-- Imagen del corte -->
-                <div class="relative h-72 md:h-80 overflow-hidden">
-                  <img 
-                    src={corte.imagen} 
-                    alt={corte.nombre}
+      <!-- Gradientes de fade en los bordes -->
+      <div class="absolute left-0 top-0 bottom-0 w-32 bg-gradient-to-r from-white to-transparent z-10 pointer-events-none"></div>
+      <div class="absolute right-0 top-0 bottom-0 w-32 bg-gradient-to-l from-gray-50 to-transparent z-10 pointer-events-none"></div>
+      
+      <!-- Contenedor del carrusel -->
+      <div class="carousel-container overflow-hidden py-8">
+        <div class="carousel-track flex gap-6" style="animation: scroll-left 40s linear infinite;">
+          {allImages.map((image, index) => (
+            <div class="carousel-item flex-shrink-0">
+              <div class="relative group">
+                <div class="w-80 h-80 rounded-3xl overflow-hidden shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-105">
+                  <img
+                    src={image}
+                    alt={`Plato ${(index % platosImages.length) + 1}`}
                     class="w-full h-full object-cover"
+                    loading="lazy"
                   />
-                  <!-- Overlay gradiente -->
-                  <div class="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent"></div>
-                  
-                  <!-- Badge de destacado -->
-                  {corte.destacado && (
-                    <div class="absolute top-6 right-6 bg-gradient-to-r from-[#9e2a2b] to-[#d4af37] text-white px-5 py-2 rounded-full text-sm font-bold shadow-lg animate-pulse">
-                      ⭐ Más Pedido
-                    </div>
-                  )}
-
-                  <!-- Nombre sobre la imagen -->
-                  <div class="absolute bottom-6 left-6 right-6">
-                    <h3 class="text-3xl md:text-4xl font-black text-white drop-shadow-2xl">
-                      {corte.nombre}
-                    </h3>
-                  </div>
-                </div>
-
-                <!-- Contenido de la card -->
-                <div class="p-6 md:p-8">
-                  <p class="text-gray-700 text-lg mb-6 leading-relaxed">
-                    {corte.descripcion}
-                  </p>
-
-                  <a 
-                    href="/#contacto"
-                    class="block w-full bg-gradient-to-r from-[#9e2a2b] to-[#d4af37] text-white text-center py-4 rounded-full font-bold text-lg hover:shadow-[0_10px_40px_rgba(212,175,55,0.4)] hover:scale-105 transition-all duration-300"
-                  >
-                    Reservar Ahora
-                  </a>
+                  <!-- Overlay con gradiente -->
+                  <div class="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
                 </div>
               </div>
             </div>
           ))}
         </div>
       </div>
-
-      <!-- Botones de navegación -->
-      <button 
-        id="prev-btn"
-        class="absolute left-0 md:left-4 top-1/2 -translate-y-1/2 z-20 w-14 h-14 rounded-full bg-white/90 backdrop-blur-sm shadow-xl hover:bg-[#d4af37] hover:scale-110 transition-all duration-300 flex items-center justify-center group border-2 border-gray-200 hover:border-[#d4af37]"
-        aria-label="Anterior"
-      >
-        <svg class="w-6 h-6 text-gray-800 group-hover:text-white transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M15 19l-7-7 7-7"/>
-        </svg>
-      </button>
-
-      <button 
-        id="next-btn"
-        class="absolute right-0 md:right-4 top-1/2 -translate-y-1/2 z-20 w-14 h-14 rounded-full bg-white/90 backdrop-blur-sm shadow-xl hover:bg-[#d4af37] hover:scale-110 transition-all duration-300 flex items-center justify-center group border-2 border-gray-200 hover:border-[#d4af37]"
-        aria-label="Siguiente"
-      >
-        <svg class="w-6 h-6 text-gray-800 group-hover:text-white transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M9 5l7 7-7 7"/>
-        </svg>
-      </button>
-
-      <!-- Indicadores de posición -->
-      <div class="flex justify-center gap-3 mt-8">
-        {cortes.map((_, index) => (
-          <button 
-            class="carousel-dot w-3 h-3 rounded-full bg-gray-300 hover:bg-[#d4af37] transition-all duration-300"
-            data-index={index}
-            aria-label={`Ir a slide ${index + 1}`}
-          ></button>
-        ))}
-      </div>
     </div>
   </div>
 </section>
 <br>
 
-<script>
-  const track = document.getElementById('carousel-track');
-  const cards = document.querySelectorAll('.carousel-card');
-  const prevBtn = document.getElementById('prev-btn');
-  const nextBtn = document.getElementById('next-btn');
-  const dots = document.querySelectorAll('.carousel-dot');
-  
-  let currentIndex = 0;
-  const totalCards = cards.length;
-  let autoPlayInterval: number;
-
-  function updateCarousel() {
-    cards.forEach((card, index) => {
-      const offset = index - currentIndex;
-      const absOffset = Math.abs(offset);
-      
-      // Posición y transformación 3D
-      let translateX = offset * 120; // Separación horizontal
-      let translateZ = -absOffset * 300; // Profundidad
-      let rotateY = offset * 15; // Rotación
-      let scale = 1 - (absOffset * 0.15); // Escala
-      let opacity = absOffset === 0 ? 1 : 0.4; // Opacidad
-      
-      // Aplicar transformaciones
-      (card as HTMLElement).style.transform = `
-        translateX(${translateX}%) 
-        translateZ(${translateZ}px) 
-        rotateY(${rotateY}deg) 
-        scale(${scale})
-      `;
-      (card as HTMLElement).style.opacity = opacity.toString();
-      (card as HTMLElement).style.zIndex = (100 - absOffset).toString();
-      
-      // Pointer events solo en la tarjeta activa
-      (card as HTMLElement).style.pointerEvents = absOffset === 0 ? 'auto' : 'none';
-    });
-
-    // Actualizar dots
-    dots.forEach((dot, index) => {
-      if (index === currentIndex) {
-        dot.classList.add('bg-[#d4af37]', 'w-8');
-        dot.classList.remove('bg-gray-300', 'w-3');
-      } else {
-        dot.classList.remove('bg-[#d4af37]', 'w-8');
-        dot.classList.add('bg-gray-300', 'w-3');
-      }
-    });
-  }
-
-  function nextSlide() {
-    currentIndex = (currentIndex + 1) % totalCards;
-    updateCarousel();
-  }
-
-  function prevSlide() {
-    currentIndex = (currentIndex - 1 + totalCards) % totalCards;
-    updateCarousel();
-  }
-
-  function goToSlide(index: number) {
-    currentIndex = index;
-    updateCarousel();
-  }
-
-  function startAutoPlay() {
-    autoPlayInterval = window.setInterval(nextSlide, 4000);
-  }
-
-  function stopAutoPlay() {
-    clearInterval(autoPlayInterval);
-  }
-
-  // Event Listeners
-  prevBtn?.addEventListener('click', () => {
-    prevSlide();
-    stopAutoPlay();
-    startAutoPlay();
-  });
-
-  nextBtn?.addEventListener('click', () => {
-    nextSlide();
-    stopAutoPlay();
-    startAutoPlay();
-  });
-
-  dots.forEach((dot, index) => {
-    dot.addEventListener('click', () => {
-      goToSlide(index);
-      stopAutoPlay();
-      startAutoPlay();
-    });
-  });
-
-  // Pausar auto-play al hacer hover
-  track?.addEventListener('mouseenter', stopAutoPlay);
-  track?.addEventListener('mouseleave', startAutoPlay);
-
-  // Soporte para gestos táctiles
-  let touchStartX = 0;
-  let touchEndX = 0;
-
-  track?.addEventListener('touchstart', (e) => {
-    touchStartX = e.changedTouches[0].screenX;
-    stopAutoPlay();
-  });
-
-  track?.addEventListener('touchend', (e) => {
-    touchEndX = e.changedTouches[0].screenX;
-    handleSwipe();
-    startAutoPlay();
-  });
-
-  function handleSwipe() {
-    if (touchEndX < touchStartX - 50) nextSlide();
-    if (touchEndX > touchStartX + 50) prevSlide();
-  }
-
-  // Inicializar
-  updateCarousel();
-  startAutoPlay();
-</script>
-
 <style>
-  .carousel-container {
-    touch-action: pan-y;
+  @keyframes scroll-left {
+    0% {
+      transform: translateX(0);
+    }
+    100% {
+      transform: translateX(-50%);
+    }
   }
 
-  .carousel-card {
-    transition: transform 0.7s cubic-bezier(0.16, 1, 0.3, 1), 
-                opacity 0.7s ease,
-                z-index 0s;
+  .carousel-track {
+    width: max-content;
   }
 
-  .carousel-dot {
-    transition: all 0.3s ease;
+  /* Pausar animación al hover */
+  .carousel-container:hover .carousel-track {
+    animation-play-state: paused;
   }
 </style>
