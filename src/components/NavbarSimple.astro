@@ -1,4 +1,4 @@
----
+﻿---
 // Navbar minimalista fija - Logo, Menú, Contacto, Reservar
 const whatsappNumber = "59178555886"; // Número de WhatsApp con código de país
 const whatsappMessage = encodeURIComponent(
@@ -62,58 +62,82 @@ const whatsappMessage = encodeURIComponent(
         </a>
       </div>
 
-      <!-- Botón menú móvil -->
+      <!-- Botón menú móvil animado -->
       <button
         id="mobile-menu-btn"
-        class="md:hidden text-white p-2 hover:text-[#d4af37] transition-colors"
+        class="md:hidden relative w-10 h-10 text-white focus:outline-none z-50 flex items-center justify-center mr-8"
         aria-label="Abrir menú"
       >
-        <svg
-          class="w-6 h-6"
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
-        >
-          <path
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            stroke-width="2"
-            d="M4 6h16M4 12h16M4 18h16"></path>
-        </svg>
+        <div class="relative w-6 h-5">
+          <span class="hamburger-line top-0"></span>
+          <span class="hamburger-line top-1/2 -translate-y-1/2"></span>
+          <span class="hamburger-line bottom-0"></span>
+        </div>
       </button>
     </div>
   </div>
 
-  <!-- Menú móvil -->
+  <!-- Menú móvil moderno -->
   <div
     id="mobile-menu"
-    class="hidden md:hidden bg-[#1a1a1a] border-t border-[#d4a574]/20"
+    class="fixed inset-0 z-40 transform translate-x-full transition-transform duration-500 ease-out md:hidden"
   >
-    <div class="px-4 py-4 space-y-3">
-      <a
-        href="/#inicio"
-        class="block text-white hover:text-[#d4af37] transition-colors font-medium py-2"
+    <!-- Overlay oscuro con blur -->
+    <div class="absolute inset-0 bg-black/95 backdrop-blur-md"></div>
+
+    <!-- Contenido del menú -->
+    <div class="relative h-full flex flex-col justify-center items-center px-8">
+      <!-- Links del menú -->
+      <nav class="space-y-8 text-center">
+        <a
+          href="/#inicio"
+          class="mobile-link block text-white text-3xl font-bold hover:text-[#d4af37] transition-all duration-300 transform hover:scale-110"
+          style="animation-delay: 0.1s"
+        >
+          Inicio
+        </a>
+        <a
+          href="/#menu"
+          class="mobile-link block text-white text-3xl font-bold hover:text-[#d4af37] transition-all duration-300 transform hover:scale-110"
+          style="animation-delay: 0.2s"
+        >
+          Menú
+        </a>
+        <a
+          href="/#contacto"
+          class="mobile-link block text-white text-3xl font-bold hover:text-[#d4af37] transition-all duration-300 transform hover:scale-110"
+          style="animation-delay: 0.3s"
+        >
+          Contacto
+        </a>
+        <a
+          href="/sucursales"
+          class="mobile-link block text-white text-3xl font-bold hover:text-[#d4af37] transition-all duration-300 transform hover:scale-110"
+          style="animation-delay: 0.4s"
+        >
+          Sucursales
+        </a>
+      </nav>
+
+      <!-- Botón de reserva destacado -->
+      <div class="mt-12" style="animation-delay: 0.5s">
+        <a
+          href="/#contacto"
+          class="mobile-link inline-block bg-gradient-to-r from-[#9e2a2b] to-[#d4af37] text-white px-10 py-4 rounded-full font-bold text-xl hover:shadow-[0_0_30px_rgba(212,175,55,0.5)] hover:scale-105 transition-all duration-300"
+        >
+          Reservar Mesa
+        </a>
+      </div>
+
+      <!-- Decoración -->
+      <div
+        class="absolute top-10 right-10 w-32 h-32 bg-[#d4af37]/10 rounded-full blur-3xl"
       >
-        Inicio
-      </a>
-      <a
-        href="/#menu"
-        class="block text-white hover:text-[#d4af37] transition-colors font-medium py-2"
+      </div>
+      <div
+        class="absolute bottom-10 left-10 w-32 h-32 bg-[#9e2a2b]/10 rounded-full blur-3xl"
       >
-        Menú
-      </a>
-      <a
-        href="/#contacto"
-        class="block text-white hover:text-[#d4af37] transition-colors font-medium py-2"
-      >
-        Contacto
-      </a>
-      <a
-        href="/sucursales"
-        class="block text-white hover:text-[#d4af37] transition-colors font-medium py-2"
-      >
-        Sucursales
-      </a>
+      </div>
     </div>
   </div>
 </nav>
@@ -141,20 +165,76 @@ const whatsappMessage = encodeURIComponent(
   // Alternar cada 3 segundos
   setInterval(alternateLogo, 3000);
 
-  // Toggle menú móvil
+  // Toggle menú móvil con animaciones
   const mobileMenuBtn = document.getElementById("mobile-menu-btn");
   const mobileMenu = document.getElementById("mobile-menu");
   const navbar = document.getElementById("navbar");
+  const hamburgerLines = document.querySelectorAll(".hamburger-line");
+  const mobileLinkElements = document.querySelectorAll(".mobile-link");
+  let isMenuOpen = false;
 
   mobileMenuBtn?.addEventListener("click", () => {
-    mobileMenu?.classList.toggle("hidden");
+    isMenuOpen = !isMenuOpen;
+
+    if (isMenuOpen) {
+      // Abrir menú
+      mobileMenu?.classList.remove("translate-x-full");
+      document.body.style.overflow = "hidden";
+
+      // Animar hamburger a X
+      hamburgerLines[0]?.classList.add(
+        "rotate-45",
+        "top-1/2",
+        "-translate-y-1/2",
+      );
+      hamburgerLines[0]?.classList.remove("top-0");
+      hamburgerLines[1]?.classList.add("opacity-0");
+      hamburgerLines[2]?.classList.add(
+        "-rotate-45",
+        "top-1/2",
+        "-translate-y-1/2",
+      );
+      hamburgerLines[2]?.classList.remove("bottom-0");
+
+      // Animar links con delay
+      mobileLinkElements.forEach((link, index) => {
+        setTimeout(() => {
+          link.classList.add("fade-in");
+        }, index * 100);
+      });
+    } else {
+      // Cerrar menú
+      mobileMenu?.classList.add("translate-x-full");
+      document.body.style.overflow = "";
+
+      // Animar X a hamburger
+      hamburgerLines[0]?.classList.remove(
+        "rotate-45",
+        "top-1/2",
+        "-translate-y-1/2",
+      );
+      hamburgerLines[0]?.classList.add("top-0");
+      hamburgerLines[1]?.classList.remove("opacity-0");
+      hamburgerLines[2]?.classList.remove(
+        "-rotate-45",
+        "top-1/2",
+        "-translate-y-1/2",
+      );
+      hamburgerLines[2]?.classList.add("bottom-0");
+
+      // Remover animación de links
+      mobileLinkElements.forEach((link) => {
+        link.classList.remove("fade-in");
+      });
+    }
   });
 
   // Cerrar menú móvil al hacer clic en un enlace
-  const mobileLinks = mobileMenu?.querySelectorAll("a");
-  mobileLinks?.forEach((link) => {
+  mobileLinkElements?.forEach((link) => {
     link.addEventListener("click", () => {
-      mobileMenu?.classList.add("hidden");
+      if (isMenuOpen) {
+        mobileMenuBtn?.click();
+      }
     });
   });
 
@@ -199,3 +279,36 @@ const whatsappMessage = encodeURIComponent(
     });
   });
 </script>
+
+
+<style>
+  /* Hamburger lines */
+  .hamburger-line {
+    position: absolute;
+    width: 100%;
+    height: 2px;
+    background-color: white;
+    border-radius: 9999px;
+    transition: all 0.3s ease;
+  }
+
+  /* Animaci�n de fade-in para links */
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+      transform: translateY(20px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .fade-in {
+    animation: fadeIn 0.5s ease-out forwards;
+  }
+</style>
+
+
+
+

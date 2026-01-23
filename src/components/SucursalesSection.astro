@@ -9,8 +9,6 @@ const sucursales = [
     type: "Restaurante",
     address: "Av. Beni",
     hours: "Abre a las 11:30 a. m.",
-    status: "Cerrado",
-    testimonial: "Atención adecuada.",
     image: "/img/sucursales/churrasqueria.webp",
   },
   {
@@ -21,9 +19,6 @@ const sucursales = [
     type: "Bufé",
     address: "C. 12 Oeste",
     hours: "Abre a las 11 a. m.",
-    status: "Cerrado",
-    testimonial:
-      "Un lugar muy acogedor y con amplio estacionamiento subterráneo.",
     image: "/img/sucursales/rodizio.webp",
     featured: true,
   },
@@ -33,10 +28,8 @@ const sucursales = [
     reviews: "78",
     price: "",
     type: "Carne",
-    address: "6QGW+R9P",
+    address: "IC Norte",
     hours: "Abre a las 11:30 a. m.",
-    status: "Cerrado",
-    testimonial: "La comida y guarniciones son buenas, la espera es tardada",
     image: "/img/sucursales/icNorte.webp",
   },
   {
@@ -45,10 +38,8 @@ const sucursales = [
     reviews: "100",
     price: "",
     type: "Restaurante",
-    address: "7R2F+C7H",
+    address: "Las Brisas",
     hours: "",
-    status: "",
-    testimonial: "Muy buena opción",
     image: "/img/sucursales/brisas.webp",
   },
   {
@@ -57,10 +48,8 @@ const sucursales = [
     reviews: "40",
     price: "",
     type: "Restaurante",
-    address: "6RW2+78H Ventura Mall",
+    address: "Ventura Mall",
     hours: "Abre a las 11 a. m.",
-    status: "Cerrado",
-    testimonial: "Los domingos la fila es de una hora.",
     image: "/img/sucursales/ventura.webp",
   },
   {
@@ -69,10 +58,8 @@ const sucursales = [
     reviews: "21",
     price: "Bs 40-60",
     type: "Restaurante",
-    address: "7R8J+R8F, Av. Cristo Redentor",
+    address: "Av. Cristo Redentor",
     hours: "Abre a las 11 a. m.",
-    status: "Cerrado",
-    testimonial: "",
     services: ["Consumo en el lugar", "Para llevar"],
     image: "/img/sucursales/belen.webp",
   },
@@ -105,14 +92,8 @@ const sucursales = [
 
   <div class="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
     <!-- Header -->
+    <br />
     <div class="text-center mb-16 space-y-4">
-      <div class="inline-block">
-        <span
-          class="text-[#d4af37] text-sm font-semibold tracking-[0.3em] uppercase bg-[#d4af37]/10 px-6 py-2 rounded-full border border-[#d4af37]/30 backdrop-blur-sm"
-        >
-          Nuestras Ubicaciones
-        </span>
-      </div>
       <h2 class="text-5xl md:text-6xl font-bold text-gray-900">
         Encuentra tu
         <span
@@ -122,12 +103,7 @@ const sucursales = [
         </span>
         más cercano
       </h2>
-      <p
-        class="text-center text-gray-800 text-lg max-w-2xl mx-auto font-medium leading-relaxed"
-      >
-        Visítanos en cualquiera de nuestras sucursales y disfruta de la mejor
-        experiencia gastronómica.
-      </p>
+      <br />
     </div>
 
     <!-- Grid de Sucursales - Grid cuadrado centrado -->
@@ -135,7 +111,7 @@ const sucursales = [
       <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {
           sucursales.map((sucursal) => (
-            <div class="group relative w-full max-w-sm bg-white rounded-2xl overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-300">
+            <div class="group relative w-full max-w-sm bg-white rounded-2xl overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-300 flex flex-col">
               {/* Imagen de la sucursal */}
               <div class="relative h-56 overflow-hidden">
                 <img
@@ -153,8 +129,8 @@ const sucursales = [
                 <div class="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent" />
               </div>
 
-              {/* Contenido de la card */}
-              <div class="p-6">
+              {/* Contenido de la card - con grow para empujar botones abajo */}
+              <div class="p-6 flex flex-col grow">
                 {/* Nombre y rating */}
                 <h3 class="text-2xl font-bold text-gray-900 mb-3">
                   {sucursal.name}
@@ -238,15 +214,63 @@ const sucursales = [
                   </p>
                 )}
 
-                {/* Botón */}
-                <a
-                  href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(sucursal.name + " " + sucursal.address)}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  class="block w-full text-center bg-gradient-to-r from-[#9e2a2b] to-[#d4af37] text-white font-semibold py-3 rounded-xl hover:shadow-lg hover:shadow-[#d4af37]/30 transition-all duration-300 hover:scale-105"
-                >
-                  Ver en Google Maps
-                </a>
+                {/* Spacer para empujar botones al final */}
+                <div class="grow" />
+
+                {/* Botones de Acción - Circulares - Siempre al final */}
+                <div class="flex gap-6 items-center justify-center mt-4">
+                  {/* Botón Ver Ubicación - Verde Google (Circular) */}
+                  <a
+                    href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(sucursal.name + " " + sucursal.address)}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    class="w-14 h-14 flex items-center justify-center bg-[#34A853] text-white rounded-full hover:bg-[#2d9348] hover:shadow-xl hover:shadow-[#34A853]/50 transition-all duration-300 hover:scale-110 group"
+                    title="Ver ubicación en Google Maps"
+                  >
+                    <svg
+                      class="w-6 h-6 group-hover:scale-110 transition-transform duration-300"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"
+                      />
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"
+                      />
+                    </svg>
+                  </a>
+
+                  {/* Botón Ver Menú - Rojo Vino (Circular) - Abre Modal */}
+                  <button
+                    type="button"
+                    data-modal-open="menu-modal"
+                    data-sucursal-name={sucursal.name}
+                    class="w-14 h-14 flex items-center justify-center bg-[#9e2a2b] text-white rounded-full hover:bg-[#8a2426] hover:shadow-xl hover:shadow-[#9e2a2b]/50 transition-all duration-300 hover:scale-110 group"
+                    title="Ver nuestro menú"
+                  >
+                    <svg
+                      class="w-6 h-6 group-hover:scale-110 transition-transform duration-300"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"
+                      />
+                    </svg>
+                  </button>
+                </div>
               </div>
             </div>
           ))
@@ -283,7 +307,483 @@ const sucursales = [
   <br />
   <br />
   <br />
+
+  {/* Modal del Menú */}
+  <div
+    id="menu-modal"
+    class="fixed inset-0 z-50 hidden items-center justify-center bg-black/70 backdrop-blur-sm"
+    data-modal="menu-modal"
+  >
+    <div
+      class="relative max-w-4xl w-full mx-auto bg-white rounded-3xl shadow-2xl overflow-hidden animate-modal-enter"
+    >
+      {/* Header del Modal con Logo */}
+      <div class="relative bg-[#9e2a2b] p-6">
+        <div class="flex items-center justify-between">
+          <div class="flex items-center gap-4">
+            <img
+              src="/img/logo/logoRojo-SF.png"
+              alt="Brasargent Logo"
+              class="h-16 w-auto"
+            />
+          </div>
+
+          <div class="text-white text-right">
+            <h2 id="modal-sucursal-name" class="text-2xl font-bold">
+              Brasargent
+            </h2>
+          </div>
+
+          {/* Botón Cerrar */}
+          <button
+            type="button"
+            data-modal-close="menu-modal"
+            class="w-10 h-10 flex items-center justify-center bg-white/20 hover:bg-white/30 text-white rounded-full transition-all duration-300 hover:scale-110"
+            title="Cerrar"
+          >
+            <svg
+              class="w-6 h-6"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M6 18L18 6M6 6l12 12"></path>
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      {/* Barra de Navegación Sticky */}
+      <div
+        class="sticky top-0 z-10 bg-white border-b border-gray-200 shadow-md"
+      >
+        <nav
+          class="flex justify-center items-center gap-6 py-4 px-6"
+          id="menu-nav"
+        >
+          <button
+            data-section="entradas"
+            class="menu-nav-btn px-4 py-2 text-lg font-bold text-gray-600 hover:text-[#9e2a2b] hover:bg-gray-50 transition-all duration-300 border-b-2 border-transparent rounded-lg"
+          >
+            Entradas
+          </button>
+          <button
+            data-section="cortes-clasicos"
+            class="menu-nav-btn px-4 py-2 text-lg font-bold text-gray-600 hover:text-[#9e2a2b] hover:bg-gray-50 transition-all duration-300 border-b-2 border-transparent rounded-lg"
+          >
+            Cortes Clásicos
+          </button>
+          <button
+            data-section="platos-premium"
+            class="menu-nav-btn px-4 py-2 text-lg font-bold text-gray-600 hover:text-[#9e2a2b] hover:bg-gray-50 transition-all duration-300 border-b-2 border-transparent rounded-lg"
+          >
+            Platos Premium
+          </button>
+          <button
+            data-section="cortes-junior"
+            class="menu-nav-btn px-4 py-2 text-lg font-bold text-gray-600 hover:text-[#9e2a2b] hover:bg-gray-50 transition-all duration-300 border-b-2 border-transparent rounded-lg"
+          >
+            Cortes Junior
+          </button>
+          <button
+            data-section="bebidas"
+            class="menu-nav-btn px-4 py-2 text-lg font-bold text-gray-600 hover:text-[#9e2a2b] hover:bg-gray-50 transition-all duration-300 border-b-2 border-transparent rounded-lg"
+          >
+            Bebidas
+          </button>
+        </nav>
+      </div>
+
+      {/* Contenido del Modal - Menú HTML */}
+      <div
+        class="max-h-[70vh] overflow-y-auto bg-gradient-to-br from-gray-50 to-gray-100 p-6 flex justify-center"
+        id="menu-content"
+      >
+        {/* Contenido del Menú en Una Sola Columna Centrada */}
+        <div class="max-w-3xl w-full">
+          <div class="space-y-8">
+            {/* ENTRADAS */}
+            <div id="entradas" class="menu-section">
+              <h4
+                class="text-2xl font-bold text-gray-800 mb-4 pb-2 border-b-2 border-[#d4af37]"
+              >
+                ENTRADAS
+              </h4>
+              <div class="space-y-2">
+                <div class="flex justify-between items-start">
+                  <span class="text-gray-700">EMPANADAS TUCUMANAS</span>
+                  <span class="text-[#9e2a2b] font-semibold ml-2">Bs.10</span>
+                </div>
+                <div class="flex justify-between items-start">
+                  <span class="text-gray-700"
+                    >MIX DE ACHURAS<br /><span class="text-sm text-gray-500"
+                      >(Ubre, Riñón y Chinchulli)</span
+                    ></span
+                  >
+                  <span class="text-[#9e2a2b] font-semibold ml-2">Bs.59</span>
+                </div>
+              </div>
+            </div>
+
+            {/* CORTES CLÁSICOS */}
+            <div id="cortes-clasicos" class="menu-section">
+              <h4
+                class="text-2xl font-bold text-gray-800 mb-4 pb-2 border-b-2 border-[#d4af37]"
+              >
+                CORTES CLÁSICOS
+              </h4>
+              <div class="space-y-2">
+                <div class="flex justify-between items-start">
+                  <span class="text-gray-700">PUNTA DE "S"</span>
+                  <span class="text-[#9e2a2b] font-semibold ml-2">Bs.75</span>
+                </div>
+                <div class="flex justify-between items-start">
+                  <span class="text-gray-700">BIFE DE CHORIZO</span>
+                  <span class="text-[#9e2a2b] font-semibold ml-2">Bs.72</span>
+                </div>
+                <div class="flex justify-between items-start">
+                  <span class="text-gray-700">OJO DE BIFE</span>
+                  <span class="text-[#9e2a2b] font-semibold ml-2">Bs.75</span>
+                </div>
+                <div class="flex justify-between items-start">
+                  <span class="text-gray-700">CUADRIL (PARA 1 PERSONA)</span>
+                  <span class="text-[#9e2a2b] font-semibold ml-2">Bs.72</span>
+                </div>
+                <div class="flex justify-between items-start">
+                  <span class="text-gray-700">CUADRIL (PARA 2 PERSONAS)</span>
+                  <span class="text-[#9e2a2b] font-semibold ml-2">Bs.140</span>
+                </div>
+                <div class="flex justify-between items-start">
+                  <span class="text-gray-700">ASADO DE TIRA</span>
+                  <span class="text-[#9e2a2b] font-semibold ml-2">Bs.70</span>
+                </div>
+                <div class="flex justify-between items-start">
+                  <span class="text-gray-700">COSTELETA</span>
+                  <span class="text-[#9e2a2b] font-semibold ml-2">Bs.68</span>
+                </div>
+                <div class="flex justify-between items-start">
+                  <span class="text-gray-700">PACUMUTO DE RES</span>
+                  <span class="text-[#9e2a2b] font-semibold ml-2">Bs.48</span>
+                </div>
+                <div class="flex justify-between items-start">
+                  <span class="text-gray-700">PACUMUTO MIXTO</span>
+                  <span class="text-[#9e2a2b] font-semibold ml-2">Bs.48</span>
+                </div>
+                <div class="flex justify-between items-start">
+                  <span class="text-gray-700">PECHUGA DESHUESADA</span>
+                  <span class="text-[#9e2a2b] font-semibold ml-2">Bs.48</span>
+                </div>
+                <div class="flex justify-between items-start">
+                  <span class="text-gray-700">MUSLO DESHUESADO</span>
+                  <span class="text-[#9e2a2b] font-semibold ml-2">Bs.45</span>
+                </div>
+                <div class="flex justify-between items-start">
+                  <span class="text-gray-700">MATAMBRITO DE CERDO</span>
+                  <span class="text-[#9e2a2b] font-semibold ml-2">Bs.65</span>
+                </div>
+                <div class="flex justify-between items-start">
+                  <span class="text-gray-700"
+                    >1/2 PACK DE COSTILLAS DE CERDO BBQ</span
+                  >
+                  <span class="text-[#9e2a2b] font-semibold ml-2">Bs.75</span>
+                </div>
+              </div>
+              <p class="text-sm text-gray-500 italic mt-3">
+                *Todos los platos acompañados de 4 guarniciones
+              </p>
+              <div class="mt-3 flex justify-between items-start">
+                <span class="text-gray-700"
+                  >PLATO VEGETARIANO<br /><span class="text-sm text-gray-500"
+                    >(6 guarniciones)</span
+                  ></span
+                >
+                <span class="text-[#9e2a2b] font-semibold ml-2">Bs.45</span>
+              </div>
+            </div>
+
+            {/* PLATOS PREMIUM */}
+            <div id="platos-premium" class="menu-section">
+              <h4
+                class="text-2xl font-bold text-gray-800 mb-4 pb-2 border-b-2 border-[#d4af37]"
+              >
+                PLATOS PREMIUM
+              </h4>
+              <div class="space-y-2">
+                <div class="flex justify-between items-start">
+                  <span class="text-gray-700">PICAÑA</span>
+                  <span class="text-[#9e2a2b] font-semibold ml-2">Bs.95</span>
+                </div>
+                <div class="flex justify-between items-start">
+                  <span class="text-gray-700">OJO DE BIFE</span>
+                  <span class="text-[#9e2a2b] font-semibold ml-2">Bs.90</span>
+                </div>
+                <div class="flex justify-between items-start">
+                  <span class="text-gray-700">BIFE DE CHORIZO</span>
+                  <span class="text-[#9e2a2b] font-semibold ml-2">Bs.85</span>
+                </div>
+                <div class="flex justify-between items-start">
+                  <span class="text-gray-700">ENTRAÑA</span>
+                  <span class="text-[#9e2a2b] font-semibold ml-2">Bs.75</span>
+                </div>
+                <div class="flex justify-between items-start">
+                  <span class="text-gray-700">TRADICIÓN ARGENTINA</span>
+                  <span class="text-[#9e2a2b] font-semibold ml-2">Bs.80</span>
+                </div>
+                <div class="flex justify-between items-start">
+                  <span class="text-gray-700">PARRILLA MIXTA (P/DOS)</span>
+                  <span class="text-[#9e2a2b] font-semibold ml-2">Bs.180</span>
+                </div>
+                <div class="flex justify-between items-start">
+                  <span class="text-gray-700">TOMAHAWK</span>
+                  <span class="text-[#9e2a2b] font-semibold ml-2">Bs.140</span>
+                </div>
+              </div>
+            </div>
+
+            {/* CORTES JUNIOR */}
+            <div id="cortes-junior" class="menu-section">
+              <h4
+                class="text-2xl font-bold text-gray-800 mb-4 pb-2 border-b-2 border-[#d4af37]"
+              >
+                CORTES JUNIOR
+              </h4>
+              <div class="space-y-2">
+                <div class="flex justify-between items-start">
+                  <span class="text-gray-700">PUNTA DE "S" JUNIOR</span>
+                  <span class="text-[#9e2a2b] font-semibold ml-2">Bs.59</span>
+                </div>
+                <div class="flex justify-between items-start">
+                  <span class="text-gray-700">CHURRASQUITO</span>
+                  <span class="text-[#9e2a2b] font-semibold ml-2">Bs.50</span>
+                </div>
+                <div class="flex justify-between items-start">
+                  <span class="text-gray-700">BABY BEEF</span>
+                  <span class="text-[#9e2a2b] font-semibold ml-2">Bs.50</span>
+                </div>
+                <div class="flex justify-between items-start">
+                  <span class="text-gray-700">ESPETINHO DE PICANA</span>
+                  <span class="text-[#9e2a2b] font-semibold ml-2">Bs.39</span>
+                </div>
+                <div class="flex justify-between items-start">
+                  <span class="text-gray-700">ESPETINHO DE CUPIM (JIBA)</span>
+                  <span class="text-[#9e2a2b] font-semibold ml-2">Bs.39</span>
+                </div>
+                <div class="flex justify-between items-start">
+                  <span class="text-gray-700">TOMAHAWK</span>
+                  <span class="text-[#9e2a2b] font-semibold ml-2">Bs.75</span>
+                </div>
+              </div>
+            </div>
+
+            {/* BEBIDAS */}
+            <div id="bebidas" class="menu-section">
+              <h4
+                class="text-2xl font-bold text-gray-800 mb-4 pb-2 border-b-2 border-[#d4af37]"
+              >
+                BEBIDAS
+              </h4>
+              <div class="space-y-2">
+                <div class="flex justify-between items-start">
+                  <span class="text-gray-700">GASEOSAS</span>
+                  <span class="text-[#9e2a2b] font-semibold ml-2">Bs.12</span>
+                </div>
+                <div class="flex justify-between items-start">
+                  <span class="text-gray-700">JUGOS</span>
+                  <span class="text-[#9e2a2b] font-semibold ml-2">Bs.10</span>
+                </div>
+              </div>
+            </div>
+
+            {/* EXTRAS */}
+            <div>
+              <h4
+                class="text-2xl font-bold text-gray-800 mb-4 pb-2 border-b-2 border-[#d4af37]"
+              >
+                EXTRAS
+              </h4>
+              <div class="space-y-2">
+                <div class="flex justify-between items-start">
+                  <span class="text-gray-700">CHORIZO</span>
+                  <span class="text-[#9e2a2b] font-semibold ml-2">Bs.10</span>
+                </div>
+                <div class="flex justify-between items-start">
+                  <span class="text-gray-700">MORCILLA</span>
+                  <span class="text-[#9e2a2b] font-semibold ml-2">Bs.10</span>
+                </div>
+                <div class="flex justify-between items-start">
+                  <span class="text-gray-700">GUARNICIÓN (FRÍA O CALIENTE)</span
+                  >
+                  <span class="text-[#9e2a2b] font-semibold ml-2">Bs.12</span>
+                </div>
+              </div>
+            </div>
+
+            {/* DOMINGOS Y FERIADOS */}
+            <div>
+              <h4
+                class="text-2xl font-bold text-gray-800 mb-4 pb-2 border-b-2 border-[#d4af37]"
+              >
+                DOMINGOS Y FERIADOS
+              </h4>
+              <div class="space-y-2">
+                <div class="flex justify-between items-start">
+                  <span class="text-gray-700">SOPA DE MANÍ</span>
+                  <span class="text-[#9e2a2b] font-semibold ml-2">Bs.25</span>
+                </div>
+              </div>
+            </div>
+
+            {/* POSTRES */}
+            <div>
+              <h4
+                class="text-2xl font-bold text-gray-800 mb-4 pb-2 border-b-2 border-[#d4af37]"
+              >
+                POSTRES
+              </h4>
+              <div class="space-y-2">
+                <div class="flex justify-between items-start">
+                  <span class="text-gray-700">PORCIÓN</span>
+                  <span class="text-[#9e2a2b] font-semibold ml-2">Bs.22</span>
+                </div>
+              </div>
+            </div>
+
+            {/* ALMUERZO EJECUTIVO */}
+            <div
+              class="bg-gradient-to-r from-[#9e2a2b]/10 to-[#d4af37]/10 p-4 rounded-xl border-2 border-[#d4af37]"
+            >
+              <h4 class="text-2xl font-bold text-gray-800 text-center">
+                ALMUERZO EJECUTIVO
+              </h4>
+              <p class="text-sm text-gray-600 text-center mt-2">
+                Consultar disponibilidad
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
 </section>
+
+<script>
+  // Manejo del Modal
+  document.addEventListener("DOMContentLoaded", () => {
+    const modal = document.getElementById("menu-modal");
+    const modalSucursalName = document.getElementById("modal-sucursal-name");
+    const menuContent = document.getElementById("menu-content");
+    const navButtons = document.querySelectorAll(".menu-nav-btn");
+    const menuSections = document.querySelectorAll(".menu-section");
+    const openButtons = document.querySelectorAll(
+      '[data-modal-open="menu-modal"]',
+    );
+    const closeButtons = document.querySelectorAll(
+      '[data-modal-close="menu-modal"]',
+    );
+
+    // Función para actualizar el botón activo
+    const updateActiveButton = (sectionId: string) => {
+      navButtons.forEach((btn) => {
+        const isActive = btn.getAttribute("data-section") === sectionId;
+        if (isActive) {
+          btn.classList.add("text-[#9e2a2b]", "border-[#9e2a2b]");
+          btn.classList.remove("text-gray-600", "border-transparent");
+        } else {
+          btn.classList.remove("text-[#9e2a2b]", "border-[#9e2a2b]");
+          btn.classList.add("text-gray-600", "border-transparent");
+        }
+      });
+    };
+
+    // IntersectionObserver para detectar secciones visibles
+    const observerOptions = {
+      root: menuContent,
+      rootMargin: "-20% 0px -70% 0px",
+      threshold: 0,
+    };
+
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach((entry) => {
+        if (entry.isIntersecting) {
+          const sectionId = entry.target.getAttribute("id");
+          if (sectionId) {
+            updateActiveButton(sectionId);
+          }
+        }
+      });
+    }, observerOptions);
+
+    // Observar todas las secciones del menú
+    menuSections.forEach((section) => {
+      observer.observe(section);
+    });
+
+    // Scroll suave al hacer click en los botones de navegación
+    navButtons.forEach((button) => {
+      button.addEventListener("click", () => {
+        const sectionId = button.getAttribute("data-section");
+        if (!sectionId) return;
+
+        const section = document.getElementById(sectionId);
+        if (section && menuContent) {
+          const offsetTop = section.offsetTop - menuContent.offsetTop - 20;
+          menuContent.scrollTo({
+            top: offsetTop,
+            behavior: "smooth",
+          });
+        }
+      });
+    });
+
+    // Abrir modal
+    openButtons.forEach((button) => {
+      button.addEventListener("click", () => {
+        const sucursalName = button.getAttribute("data-sucursal-name");
+        if (modalSucursalName && sucursalName) {
+          modalSucursalName.textContent = sucursalName;
+        }
+        modal?.classList.remove("hidden");
+        modal?.classList.add("flex");
+        document.body.style.overflow = "hidden";
+
+        // Resetear scroll y activar primera sección
+        if (menuContent) {
+          menuContent.scrollTop = 0;
+        }
+        updateActiveButton("entradas");
+      });
+    });
+
+    // Cerrar modal
+    const closeModal = () => {
+      modal?.classList.add("hidden");
+      modal?.classList.remove("flex");
+      document.body.style.overflow = "";
+    };
+
+    closeButtons.forEach((button) => {
+      button.addEventListener("click", closeModal);
+    });
+
+    // Cerrar al hacer click en el backdrop
+    modal?.addEventListener("click", (e) => {
+      if (e.target === modal) {
+        closeModal();
+      }
+    });
+
+    // Cerrar con tecla ESC
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape" && !modal?.classList.contains("hidden")) {
+        closeModal();
+      }
+    });
+  });
+</script>
 
 <style>
   @keyframes gradient {
@@ -309,5 +809,51 @@ const sucursales = [
     50% {
       opacity: 0.3;
     }
+  }
+
+  @keyframes modal-enter {
+    from {
+      opacity: 0;
+      transform: scale(0.95);
+    }
+    to {
+      opacity: 1;
+      transform: scale(1);
+    }
+  }
+
+  .animate-modal-enter {
+    animation: modal-enter 0.3s ease-out;
+  }
+
+  /* Ocultar scrollbar en navegación */
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* Transición suave para botones de navegación */
+  .menu-nav-btn {
+    position: relative;
+  }
+
+  .menu-nav-btn::after {
+    content: "";
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: currentColor;
+    transform: scaleX(0);
+    transition: transform 0.3s ease;
+  }
+
+  .menu-nav-btn.active::after {
+    transform: scaleX(1);
   }
 </style>

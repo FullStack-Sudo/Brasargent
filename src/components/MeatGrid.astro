@@ -27,6 +27,7 @@ const allImages = [...platosImages, ...platosImages];
   <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
     
     <!-- Header de la sección -->
+     <br>
     <div class="text-center mb-12 sm:mb-16">
       <h2 class="text-3xl sm:text-4xl lg:text-5xl font-bold text-[#1a1a1a] mb-4">
         Nuestros <span class="bg-gradient-to-r from-[#9e2a2b] to-[#d4af37] bg-clip-text text-transparent">Platos Premium</span>
@@ -37,12 +38,12 @@ const allImages = [...platosImages, ...platosImages];
     <!-- Carrusel Infinito -->
     <div class="relative">
       <!-- Gradientes de fade en los bordes -->
-      <div class="absolute left-0 top-0 bottom-0 w-32 bg-gradient-to-r from-white to-transparent z-10 pointer-events-none"></div>
-      <div class="absolute right-0 top-0 bottom-0 w-32 bg-gradient-to-l from-gray-50 to-transparent z-10 pointer-events-none"></div>
+      <div class="absolute left-0 top-0 bottom-0 w-32 bg-gradient-to-r  z-10 pointer-events-none"></div>
+      <div class="absolute right-0 top-0 bottom-0 w-32 bg-gradient-to-l z-10 pointer-events-none"></div>
       
       <!-- Contenedor del carrusel -->
       <div class="carousel-container overflow-hidden py-8">
-        <div class="carousel-track flex gap-6" style="animation: scroll-left 40s linear infinite;">
+        <div class="carousel-track flex gap-4" style="animation: scroll-left 120s linear infinite;">
           {allImages.map((image, index) => (
             <div class="carousel-item flex-shrink-0">
               <div class="relative group">
