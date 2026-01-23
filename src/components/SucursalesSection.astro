@@ -2,76 +2,61 @@
 // Componente de Sucursales con diseño futurista
 const sucursales = [
   {
-    name: "Brasargent Churrasqueria",
+    name: "Churrasqueria",
     rating: 4.3,
     reviews: "1.2K",
-    price: "Bs 100-120",
-    type: "Restaurante",
     address: "Av. Beni",
     hours: "Abre a las 11:30 a. m.",
     image: "/img/sucursales/churrasqueria.webp",
+    whatsapp: "59178787878", // Reemplazar con el número real
   },
   {
-    name: "Brasargent Rodizio",
+    name: "Rodizio",
     rating: 4.5,
     reviews: "1.3K",
     price: "",
-    type: "Bufé",
     address: "C. 12 Oeste",
     hours: "Abre a las 11 a. m.",
     image: "/img/sucursales/rodizio.webp",
     featured: true,
+    whatsapp: "59178787878", // Reemplazar con el número real
   },
   {
-    name: "Brasargent Express - IC Norte",
-    rating: 3.9,
-    reviews: "78",
-    price: "",
-    type: "Carne",
-    address: "IC Norte",
-    hours: "Abre a las 11:30 a. m.",
-    image: "/img/sucursales/icNorte.webp",
-  },
-  {
-    name: "Brasargent - Las Brisas",
+    name: "Las Brisas",
     rating: 3.9,
     reviews: "100",
-    price: "",
-    type: "Restaurante",
     address: "Las Brisas",
     hours: "",
     image: "/img/sucursales/brisas.webp",
+    whatsapp: "59178556522", // Reemplazar con el número real
   },
   {
-    name: "Brasargent Express Ventura",
-    rating: 3.5,
-    reviews: "40",
-    price: "",
-    type: "Restaurante",
-    address: "Ventura Mall",
-    hours: "Abre a las 11 a. m.",
-    image: "/img/sucursales/ventura.webp",
-  },
-  {
-    name: "Brasargent Express Belen",
-    rating: 3.3,
-    reviews: "21",
-    price: "Bs 40-60",
-    type: "Restaurante",
-    address: "Av. Cristo Redentor",
-    hours: "Abre a las 11 a. m.",
-    services: ["Consumo en el lugar", "Para llevar"],
-    image: "/img/sucursales/belen.webp",
+    name: "Nueva Sucursal",
+    rating: 3.9,
+    reviews: "100",
+    address: "Las Brisas",
+    hours: "",
+    image: "/img/sucursales/brisas.webp",
+    whatsapp: "59178787878", // Reemplazar con el número real
   },
 ];
 ---
 
-<section
-  id="sucursales"
-  class="relative py-24 bg-gradient-to-br from-gray-100 via-gray-50 to-white overflow-hidden"
->
-  <!-- Efectos de fondo futuristas -->
-  <div class="absolute inset-0 opacity-10">
+<section id="sucursales" class="relative py-24 overflow-hidden">
+  <!-- Imagen de fondo -->
+  <div class="absolute inset-0 w-full h-full">
+    <img
+      src="/img/fondo/sucursales.webp"
+      alt="Brasargent Background"
+      class="w-full h-full object-cover"
+    />
+  </div>
+
+  <!-- Overlay oscuro para legibilidad -->
+  <div class="absolute inset-0 bg-black/60 backdrop-blur-[2px]"></div>
+
+  <!-- Efectos de fondo decorativos (reducidos) -->
+  <div class="absolute inset-0 opacity-5">
     <div
       class="absolute top-20 left-10 w-96 h-96 bg-[#d4af37] rounded-full filter blur-[120px] animate-pulse"
     >
@@ -83,37 +68,32 @@ const sucursales = [
     </div>
   </div>
 
-  <!-- Grid pattern overlay -->
-  <div
-    class="absolute inset-0 opacity-5"
-    style="background-image: linear-gradient(#d4af37 1px, transparent 1px), linear-gradient(90deg, #d4af37 1px, transparent 1px); background-size: 50px 50px;"
-  >
-  </div>
-
   <div class="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
     <!-- Header -->
     <br />
     <div class="text-center mb-16 space-y-4">
-      <h2 class="text-5xl md:text-6xl font-bold text-gray-900">
-        Encuentra tu
+      <h2
+        class="text-5xl md:text-6xl font-bold text-white drop-shadow-[0_2px_8px_rgba(0,0,0,0.8)]"
+      >
         <span
-          class="bg-gradient-to-r from-[#d4af37] via-[#f4d03f] to-[#d4af37] bg-clip-text text-transparent animate-gradient"
+          class="bg-gradient-to-r from-[#d4af37] via-[#f4d03f] to-[#d4af37] bg-clip-text text-transparent animate-gradient drop-shadow-[0_2px_8px_rgba(0,0,0,0.8)]"
         >
-          Brasargent
+          Encuentra tu Brasargent más cercano
         </span>
-        más cercano
       </h2>
       <br />
     </div>
 
     <!-- Grid de Sucursales - Grid cuadrado centrado -->
     <div class="flex justify-center">
-      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div
+        class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 max-w-7xl mx-auto"
+      >
         {
           sucursales.map((sucursal) => (
-            <div class="group relative w-full max-w-sm bg-white rounded-2xl overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-300 flex flex-col">
+            <div class="group relative w-full min-h-[600px] bg-white rounded-2xl shadow-2xl hover:shadow-[0_20px_60px_rgba(0,0,0,0.5)] transition-all duration-300 flex flex-col pb-6">
               {/* Imagen de la sucursal */}
-              <div class="relative h-56 overflow-hidden">
+              <div class="relative h-64 overflow-hidden rounded-t-2xl">
                 <img
                   src={sucursal.image}
                   alt={sucursal.name}
@@ -130,9 +110,9 @@ const sucursales = [
               </div>
 
               {/* Contenido de la card - con grow para empujar botones abajo */}
-              <div class="p-6 flex flex-col grow">
+              <div class="p-8 flex flex-col grow">
                 {/* Nombre y rating */}
-                <h3 class="text-2xl font-bold text-gray-900 mb-3">
+                <h3 class="text-3xl font-bold text-gray-900 mb-4">
                   {sucursal.name}
                 </h3>
 
@@ -214,21 +194,21 @@ const sucursales = [
                   </p>
                 )}
 
-                {/* Spacer para empujar botones al final */}
+                {/* Spacer superior para centrar botones */}
                 <div class="grow" />
 
-                {/* Botones de Acción - Circulares - Siempre al final */}
-                <div class="flex gap-6 items-center justify-center mt-4">
+                {/* Botones de Acción - Circulares - Centrados */}
+                <div class="flex gap-6 items-center justify-center py-6">
                   {/* Botón Ver Ubicación - Verde Google (Circular) */}
                   <a
                     href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(sucursal.name + " " + sucursal.address)}`}
                     target="_blank"
                     rel="noopener noreferrer"
-                    class="w-14 h-14 flex items-center justify-center bg-[#34A853] text-white rounded-full hover:bg-[#2d9348] hover:shadow-xl hover:shadow-[#34A853]/50 transition-all duration-300 hover:scale-110 group"
+                    class="w-16 h-16 flex items-center justify-center bg-[#34A853] text-white rounded-full hover:bg-[#2d9348] hover:shadow-2xl hover:shadow-[#34A853]/60 transition-all duration-300 hover:scale-110 group"
                     title="Ver ubicación en Google Maps"
                   >
                     <svg
-                      class="w-6 h-6 group-hover:scale-110 transition-transform duration-300"
+                      class="w-7 h-7 group-hover:scale-110 transition-transform duration-300"
                       fill="none"
                       stroke="currentColor"
                       viewBox="0 0 24 24"
@@ -253,11 +233,11 @@ const sucursales = [
                     type="button"
                     data-modal-open="menu-modal"
                     data-sucursal-name={sucursal.name}
-                    class="w-14 h-14 flex items-center justify-center bg-[#9e2a2b] text-white rounded-full hover:bg-[#8a2426] hover:shadow-xl hover:shadow-[#9e2a2b]/50 transition-all duration-300 hover:scale-110 group"
+                    class="w-16 h-16 flex items-center justify-center bg-[#9e2a2b] text-white rounded-full hover:bg-[#8a2426] hover:shadow-2xl hover:shadow-[#9e2a2b]/60 transition-all duration-300 hover:scale-110 group"
                     title="Ver nuestro menú"
                   >
                     <svg
-                      class="w-6 h-6 group-hover:scale-110 transition-transform duration-300"
+                      class="w-7 h-7 group-hover:scale-110 transition-transform duration-300"
                       fill="none"
                       stroke="currentColor"
                       viewBox="0 0 24 24"
@@ -270,6 +250,35 @@ const sucursales = [
                       />
                     </svg>
                   </button>
+
+                  {/* Botón WhatsApp - Verde WhatsApp (Circular) */}
+                  <a
+                    href={`https://wa.me/${sucursal.whatsapp}?text=${encodeURIComponent(`Hola, me gustaría hacer una consulta sobre ${sucursal.name}`)}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    class="w-16 h-16 flex items-center justify-center bg-[#25D366] text-white rounded-full hover:bg-[#20ba5a] hover:shadow-2xl hover:shadow-[#25D366]/60 transition-all duration-300 hover:scale-110 group"
+                    title="Contactar por WhatsApp"
+                  >
+                    <svg
+                      class="w-7 h-7 group-hover:scale-110 transition-transform duration-300"
+                      fill="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z" />
+                    </svg>
+                  </a>
+                </div>
+
+                {/* Spacer inferior para centrar botones */}
+                <div class="grow" />
+
+                {/* Logo en el pie de la tarjeta */}
+                <div class="flex justify-center items-center pt-6 pb-2 border-t border-gray-100 mt-4">
+                  <img
+                    src="/img/logo/logoRojo-SF.png"
+                    alt="Brasargent Logo"
+                    class="h-20 w-auto opacity-80 hover:opacity-100 transition-opacity duration-300"
+                  />
                 </div>
               </div>
             </div>
@@ -296,7 +305,7 @@ const sucursales = [
         </p>
         <a
           href="/#contacto"
-          class="inline-block bg-gradient-to-r from-[#9e2a2b] to-[#d4af37] text-white font-semibold px-8 py-4 rounded-full hover:shadow-lg hover:shadow-[#d4af37]/30 transition-all duration-300 hover:scale-105"
+          class="inline-block bg-[#9e2a2b] text-white font-semibold px-10 py-4 rounded-lg hover:bg-[#8a2426] hover:shadow-xl hover:shadow-[#9e2a2b]/50 transition-all duration-300 hover:scale-105 border border-[#9e2a2b] hover:border-[#d4af37]"
         >
           Contáctanos
         </a>
