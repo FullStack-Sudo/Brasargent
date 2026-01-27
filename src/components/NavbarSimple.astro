@@ -65,7 +65,7 @@ const whatsappMessage = encodeURIComponent(
       <!-- Botón menú móvil animado -->
       <button
         id="mobile-menu-btn"
-        class="md:hidden relative w-10 h-10 text-white focus:outline-none z-50 flex items-center justify-center mr-8"
+        class="md:hidden relative w-10 h-10 text-white focus:outline-none z-50 flex items-center justify-center transition-opacity duration-300"
         aria-label="Abrir menú"
       >
         <div class="relative w-6 h-5">
@@ -76,125 +76,173 @@ const whatsappMessage = encodeURIComponent(
       </button>
     </div>
   </div>
+</nav>
 
-  <!-- Menú móvil moderno -->
+<!-- Menú móvil moderno - Pantalla completa -->
+<div
+  id="mobile-menu"
+  class="fixed inset-0 z-[9999] transform translate-x-full transition-transform duration-500 ease-out md:hidden"
+>
+  <!-- Overlay oscuro completo con mejor opacidad -->
+  <div class="absolute inset-0 bg-black/95 backdrop-blur-md"></div>
+
+  <!-- Contenido del menú -->
   <div
-    id="mobile-menu"
-    class="fixed inset-0 z-40 transform translate-x-full transition-transform duration-500 ease-out md:hidden"
+    class="relative h-full flex flex-col justify-center items-center px-6 py-4"
   >
-    <!-- Overlay oscuro con blur -->
-    <div class="absolute inset-0 bg-black/95 backdrop-blur-md"></div>
+    <!-- Botón de cierre (X) - Esquina superior derecha -->
+    <div class="absolute top-6 right-6 z-50">
+      <button
+        id="mobile-close-btn"
+        class="mobile-link w-12 h-12 flex items-center justify-center bg-white/10 hover:bg-white/20 rounded-full transition-all duration-300 hover:scale-110 hover:rotate-90 border-2 border-white/20 hover:border-[#d4af37]"
+        aria-label="Cerrar menú"
+        style="animation-delay: 0s"
+      >
+        <svg
+          class="w-6 h-6 text-white"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2.5"
+            d="M6 18L18 6M6 6l12 12"></path>
+        </svg>
+      </button>
+    </div>
 
-    <!-- Contenido del menú -->
-    <div class="relative h-full flex flex-col justify-center items-center px-8">
-      <!-- Links del menú -->
-      <nav class="space-y-8 text-center">
+    <!-- Contenedor central compacto -->
+    <div class="flex flex-col items-center w-full max-w-sm mt-8">
+      <!-- Logo en el menú móvil -->
+      <div class="mobile-link mb-6" style="animation-delay: 0.1s">
+        <img
+          src="/img/logo/logo-SF.png"
+          alt="Brasargent Logo"
+          class="h-24 w-auto mx-auto opacity-90"
+        />
+      </div>
+
+      <!-- Links del menú con mejor espaciado -->
+      <nav class="flex flex-col space-y-3 text-center w-full">
         <a
           href="/#inicio"
-          class="mobile-link block text-white text-3xl font-bold hover:text-[#d4af37] transition-all duration-300 transform hover:scale-110"
-          style="animation-delay: 0.1s"
+          class="mobile-link block text-white text-2xl sm:text-3xl font-bold hover:text-[#d4af37] transition-all duration-300 transform hover:scale-105 py-1 px-6 rounded-lg hover:bg-white/5"
+          style="animation-delay: 0.15s"
         >
           Inicio
         </a>
+
+        <!-- Separador sutil -->
+        <div
+          class="h-px bg-gradient-to-r from-transparent via-white/20 to-transparent"
+        >
+        </div>
+
         <a
           href="/#menu"
-          class="mobile-link block text-white text-3xl font-bold hover:text-[#d4af37] transition-all duration-300 transform hover:scale-110"
+          class="mobile-link block text-white text-2xl sm:text-3xl font-bold hover:text-[#d4af37] transition-all duration-300 transform hover:scale-105 py-1 px-6 rounded-lg hover:bg-white/5"
           style="animation-delay: 0.2s"
         >
-          Menú
+          Recuerdos
         </a>
+
+        <!-- Separador sutil -->
+        <div
+          class="h-px bg-gradient-to-r from-transparent via-white/20 to-transparent"
+        >
+        </div>
+
         <a
           href="/#contacto"
-          class="mobile-link block text-white text-3xl font-bold hover:text-[#d4af37] transition-all duration-300 transform hover:scale-110"
-          style="animation-delay: 0.3s"
+          class="mobile-link block text-white text-2xl sm:text-3xl font-bold hover:text-[#d4af37] transition-all duration-300 transform hover:scale-105 py-1 px-6 rounded-lg hover:bg-white/5"
+          style="animation-delay: 0.25s"
         >
           Contacto
         </a>
+
+        <!-- Separador sutil -->
+        <div
+          class="h-px bg-gradient-to-r from-transparent via-white/20 to-transparent"
+        >
+        </div>
+
         <a
           href="/sucursales"
-          class="mobile-link block text-white text-3xl font-bold hover:text-[#d4af37] transition-all duration-300 transform hover:scale-110"
-          style="animation-delay: 0.4s"
+          class="mobile-link block text-white text-2xl sm:text-3xl font-bold hover:text-[#d4af37] transition-all duration-300 transform hover:scale-105 py-1 px-6 rounded-lg hover:bg-white/5"
+          style="animation-delay: 0.3s"
         >
           Sucursales
         </a>
       </nav>
 
-      <!-- Botón de reserva destacado -->
-      <div class="mt-12" style="animation-delay: 0.5s">
+      <!-- Botón de reserva destacado con mejor espaciado -->
+      <div class="mobile-link w-full mt-6" style="animation-delay: 0.35s">
         <a
           href="/#contacto"
-          class="mobile-link inline-block bg-[#9e2a2b] text-white px-12 py-5 rounded-lg font-bold text-xl hover:bg-[#8a2426] hover:shadow-[0_0_30px_rgba(158,42,43,0.6)] hover:scale-105 transition-all duration-300 border-2 border-[#9e2a2b] hover:border-[#d4af37]"
+          class="block w-full bg-gradient-to-r from-[#9e2a2b] to-[#8a2426] text-white px-8 py-4 rounded-xl font-bold text-xl text-center hover:shadow-[0_0_40px_rgba(158,42,43,0.7)] hover:scale-105 transition-all duration-300 border-2 border-[#9e2a2b] hover:border-[#d4af37]"
         >
-          Reservar Mesa
+          🍖 Reservar Mesa
         </a>
       </div>
 
-      <!-- Decoración -->
+      <!-- Decoración mejorada -->
       <div
-        class="absolute top-10 right-10 w-32 h-32 bg-[#d4af37]/10 rounded-full blur-3xl"
+        class="absolute top-20 right-10 w-40 h-40 bg-[#d4af37]/10 rounded-full blur-3xl pointer-events-none"
       >
       </div>
       <div
-        class="absolute bottom-10 left-10 w-32 h-32 bg-[#9e2a2b]/10 rounded-full blur-3xl"
+        class="absolute bottom-20 left-10 w-40 h-40 bg-[#9e2a2b]/10 rounded-full blur-3xl pointer-events-none"
       >
       </div>
     </div>
   </div>
-</nav>
 
-<!-- Espaciador para compensar navbar fija -->
-<div class="h-20"></div>
+  <!-- Espaciador para compensar navbar fija -->
+  <div class="h-20"></div>
 
-<script>
-  // Alternancia dinámica del logo
-  const logoPrimary = document.getElementById("logo-primary");
-  const logoSecondary = document.getElementById("logo-secondary");
-  let isShowingPrimary = true;
+  <script>
+    // Alternancia dinámica del logo
+    const logoPrimary = document.getElementById("logo-primary");
+    const logoSecondary = document.getElementById("logo-secondary");
+    let isShowingPrimary = true;
 
-  function alternateLogo() {
-    if (isShowingPrimary) {
-      logoPrimary?.classList.add("opacity-0");
-      logoSecondary?.classList.remove("opacity-0");
-    } else {
-      logoPrimary?.classList.remove("opacity-0");
-      logoSecondary?.classList.add("opacity-0");
+    function alternateLogo() {
+      if (isShowingPrimary) {
+        logoPrimary?.classList.add("opacity-0");
+        logoSecondary?.classList.remove("opacity-0");
+      } else {
+        logoPrimary?.classList.remove("opacity-0");
+        logoSecondary?.classList.add("opacity-0");
+      }
+      isShowingPrimary = !isShowingPrimary;
     }
-    isShowingPrimary = !isShowingPrimary;
-  }
 
-  // Alternar cada 3 segundos
-  setInterval(alternateLogo, 3000);
+    // Alternar cada 3 segundos
+    setInterval(alternateLogo, 3000);
 
-  // Toggle menú móvil con animaciones
-  const mobileMenuBtn = document.getElementById("mobile-menu-btn");
-  const mobileMenu = document.getElementById("mobile-menu");
-  const navbar = document.getElementById("navbar");
-  const hamburgerLines = document.querySelectorAll(".hamburger-line");
-  const mobileLinkElements = document.querySelectorAll(".mobile-link");
-  let isMenuOpen = false;
+    // Toggle menú móvil con animaciones
+    const mobileMenuBtn = document.getElementById("mobile-menu-btn");
+    const mobileCloseBtn = document.getElementById("mobile-close-btn");
+    const mobileMenu = document.getElementById("mobile-menu");
+    const navbar = document.getElementById("navbar");
+    const hamburgerLines = document.querySelectorAll(".hamburger-line");
+    const mobileLinkElements = document.querySelectorAll(".mobile-link");
+    let isMenuOpen = false;
 
-  mobileMenuBtn?.addEventListener("click", () => {
-    isMenuOpen = !isMenuOpen;
-
-    if (isMenuOpen) {
+    // Función para abrir el menú
+    function openMenu() {
+      isMenuOpen = true;
       // Abrir menú
       mobileMenu?.classList.remove("translate-x-full");
       document.body.style.overflow = "hidden";
 
-      // Animar hamburger a X
-      hamburgerLines[0]?.classList.add(
-        "rotate-45",
-        "top-1/2",
-        "-translate-y-1/2",
-      );
-      hamburgerLines[0]?.classList.remove("top-0");
-      hamburgerLines[1]?.classList.add("opacity-0");
-      hamburgerLines[2]?.classList.add(
-        "-rotate-45",
-        "top-1/2",
-        "-translate-y-1/2",
-      );
-      hamburgerLines[2]?.classList.remove("bottom-0");
+      // Ocultar el botón hamburger para evitar doble X
+      if (mobileMenuBtn) {
+        mobileMenuBtn.style.opacity = "0";
+        mobileMenuBtn.style.pointerEvents = "none";
+      }
 
       // Animar links con delay
       mobileLinkElements.forEach((link, index) => {
@@ -202,108 +250,117 @@ const whatsappMessage = encodeURIComponent(
           link.classList.add("fade-in");
         }, index * 100);
       });
-    } else {
+    }
+
+    // Función para cerrar el menú
+    function closeMenu() {
+      isMenuOpen = false;
       // Cerrar menú
       mobileMenu?.classList.add("translate-x-full");
       document.body.style.overflow = "";
 
-      // Animar X a hamburger
-      hamburgerLines[0]?.classList.remove(
-        "rotate-45",
-        "top-1/2",
-        "-translate-y-1/2",
-      );
-      hamburgerLines[0]?.classList.add("top-0");
-      hamburgerLines[1]?.classList.remove("opacity-0");
-      hamburgerLines[2]?.classList.remove(
-        "-rotate-45",
-        "top-1/2",
-        "-translate-y-1/2",
-      );
-      hamburgerLines[2]?.classList.add("bottom-0");
+      // Mostrar el botón hamburger nuevamente
+      if (mobileMenuBtn) {
+        mobileMenuBtn.style.opacity = "1";
+        mobileMenuBtn.style.pointerEvents = "auto";
+      }
 
       // Remover animación de links
       mobileLinkElements.forEach((link) => {
         link.classList.remove("fade-in");
       });
     }
-  });
 
-  // Cerrar menú móvil al hacer clic en un enlace
-  mobileLinkElements?.forEach((link) => {
-    link.addEventListener("click", () => {
+    // Event listener para el botón hamburger
+    mobileMenuBtn?.addEventListener("click", () => {
       if (isMenuOpen) {
-        mobileMenuBtn?.click();
+        closeMenu();
+      } else {
+        openMenu();
       }
     });
-  });
 
-  // Cambiar fondo del navbar y color de letras al hacer scroll
-  const navLinks = document.querySelectorAll(".nav-link");
+    // Event listener para el botón de cierre (X)
+    mobileCloseBtn?.addEventListener("click", () => {
+      closeMenu();
+    });
 
-  window.addEventListener("scroll", () => {
-    if (window.scrollY > 50) {
-      // Scroll hacia abajo: plomo claro con blur y letras negras
-      navbar?.classList.remove("bg-black/30");
-      navbar?.classList.add("bg-gray-200/95", "shadow-lg");
-
-      // Cambiar letras a negro
-      navLinks.forEach((link) => {
-        link.classList.remove("text-white");
-        link.classList.add("text-black");
-      });
-    } else {
-      // Arriba: transparente con blur y letras blancas
-      navbar?.classList.add("bg-black/30");
-      navbar?.classList.remove("bg-gray-200/95", "shadow-lg");
-
-      // Cambiar letras a blanco
-      navLinks.forEach((link) => {
-        link.classList.add("text-white");
-        link.classList.remove("text-black");
-      });
-    }
-  });
-
-  // Smooth scroll para todos los enlaces con #
-  document.querySelectorAll('a[href^="#"]').forEach((anchor) => {
-    anchor.addEventListener("click", (e) => {
-      const href = (anchor as HTMLAnchorElement).getAttribute("href");
-      if (href && href !== "#") {
-        e.preventDefault();
-        const target = document.querySelector(href);
-        if (target) {
-          target.scrollIntoView({ behavior: "smooth", block: "start" });
+    // Cerrar menú móvil al hacer clic en un enlace
+    mobileLinkElements?.forEach((link) => {
+      link.addEventListener("click", () => {
+        if (isMenuOpen) {
+          closeMenu();
         }
+      });
+    });
+
+    // Cambiar fondo del navbar y color de letras al hacer scroll
+    const navLinks = document.querySelectorAll(".nav-link");
+
+    window.addEventListener("scroll", () => {
+      if (window.scrollY > 50) {
+        // Scroll hacia abajo: plomo claro con blur y letras negras
+        navbar?.classList.remove("bg-black/30");
+        navbar?.classList.add("bg-gray-200/95", "shadow-lg");
+
+        // Cambiar letras a negro
+        navLinks.forEach((link) => {
+          link.classList.remove("text-white");
+          link.classList.add("text-black");
+        });
+      } else {
+        // Arriba: transparente con blur y letras blancas
+        navbar?.classList.add("bg-black/30");
+        navbar?.classList.remove("bg-gray-200/95", "shadow-lg");
+
+        // Cambiar letras a blanco
+        navLinks.forEach((link) => {
+          link.classList.add("text-white");
+          link.classList.remove("text-black");
+        });
       }
     });
-  });
-</script>
 
-<style>
-  /* Hamburger lines */
-  .hamburger-line {
-    position: absolute;
-    width: 100%;
-    height: 2px;
-    background-color: white;
-    border-radius: 9999px;
-    transition: all 0.3s ease;
-  }
+    // Smooth scroll para todos los enlaces con #
+    document.querySelectorAll('a[href^="#"]').forEach((anchor) => {
+      anchor.addEventListener("click", (e) => {
+        const href = (anchor as HTMLAnchorElement).getAttribute("href");
+        if (href && href !== "#") {
+          e.preventDefault();
+          const target = document.querySelector(href);
+          if (target) {
+            target.scrollIntoView({ behavior: "smooth", block: "start" });
+          }
+        }
+      });
+    });
+  </script>
 
-  /* Animaci�n de fade-in para links */
-  @keyframes fadeIn {
-    from {
-      opacity: 0;
-      transform: translateY(20px);
+  <style>
+    /* Hamburger lines */
+    .hamburger-line {
+      position: absolute;
+      width: 100%;
+      height: 2px;
+      background-color: white;
+      border-radius: 9999px;
+      transition: all 0.3s ease;
     }
-    to {
-      opacity: 1;
-      transform: translateY(0);
-    }
-  }
 
-  .fade-in {
-    animation: fadeIn 0.5s ease-out forwards;
-  }
-</style>
+    /* Animacin de fade-in para links */
+    @keyframes fadeIn {
+      from {
+        opacity: 0;
+        transform: translateY(20px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .fade-in {
+      animation: fadeIn 0.5s ease-out forwards;
+    }
+  </style>
+</div>

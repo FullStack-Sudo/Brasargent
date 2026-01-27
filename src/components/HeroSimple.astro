@@ -2,7 +2,7 @@
 // Hero section con imagen full-bleed, overlay oscuro y CTA WhatsApp
 const whatsappNumber = "59178555886";
 const whatsappMessage = encodeURIComponent(
-  "Hola! Me gustaría hacer una reserva en Brasargent Rodizio",
+  "Hola! Me gustaría hacer una reserva en Brasargent",
 );
 ---
 
@@ -16,7 +16,7 @@ const whatsappMessage = encodeURIComponent(
     <iframe
       class="absolute top-1/2 left-1/2 w-[300%] h-[300%] -translate-x-1/2 -translate-y-1/2 pointer-events-none"
       src="https://www.youtube.com/embed/Rz44dRvbFPM?autoplay=1&mute=1&loop=1&playlist=Rz44dRvbFPM&controls=0&showinfo=0&rel=0&modestbranding=1&playsinline=1"
-      title="Brasargent Rodizio Background"
+      title="Brasargent Background"
       frameborder="0"
       allow="autoplay; encrypted-media"></iframe>
     <!-- Overlay oscuro para mejorar legibilidad del texto -->
@@ -28,59 +28,47 @@ const whatsappMessage = encodeURIComponent(
 
   <!-- Contenido centrado -->
   <div class="relative z-10 text-center px-4 sm:px-6 lg:px-8 max-w-4xl mx-auto">
-    <!-- Título principal -->
-    <h1
-      class="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold text-white mb-6 leading-tight"
+    <div
+      id="hero-cta-container"
+      class="transition-all duration-700 ease-out"
+      data-aos="fade-up"
+      data-aos-delay="300"
     >
-      <span
-        class="bg-gradient-to-r from-[#9e2a2b] to-[#d4af37] bg-clip-text text-transparent"
-        >El mejor Rodizio del País</span
+      <a
+        href="/#contacto"
+        id="hero-reserve-btn"
+        class="inline-block bg-[#9e2a2b] text-white px-12 py-6 rounded-lg font-bold text-2xl hover:bg-[#8a2426] hover:shadow-2xl hover:shadow-[#9e2a2b]/60 transition-all duration-300 hover:scale-105 border-2 border-[#9e2a2b] hover:border-[#fa69695e]"
       >
-    </h1>
-    <!-- CTAs -->
-    <div class="flex flex-col sm:flex-row gap-4 justify-center items-center"></div>
-    <!-- Info adicional -->
-    <div class="mt-12 flex flex-wrap justify-center gap-8 text-white/80">
-      <div class="flex items-center gap-2">
-        <svg
-          class="w-5 h-5 text-[#d4af37]"
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
-        >
-          <path
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            stroke-width="2"
-            d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"
-          ></path>
-          <path
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            stroke-width="2"
-            d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path>
-        </svg>
-        <span class="text-sm sm:text-base"
-          >Patio Design, Av. Busch 3er anillo</span
-        >
-      </div>
-      <div class="flex items-center gap-2">
-        <svg
-          class="w-5 h-5 text-[#d4af37]"
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
-        >
-          <path
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            stroke-width="2"
-            d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-        </svg>
-        <span class="text-sm sm:text-base">Lun - Dom: 12:00 - 23:00</span>
-      </div>
+        Reservar Mesa
+      </a>
     </div>
   </div>
+
+  <script>
+    // Animación del botón Reservar Mesa
+    window.addEventListener("scroll", () => {
+      const heroBtn = document.getElementById("hero-reserve-btn");
+      const heroCont = document.getElementById("hero-cta-container");
+      const navbarBtn = document.querySelector('nav a[href="/#contacto"]');
+
+      if (!heroBtn || !heroCont || !navbarBtn) return;
+
+      const scrollY = window.scrollY;
+      const threshold = 200; // Píxeles de scroll para activar la animación
+
+      if (scrollY > threshold) {
+        // Ocultar botón del hero con fade out y scale
+        heroCont.style.opacity = "0";
+        heroCont.style.transform = "translateY(-50px) scale(0.8)";
+        heroCont.style.pointerEvents = "none";
+      } else {
+        // Mostrar botón del hero
+        heroCont.style.opacity = "1";
+        heroCont.style.transform = "translateY(0) scale(1)";
+        heroCont.style.pointerEvents = "auto";
+      }
+    });
+  </script>
 
   <!-- Indicador de scroll -->
   <div class="absolute bottom-8 left-1/2 -translate-x-1/2 z-10 animate-bounce">

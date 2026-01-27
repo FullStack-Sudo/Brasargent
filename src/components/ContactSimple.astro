@@ -21,130 +21,140 @@ const whatsappNumber = "59178555886";
   <div class="flex justify-center items-center relative z-10">
     <div class="w-full max-w-3xl px-4 sm:px-6 lg:px-8">
       <!-- Header minimalista -->
-       <br>
-      <div class="text-center mb-16">
+      <br />
+      <div class="text-center mb-12" data-aos="fade-up">
         <h2
           class="text-4xl sm:text-5xl lg:text-6xl font-black text-gray-900 mb-6 tracking-tight"
         >
           Contáctanos
-          <br>
-          <span class="text-[#25D366]">Reserva Ahora</span>
         </h2>
-        <br>
         <p class="text-xl text-gray-600 max-w-2xl mx-auto leading-relaxed">
           Completa el formulario y te responderemos de inmediato por WhatsApp
         </p>
       </div>
-<br>
-      <!-- Formulario Futurista -->
-      <div
-        class="bg-white/40 backdrop-blur-2xl rounded-3xl p-8 sm:p-12 shadow-2xl border border-white/60"
+      <br />
+      <!-- Formulario Futurista con campos flotantes -->
+      <form
+        id="whatsappForm"
+        class="space-y-6"
+        data-aos="fade-up"
+        data-aos-delay="200"
       >
-        <form id="whatsappForm" class="space-y-8">
-          <!-- Grid de 2 columnas -->
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
-            <!-- Nombre Completo -->
-            <div>
-              <label
-                for="fullName"
-                class="block text-sm font-bold text-[#128C7E] mb-3"
-              >
-                Nombre Completo <span class="text-[#25D366]">*</span>
-              </label>
-              <input
-                type="text"
-                id="fullName"
-                name="fullName"
-                required
-                class="w-full px-6 py-4 bg-white/60 backdrop-blur-sm border-2 border-gray-200 rounded-2xl focus:border-[#25D366] focus:bg-white outline-none transition-all text-gray-900 placeholder-gray-400"
-                placeholder="Juan Pérez"
-              />
-            </div>
-
-            <!-- Email -->
-            <div>
-              <label
-                for="email"
-                class="block text-sm font-bold text-[#128C7E] mb-3"
-              >
-                Email <span class="text-gray-400 font-normal">(opcional)</span>
-              </label>
-              <input
-                type="email"
-                id="email"
-                name="email"
-                class="w-full px-6 py-4 bg-white/60 backdrop-blur-sm border-2 border-gray-200 rounded-2xl focus:border-[#25D366] focus:bg-white outline-none transition-all text-gray-900 placeholder-gray-400"
-                placeholder="ejemplo@correo.com"
-              />
-            </div>
-          </div>
-
-          <!-- Número de Referencia -->
-          <div>
+        <!-- Grid de 2 columnas -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <!-- Nombre Completo -->
+          <div
+            class="bg-white/60 backdrop-blur-xl rounded-2xl p-6 shadow-xl border border-white/80 hover:shadow-2xl hover:border-[#25D366]/30 transition-all duration-300"
+            data-animate="fade-up"
+          >
             <label
-              for="referenceNumber"
-              class="block text-sm font-bold text-[#128C7E] mb-3"
+              for="fullName"
+              class="block text-sm font-bold text-[#128C7E] mb-3 text-center"
             >
-              Número de Referencia <span class="text-[#25D366]">*</span>
+              Nombre Completo <span class="text-[#25D366]">*</span>
             </label>
             <input
               type="text"
-              id="referenceNumber"
-              name="referenceNumber"
+              id="fullName"
+              name="fullName"
               required
-              class="w-full px-6 py-4 bg-white/60 backdrop-blur-sm border-2 border-gray-200 rounded-2xl focus:border-[#25D366] focus:bg-white outline-none transition-all text-gray-900 placeholder-gray-400"
-              placeholder="785..."
+              class="w-full px-5 py-3 bg-white/80 backdrop-blur-sm border-2 border-gray-200 rounded-xl focus:border-[#25D366] focus:bg-white outline-none transition-all text-gray-900 placeholder-gray-400"
+              placeholder="Juan Pérez"
             />
           </div>
 
-          <!-- Mensaje -->
-          <div>
-            <label
-              for="message"
-              class="block text-sm font-bold text-[#128C7E] mb-3"
-            >
-              Mensaje <span class="text-[#25D366]">*</span>
-            </label>
-            <textarea
-              id="message"
-              name="message"
-              required
-              rows="6"
-              class="w-full px-6 py-4 bg-white/60 backdrop-blur-sm border-2 border-gray-200 rounded-2xl focus:border-[#25D366] focus:bg-white outline-none transition-all resize-none text-gray-900 placeholder-gray-400"
-              placeholder="Escribe tu mensaje aquí..."></textarea>
-          </div>
-
-          <!-- Botón de envío -->
-          <button
-            type="submit"
-            class="group relative w-full overflow-hidden bg-gradient-to-r from-[#25D366] to-[#128C7E] text-white py-5 rounded-2xl font-bold text-lg shadow-xl hover:shadow-2xl hover:shadow-[#25D366]/30 transition-all duration-300 hover:scale-[1.02]"
+          <!-- Email -->
+          <div
+            class="bg-white/60 backdrop-blur-xl rounded-2xl p-6 shadow-xl border border-white/80 hover:shadow-2xl hover:border-[#25D366]/30 transition-all duration-300"
+            data-animate="fade-up"
           >
-            <span class="relative z-10 flex items-center justify-center gap-3">
-              Enviar por WhatsApp
-              <svg
-                class="w-6 h-6 group-hover:translate-x-1 transition-transform"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M14 5l7 7m0 0l-7 7m7-7H3"></path>
-              </svg>
-            </span>
-            <div
-              class="absolute inset-0 bg-white/20 transform -translate-x-full group-hover:translate-x-full transition-transform duration-700 ease-in-out"
+            <label
+              for="email"
+              class="block text-sm font-bold text-[#128C7E] mb-3 text-center"
             >
-            </div>
-          </button>
-        </form>
-      </div>
-<br>
+              Email <span class="text-gray-400 font-normal">(opcional)</span>
+            </label>
+            <input
+              type="email"
+              id="email"
+              name="email"
+              class="w-full px-5 py-3 bg-white/80 backdrop-blur-sm border-2 border-gray-200 rounded-xl focus:border-[#25D366] focus:bg-white outline-none transition-all text-gray-900 placeholder-gray-400"
+              placeholder="ejemplo@correo.com"
+            />
+          </div>
+        </div>
+
+        <!-- Número de Referencia -->
+        <div
+          class="bg-white/60 backdrop-blur-xl rounded-2xl p-6 shadow-xl border border-white/80 hover:shadow-2xl hover:border-[#25D366]/30 transition-all duration-300"
+          data-animate="fade-up"
+        >
+          <label
+            for="referenceNumber"
+            class="block text-sm font-bold text-[#128C7E] mb-3 text-center"
+          >
+            Número de Referencia <span class="text-[#25D366]">*</span>
+          </label>
+          <input
+            type="text"
+            id="referenceNumber"
+            name="referenceNumber"
+            required
+            class="w-full px-5 py-3 bg-white/80 backdrop-blur-sm border-2 border-gray-200 rounded-xl focus:border-[#25D366] focus:bg-white outline-none transition-all text-gray-900 placeholder-gray-400"
+            placeholder="785..."
+          />
+        </div>
+
+        <!-- Mensaje -->
+        <div
+          class="bg-white/60 backdrop-blur-xl rounded-2xl p-6 shadow-xl border border-white/80 hover:shadow-2xl hover:border-[#25D366]/30 transition-all duration-300"
+          data-animate="fade-up"
+        >
+          <label
+            for="message"
+            class="block text-sm font-bold text-[#128C7E] mb-3 text-center"
+          >
+            Mensaje <span class="text-[#25D366]">*</span>
+          </label>
+          <textarea
+            id="message"
+            name="message"
+            required
+            rows="6"
+            class="w-full px-5 py-3 bg-white/80 backdrop-blur-sm border-2 border-gray-200 rounded-xl focus:border-[#25D366] focus:bg-white outline-none transition-all resize-none text-gray-900 placeholder-gray-400"
+            placeholder="Escribe tu mensaje aquí..."></textarea>
+        </div>
+
+        <!-- Botón de envío -->
+        <button
+          type="submit"
+          class="group relative w-full overflow-hidden bg-gradient-to-r from-[#25D366] to-[#128C7E] text-white py-5 rounded-2xl font-bold text-lg shadow-xl hover:shadow-2xl hover:shadow-[#25D366]/30 transition-all duration-300 hover:scale-[1.02]"
+        >
+          <span class="relative z-10 flex items-center justify-center gap-3">
+            Enviar por WhatsApp
+            <svg
+              class="w-6 h-6 group-hover:translate-x-1 transition-transform"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M14 5l7 7m0 0l-7 7m7-7H3"></path>
+            </svg>
+          </span>
+          <div
+            class="absolute inset-0 bg-white/20 transform -translate-x-full group-hover:translate-x-full transition-transform duration-700 ease-in-out"
+          >
+          </div>
+        </button>
+      </form>
+      <br />
       <!-- Información de contacto -->
       <div class="grid grid-cols-1 md:grid-cols-2 gap-8 mt-16">
-        <!-- Dirección -->
+        <!-- Dirección
         <div
           class="bg-white/40 backdrop-blur-xl rounded-2xl p-8 border border-white/60 hover:border-[#25D366]/50 transition-all hover:shadow-lg"
         >
@@ -163,10 +173,10 @@ const whatsappNumber = "59178555886";
               Santa Cruz, Bolivia
             </p>
           </div>
-        </div>
+        </div> -->
 
         <!-- Horarios -->
-        <div
+        <!-- <div
           class="bg-white/40 backdrop-blur-xl rounded-2xl p-8 border border-white/60 hover:border-[#25D366]/50 transition-all hover:shadow-lg"
         >
           <div class="text-center">
@@ -185,10 +195,10 @@ const whatsappNumber = "59178555886";
             </div>
           </div>
         </div>
-      </div>
-<br>
-      <!-- Mapa -->
-      <div class="mt-12">
+      </div> -->
+        <br />
+        <!-- Mapa -->
+        <!-- <div class="mt-12">
         <h3
           class="text-3xl font-black text-gray-900 mb-6 text-center tracking-tight"
         >
@@ -209,52 +219,56 @@ const whatsappNumber = "59178555886";
         </div>
       </div>
     </div>
+  </div> -->
+      </div>
+      <br />
+      <script>
+        // Script para manejar el envío del formulario a WhatsApp
+        document
+          .getElementById("whatsappForm")
+          ?.addEventListener("submit", function (e) {
+            e.preventDefault();
+
+            // Obtener valores del formulario
+            const fullName = (
+              document.getElementById("fullName") as HTMLInputElement
+            ).value;
+            const email = (document.getElementById("email") as HTMLInputElement)
+              .value;
+            const referenceNumber = (
+              document.getElementById("referenceNumber") as HTMLInputElement
+            ).value;
+            const message = (
+              document.getElementById("message") as HTMLTextAreaElement
+            ).value;
+
+            // Construir el mensaje para WhatsApp
+            let whatsappMessage = `*Nuevo Contacto - Brasargent Rodizio*\n\n`;
+            whatsappMessage += `👤 *Nombre:* ${fullName}\n`;
+
+            if (email) {
+              whatsappMessage += `📧 *Email:* ${email}\n`;
+            }
+
+            whatsappMessage += `📞 *Número de Referencia:* ${referenceNumber}\n\n`;
+            whatsappMessage += `💬 *Mensaje:*\n${message}`;
+
+            // Codificar el mensaje para URL
+            const encodedMessage = encodeURIComponent(whatsappMessage);
+
+            // Número de WhatsApp (sin el +)
+            const whatsappNumber = "59178555886";
+
+            // Abrir WhatsApp con el mensaje
+            window.open(
+              `https://wa.me/${whatsappNumber}?text=${encodedMessage}`,
+              "_blank",
+            );
+
+            // Opcional: Resetear el formulario
+            (e.target as HTMLFormElement).reset();
+          });
+      </script>
+    </div>
   </div>
 </section>
-<br />
-<script>
-  // Script para manejar el envío del formulario a WhatsApp
-  document
-    .getElementById("whatsappForm")
-    ?.addEventListener("submit", function (e) {
-      e.preventDefault();
-
-      // Obtener valores del formulario
-      const fullName = (document.getElementById("fullName") as HTMLInputElement)
-        .value;
-      const email = (document.getElementById("email") as HTMLInputElement)
-        .value;
-      const referenceNumber = (
-        document.getElementById("referenceNumber") as HTMLInputElement
-      ).value;
-      const message = (
-        document.getElementById("message") as HTMLTextAreaElement
-      ).value;
-
-      // Construir el mensaje para WhatsApp
-      let whatsappMessage = `*Nuevo Contacto - Brasargent Rodizio*\n\n`;
-      whatsappMessage += `👤 *Nombre:* ${fullName}\n`;
-
-      if (email) {
-        whatsappMessage += `📧 *Email:* ${email}\n`;
-      }
-
-      whatsappMessage += `📞 *Número de Referencia:* ${referenceNumber}\n\n`;
-      whatsappMessage += `💬 *Mensaje:*\n${message}`;
-
-      // Codificar el mensaje para URL
-      const encodedMessage = encodeURIComponent(whatsappMessage);
-
-      // Número de WhatsApp (sin el +)
-      const whatsappNumber = "59178555886";
-
-      // Abrir WhatsApp con el mensaje
-      window.open(
-        `https://wa.me/${whatsappNumber}?text=${encodedMessage}`,
-        "_blank",
-      );
-
-      // Opcional: Resetear el formulario
-      (e.target as HTMLFormElement).reset();
-    });
-</script>

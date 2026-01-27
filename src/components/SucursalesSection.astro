@@ -42,7 +42,11 @@ const sucursales = [
 ];
 ---
 
-<section id="sucursales" class="relative py-24 overflow-hidden">
+<section
+  id="sucursales"
+  class="relative pb-24 overflow-hidden"
+  style="padding-top: 250px;"
+>
   <!-- Imagen de fondo -->
   <div class="absolute inset-0 w-full h-full">
     <img
@@ -58,7 +62,7 @@ const sucursales = [
   <!-- Efectos de fondo decorativos (reducidos) -->
   <div class="absolute inset-0 opacity-5">
     <div
-      class="absolute top-20 left-10 w-96 h-96 bg-[#d4af37] rounded-full filter blur-[120px] animate-pulse"
+      class="absolute top-50 left-10 w-96 h-96 bg-[#d4af37] rounded-full filter blur-[120px] animate-pulse"
     >
     </div>
     <div
@@ -71,7 +75,7 @@ const sucursales = [
   <div class="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
     <!-- Header -->
     <br />
-    <div class="text-center mb-16 space-y-4">
+    <div class="text-center mb-16 space-y-4" data-aos="fade-up">
       <h2
         class="text-5xl md:text-6xl font-bold text-white drop-shadow-[0_2px_8px_rgba(0,0,0,0.8)]"
       >
@@ -81,7 +85,6 @@ const sucursales = [
           Encuentra tu Brasargent más cercano
         </span>
       </h2>
-      <br />
     </div>
 
     <!-- Grid de Sucursales - Grid cuadrado centrado -->
@@ -90,8 +93,12 @@ const sucursales = [
         class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 max-w-7xl mx-auto"
       >
         {
-          sucursales.map((sucursal) => (
-            <div class="group relative w-full min-h-[600px] bg-white rounded-2xl shadow-2xl hover:shadow-[0_20px_60px_rgba(0,0,0,0.5)] transition-all duration-300 flex flex-col pb-6">
+          sucursales.map((sucursal, index) => (
+            <div
+              class="group relative w-full min-h-[600px] bg-white rounded-2xl shadow-2xl hover:shadow-[0_20px_60px_rgba(0,0,0,0.5)] transition-all duration-300 flex flex-col pb-6"
+              data-aos="fade-up"
+              data-aos-delay={index * 100}
+            >
               {/* Imagen de la sucursal */}
               <div class="relative h-64 overflow-hidden rounded-t-2xl">
                 <img
@@ -291,7 +298,7 @@ const sucursales = [
     <br />
     <br />
     {/* CTA Final */}
-    <div class="mt-16 text-center">
+    <div class="mt-16 text-center" data-aos="fade-up" data-aos-delay="200">
       <div
         class="inline-block bg-white/80 backdrop-blur-xl rounded-2xl border border-gray-200 shadow-lg p-8"
       >
@@ -371,36 +378,36 @@ const sucursales = [
         class="sticky top-0 z-10 bg-white border-b border-gray-200 shadow-md"
       >
         <nav
-          class="flex justify-center items-center gap-6 py-4 px-6"
+          class="flex justify-start md:justify-center items-center gap-4 md:gap-6 py-4 px-4 overflow-x-auto whitespace-nowrap no-scrollbar"
           id="menu-nav"
         >
           <button
             data-section="entradas"
-            class="menu-nav-btn px-4 py-2 text-lg font-bold text-gray-600 hover:text-[#9e2a2b] hover:bg-gray-50 transition-all duration-300 border-b-2 border-transparent rounded-lg"
+            class="menu-nav-btn px-4 py-2 text-base md:text-lg font-bold text-gray-600 hover:text-[#9e2a2b] hover:bg-gray-50 transition-all duration-300 border-b-2 border-transparent rounded-lg flex-shrink-0"
           >
             Entradas
           </button>
           <button
             data-section="cortes-clasicos"
-            class="menu-nav-btn px-4 py-2 text-lg font-bold text-gray-600 hover:text-[#9e2a2b] hover:bg-gray-50 transition-all duration-300 border-b-2 border-transparent rounded-lg"
+            class="menu-nav-btn px-4 py-2 text-base md:text-lg font-bold text-gray-600 hover:text-[#9e2a2b] hover:bg-gray-50 transition-all duration-300 border-b-2 border-transparent rounded-lg flex-shrink-0"
           >
             Cortes Clásicos
           </button>
           <button
             data-section="platos-premium"
-            class="menu-nav-btn px-4 py-2 text-lg font-bold text-gray-600 hover:text-[#9e2a2b] hover:bg-gray-50 transition-all duration-300 border-b-2 border-transparent rounded-lg"
+            class="menu-nav-btn px-4 py-2 text-base md:text-lg font-bold text-gray-600 hover:text-[#9e2a2b] hover:bg-gray-50 transition-all duration-300 border-b-2 border-transparent rounded-lg flex-shrink-0"
           >
             Platos Premium
           </button>
           <button
             data-section="cortes-junior"
-            class="menu-nav-btn px-4 py-2 text-lg font-bold text-gray-600 hover:text-[#9e2a2b] hover:bg-gray-50 transition-all duration-300 border-b-2 border-transparent rounded-lg"
+            class="menu-nav-btn px-4 py-2 text-base md:text-lg font-bold text-gray-600 hover:text-[#9e2a2b] hover:bg-gray-50 transition-all duration-300 border-b-2 border-transparent rounded-lg flex-shrink-0"
           >
             Cortes Junior
           </button>
           <button
             data-section="bebidas"
-            class="menu-nav-btn px-4 py-2 text-lg font-bold text-gray-600 hover:text-[#9e2a2b] hover:bg-gray-50 transition-all duration-300 border-b-2 border-transparent rounded-lg"
+            class="menu-nav-btn px-4 py-2 text-base md:text-lg font-bold text-gray-600 hover:text-[#9e2a2b] hover:bg-gray-50 transition-all duration-300 border-b-2 border-transparent rounded-lg flex-shrink-0"
           >
             Bebidas
           </button>

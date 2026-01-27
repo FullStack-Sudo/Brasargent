@@ -52,9 +52,23 @@ const {
         color: var(--color-carbon);
       }
     </style>
+
+    <!-- AOS CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/aos@2.3.1/dist/aos.css" />
   </head>
   <body class="antialiased">
     <!-- Contenido de la página -->
     <slot />
+
+    <!-- AOS JavaScript -->
+    <script>
+      import AOS from "aos";
+      AOS.init({
+        duration: 1000,
+        once: true,
+        offset: 100,
+        easing: "ease-out-cubic",
+      });
+    </script>
   </body>
 </html>
