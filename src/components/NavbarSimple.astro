@@ -8,7 +8,7 @@ const whatsappMessage = encodeURIComponent(
 
 <nav
   id="navbar"
-  class="fixed top-0 left-0 right-0 z-50 transition-all duration-300 backdrop-blur-md bg-black/30"
+  class="fixed top-0 left-0 right-0 z-50 transition-all duration-300 backdrop-blur-md bg-white/5"
 >
   <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
     <div class="flex justify-between items-center h-20">
@@ -28,8 +28,8 @@ const whatsappMessage = encodeURIComponent(
         />
       </a>
 
-      <!-- Todos los botones a la derecha (Desktop) -->
-      <div class="hidden md:flex items-center gap-8">
+      <!-- Ocultar botones a la derecha (Cambiado a hidden siempre) -->
+      <div class="hidden items-center gap-8">
         <a
           href="/#inicio"
           class="nav-link text-white hover:text-[#3f371f] transition-colors font-medium"
@@ -65,7 +65,7 @@ const whatsappMessage = encodeURIComponent(
       <!-- Botón menú móvil animado -->
       <button
         id="mobile-menu-btn"
-        class="md:hidden relative w-20 h-10 text-white focus:outline-none z-50 flex items-center justify-center transition-opacity duration-300 mr-8"
+        class="relative w-20 h-10 text-white focus:outline-none z-50 flex items-center justify-center transition-opacity duration-300 mr-8"
         aria-label="Abrir menú"
       >
         <div class="relative w-6 h-5">
@@ -81,7 +81,7 @@ const whatsappMessage = encodeURIComponent(
 <!-- Menú móvil moderno - Pantalla completa -->
 <div
   id="mobile-menu"
-  class="fixed inset-0 z-[9999] transform translate-x-full transition-transform duration-500 ease-out md:hidden"
+  class="fixed inset-0 z-[9999] transform translate-x-full transition-transform duration-500 ease-out"
 >
   <!-- Overlay oscuro completo con mejor opacidad -->
   <div class="absolute inset-0 bg-black/95 backdrop-blur-md"></div>
@@ -326,7 +326,7 @@ const whatsappMessage = encodeURIComponent(
     window.addEventListener("scroll", () => {
       if (window.scrollY > 50) {
         // Scroll hacia abajo: plomo claro con blur y letras negras
-        navbar?.classList.remove("bg-black/30");
+        navbar?.classList.remove("bg-white/5", "bg-black/30");
         navbar?.classList.add("bg-gray-200/95", "shadow-lg");
 
         // Cambiar letras a negro
@@ -334,15 +334,25 @@ const whatsappMessage = encodeURIComponent(
           link.classList.remove("text-white");
           link.classList.add("text-black");
         });
+
+        // Cambiar hamburger a negro
+        hamburgerLines.forEach((line) => {
+          (line as HTMLElement).style.backgroundColor = "black";
+        });
       } else {
         // Arriba: transparente con blur y letras blancas
-        navbar?.classList.add("bg-black/30");
-        navbar?.classList.remove("bg-gray-200/95", "shadow-lg");
+        navbar?.classList.add("bg-white/5");
+        navbar?.classList.remove("bg-gray-200/95", "shadow-lg", "bg-black/30");
 
         // Cambiar letras a blanco
         navLinks.forEach((link) => {
           link.classList.add("text-white");
           link.classList.remove("text-black");
+        });
+
+        // Cambiar hamburger a blanco
+        hamburgerLines.forEach((line) => {
+          (line as HTMLElement).style.backgroundColor = "white";
         });
       }
     });

@@ -1,0 +1,213 @@
+---
+// Componente de Testimonios con carrusel y tipografía Poppins
+---
+
+<style>
+  @import url("https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&display=swap");
+
+  .testimonials-section * {
+    font-family: "Poppins", sans-serif;
+  }
+</style>
+
+<section
+  id="testimonios"
+  class="testimonials-section py-20 px-4 sm:px-6 lg:px-8"
+  style="background-image: linear-gradient(135deg, rgba(244, 244, 244,0.07) 0%, rgba(244, 244, 244,0.07) 12.5%,rgba(211, 211, 211,0.07) 12.5%, rgba(211, 211, 211,0.07) 25%,rgba(178, 178, 178,0.07) 25%, rgba(178, 178, 178,0.07) 37.5%,rgba(145, 145, 145,0.07) 37.5%, rgba(145, 145, 145,0.07) 50%,rgba(113, 113, 113,0.07) 50%, rgba(113, 113, 113,0.07) 62.5%,rgba(80, 80, 80,0.07) 62.5%, rgba(80, 80, 80,0.07) 75%,rgba(47, 47, 47,0.07) 75%, rgba(47, 47, 47,0.07) 87.5%,rgba(14, 14, 14,0.07) 87.5%, rgba(14, 14, 14,0.07) 100%),linear-gradient(45deg, rgba(236, 236, 236,0.07) 0%, rgba(236, 236, 236,0.07) 12.5%,rgba(210, 210, 210,0.07) 12.5%, rgba(210, 210, 210,0.07) 25%,rgba(183, 183, 183,0.07) 25%, rgba(183, 183, 183,0.07) 37.5%,rgba(157, 157, 157,0.07) 37.5%, rgba(157, 157, 157,0.07) 50%,rgba(130, 130, 130,0.07) 50%, rgba(130, 130, 130,0.07) 62.5%,rgba(104, 104, 104,0.07) 62.5%, rgba(104, 104, 104,0.07) 75%,rgba(77, 77, 77,0.07) 75%, rgba(77, 77, 77,0.07) 87.5%,rgba(51, 51, 51,0.07) 87.5%, rgba(51, 51, 51,0.07) 100%),linear-gradient(90deg, #ffffff,#ffffff);"
+>
+  <div class="w-full max-w-6xl mx-auto">
+    <h2
+      class="text-neutral-900 font-medium text-4xl md:text-[40px] text-center md:text-left"
+    >
+      Nuestros Clientes
+    </h2>
+    <p
+      class="text-neutral-800 text-sm/6 mt-4 max-w-96 text-center md:text-left mx-auto md:mx-0"
+    >
+      Cada testimonio es una prueba del impacto profundo que nos esforzamos por
+      crear cada día.
+    </p>
+
+    <div class="hidden md:flex justify-end gap-2 mt-4">
+      <button
+        id="prev-btn"
+        class="h-10 w-10 rounded-lg bg-neutral-100 border border-neutral-200 flex items-center justify-center cursor-pointer hover:bg-neutral-200 transition-all text-neutral-500"
+        aria-label="Previous"
+      >
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          width="20"
+          height="20"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          ><path d="m12 19-7-7 7-7"></path><path d="M19 12H5"></path></svg
+        >
+      </button>
+      <button
+        id="next-btn"
+        class="h-10 w-10 rounded-lg bg-neutral-100 border border-neutral-200 flex items-center justify-center cursor-pointer hover:bg-neutral-200 transition-all text-neutral-500"
+        aria-label="Next"
+      >
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          width="20"
+          height="20"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          ><path d="M5 12h14"></path><path d="m12 5 7 7-7 7"></path></svg
+        >
+      </button>
+    </div>
+
+    <div
+      id="testimonials"
+      class="mx-auto grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 px-8 md:px-0 mt-12 md:mt-6"
+    >
+    </div>
+
+    <div
+      id="dots"
+      class="hidden max-md:flex items-center justify-center mt-5 gap-2"
+    >
+    </div>
+  </div>
+</section>
+
+<script>
+  const testimonials = [
+    {
+      id: 1,
+      date: "Enero 2026",
+      text: 'La mejor experiencia👌',
+      name: "Ruth Niva Loza Mendoza",
+      role: "Facebook",
+      img: "/img/logo/logo.jpg",
+    },
+    {
+      id: 2,
+      date: "Enero 2026",
+      text: 'Mi restaurante favorito de toda la vida!!! Ahora que vivo en otro país, voy sin falta el día que llego 😁. La mejor comida y la mejor atención de nuestro amigo de siempre Juvenal y todo el equipo.',
+      name: "Monina Montes",
+      role: "Facebook",
+      img: "/img/logo/logo.jpg",
+    },
+    {
+      id: 3,
+      date: "Enero 2026",
+      text: 'Execelente servicio y la carne la mejor',
+      name: "KariNoe LFer",
+      role: "Facebook",
+      img: "/img/logo/logo.jpg",
+    },
+    {
+      id: 4,
+      date: "Enero 2026",
+      text: 'Muchas felicidades querida Ruthy y a todo su equipo! Por estos años que no son pocos! Bendiciones y siga adelante!🥰🥂🍾',
+      name: "Negra Zambrana",
+      role: "Facebook",
+      img: "/img/logo/logo.jpg",
+    },
+    {
+      id: 5,
+      date: "Enero 2026",
+      text: 'Sin duda alguna, el mejor 👌 Bendiciones y muchos éxitos más 🙌🙌🙌',
+      name: "Golding Cespedes Barbery",
+      role: "Facebook",
+      img: "/img/logo/logo.jpg",
+    },
+  ];
+
+  let index = 0,
+    mobile = window.innerWidth < 768,
+    timer;
+
+  const render = () => {
+    const container = document.getElementById("testimonials");
+    const dotsContainer = document.getElementById("dots");
+    if (!container || !dotsContainer) return;
+
+    const count = mobile ? 1 : 3;
+    const visibleTestimonials = testimonials.slice(index, index + count);
+
+    container.innerHTML = visibleTestimonials
+      .map(
+        (t) => `
+            <div class="bg-zinc-50/80 backdrop-blur-sm hover:-translate-y-1 transition duration-300 border border-zinc-200 rounded-2xl p-6 space-y-6">
+                <div class="flex items-start justify-between">
+                    <div class="flex">${'<svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="#FF8F20"><path d="M11.525 2.295a.53.53 0 0 1 .95 0l2.31 4.679a2.123 2.123 0 0 0 1.595 1.16l5.166.756a.53.53 0 0 1 .294.904l-3.736 3.638a2.123 2.123 0 0 0-.611 1.878l.882 5.14a.53.53 0 0 1-.771.56l-4.618-2.428a2.122 2.122 0 0 0-1.973 0L6.396 21.01a.53.53 0 0 1-.77-.56l.881-5.139a2.122 2.122 0 0 0-.611-1.879L2.16 9.795a.53.53 0 0 1 .294-.906l5.165-.755a2.122 2.122 0 0 0 1.597-1.16z"/></svg>'.repeat(5)}</div>
+                    <p class="text-xs text-neutral-500">${t.date}</p>
+                </div>
+                <p class="text-sm/6 text-neutral-600">${t.text}</p>
+                <div class="flex items-center gap-4">
+                    <img src="${t.img}" alt="${t.name}" class="w-12 h-12 rounded-full object-cover">
+                    <div>
+                        <p class="text-sm text-neutral-700 font-medium">${t.name}</p>
+                        <p class="text-xs text-neutral-500">${t.role}</p>
+                    </div>
+                </div>
+            </div>
+        `,
+      )
+      .join("");
+
+    dotsContainer.innerHTML = testimonials
+      .map(
+        (_, i) =>
+          `<button class="w-3 h-3 rounded-full transition ${i === index ? "bg-neutral-800" : "bg-neutral-300"}" data-index="${i}" aria-label="Slide ${i + 1}"></button>`,
+      )
+      .join("");
+
+    // Re-attach listeners to dots
+    dotsContainer.querySelectorAll("button").forEach((btn) => {
+      btn.onclick = (e) => {
+        index = parseInt(e.target.dataset.index);
+        render();
+      };
+    });
+  };
+
+  const prevBtn = document.getElementById("prev-btn");
+  const nextBtn = document.getElementById("next-btn");
+
+  if (prevBtn)
+    prevBtn.onclick = () => {
+      index = index - 3 < 0 ? Math.max(testimonials.length - 3, 0) : index - 3;
+      render();
+    };
+  if (nextBtn)
+    nextBtn.onclick = () => {
+      index = index + 3 >= testimonials.length ? 0 : index + 3;
+      render();
+    };
+
+  window.addEventListener("resize", () => {
+    const wasMobile = mobile;
+    mobile = window.innerWidth < 768;
+    if (mobile !== wasMobile) {
+      clearInterval(timer);
+      if (mobile) {
+        timer = setInterval(() => {
+          index = (index + 1) % testimonials.length;
+          render();
+        }, 3000);
+      }
+      render();
+    }
+  });
+
+  if (mobile) {
+    timer = setInterval(() => {
+      index = (index + 1) % testimonials.length;
+      render();
+    }, 3000);
+  }
+  render();
+</script>
