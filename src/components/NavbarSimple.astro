@@ -16,15 +16,21 @@ const whatsappMessage = encodeURIComponent(
       <a href="/" class="flex items-center group ml-8 relative">
         <img
           id="logo-primary"
-          src="/img/logo/logo-SF.png"
+          src="/img/logo/LOGO1SF.png"
           alt="Brasargent Rodizio Logo"
-          class="h-24 w-auto object-contain transition-opacity duration-1000 absolute"
+          class="h-12 w-auto object-contain transition-opacity duration-1000 absolute"
         />
         <img
           id="logo-secondary"
-          src="/img/logo/logoRojo-SF.png"
+          src="/img/logo/LOGO2SF.png"
           alt="Brasargent Rodizio Logo"
-          class="h-24 w-auto object-contain transition-opacity duration-1000 opacity-0"
+          class="h-16 w-auto object-contain transition-opacity duration-1000 absolute opacity-0"
+        />
+        <img
+          id="logo-tertiary"
+          src="/img/logo/LOGO3SF.png"
+          alt="Brasargent Rodizio Logo"
+          class="h-12 w-auto object-contain transition-opacity duration-1000 opacity-0"
         />
       </a>
 
@@ -128,15 +134,21 @@ const whatsappMessage = encodeURIComponent(
 
         <img
           id="mobile-logo-primary"
-          src="/img/logo/logo-SF.png"
+          src="/img/logo/LOGO1SF.png"
           alt="Brasargent Logo"
-          class="h-24 w-auto absolute transition-opacity duration-1000"
+          class="h-12 w-auto absolute transition-opacity duration-1000"
         />
         <img
           id="mobile-logo-secondary"
-          src="/img/logo/logoRojo-SF.png"
+          src="/img/logo/LOGO2SF.png"
           alt="Brasargent Logo"
-          class="h-24 w-auto absolute transition-opacity duration-1000 opacity-0"
+          class="h-14 w-auto absolute transition-opacity duration-1000 opacity-0"
+        />
+        <img
+          id="mobile-logo-tertiary"
+          src="/img/logo/LOGO3SF.png"
+          alt="Brasargent Logo"
+          class="h-12 w-auto absolute transition-opacity duration-1000 opacity-0"
         />
       </div>
 
@@ -219,30 +231,30 @@ const whatsappMessage = encodeURIComponent(
   <div class="h-20"></div>
 
   <script>
-    // Alternancia dinámica del logo (Header y Móvil)
-    const logoPrimary = document.getElementById("logo-primary");
-    const logoSecondary = document.getElementById("logo-secondary");
-    const mobileLogoPrimary = document.getElementById("mobile-logo-primary");
-    const mobileLogoSecondary = document.getElementById(
-      "mobile-logo-secondary",
-    );
-    let isShowingPrimary = true;
+    // Alternancia dinámica del logo (Header y Móvil) - Ciclo de 3 imágenes
+    const logosP = [
+      document.getElementById("logo-primary"),
+      document.getElementById("logo-secondary"),
+      document.getElementById("logo-tertiary"),
+    ];
+    const logosM = [
+      document.getElementById("mobile-logo-primary"),
+      document.getElementById("mobile-logo-secondary"),
+      document.getElementById("mobile-logo-tertiary"),
+    ];
+    let currentIndex = 0;
 
     function alternateLogo() {
-      if (isShowingPrimary) {
-        // Ocultar primario, mostrar secundario
-        logoPrimary?.classList.add("opacity-0");
-        logoSecondary?.classList.remove("opacity-0");
-        mobileLogoPrimary?.classList.add("opacity-0");
-        mobileLogoSecondary?.classList.remove("opacity-0");
-      } else {
-        // Mostrar primario, ocultar secundario
-        logoPrimary?.classList.remove("opacity-0");
-        logoSecondary?.classList.add("opacity-0");
-        mobileLogoPrimary?.classList.remove("opacity-0");
-        mobileLogoSecondary?.classList.add("opacity-0");
-      }
-      isShowingPrimary = !isShowingPrimary;
+      // Ocultar logo actual
+      logosP[currentIndex]?.classList.add("opacity-0");
+      logosM[currentIndex]?.classList.add("opacity-0");
+
+      // Incrementar índice
+      currentIndex = (currentIndex + 1) % logosP.length;
+
+      // Mostrar siguiente logo
+      logosP[currentIndex]?.classList.remove("opacity-0");
+      logosM[currentIndex]?.classList.remove("opacity-0");
     }
 
     // Alternar cada 3 segundos

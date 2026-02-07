@@ -37,7 +37,7 @@ const whatsappMessage = encodeURIComponent(
       <a
         href="/#contacto"
         id="hero-reserve-btn"
-        class="inline-block bg-[#9e2a2b] text-white px-12 py-6 rounded-lg font-bold text-2xl hover:bg-[#8a2426] hover:shadow-2xl hover:shadow-[#9e2a2b]/60 transition-all duration-300 hover:scale-105 border-2 border-[#9e2a2b] hover:border-[#fa69695e]"
+        class="inline-block bg-[#9e2a2b] text-white px-12 py-6 rounded-lg font-bold text-2xl hover:bg-[#8a2426] hover:shadow-2xl hover:shadow-[#9e2a2b]/60 transition-all duration-300 hover:scale-105 border-2 border-[#9e2a2b] hover:border-[#fa69695e] heartbeat-btn"
       >
         Reservar Mesa
       </a>
@@ -86,3 +86,34 @@ const whatsappMessage = encodeURIComponent(
     </svg>
   </div>
 </section>
+
+<style>
+  @keyframes heartbeat {
+    0% {
+      transform: scale(1);
+    }
+    14% {
+      transform: scale(1.1);
+    }
+    28% {
+      transform: scale(1);
+    }
+    42% {
+      transform: scale(1.15);
+    }
+    70% {
+      transform: scale(1);
+    }
+  }
+
+  .heartbeat-btn {
+    animation: heartbeat 2s ease-in-out infinite;
+    will-change: transform;
+  }
+
+  /* Asegurar que el hover gane sobre la animación */
+  .heartbeat-btn:hover {
+    animation: none;
+    transform: scale(1.05);
+  }
+</style>
