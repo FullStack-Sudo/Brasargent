@@ -15,36 +15,38 @@ const sucursales = [
     mapUrl: "https://maps.app.goo.gl/Ee8GbY1Ufdon1KC88",
     type: "Churrasquería",
     status: "",
-    testimonial: "",
+    footerLogo: "/img/logo/LOGO1SF.png",
   },
   {
-    name: "Rodizio",
+    name: "Fast Grill",
     rating: 4.5,
     reviews: "1.3K",
     price: "",
     address: "C. 12 Oeste",
-    hours: "Abre a las 11 a. m.",
+    hours: "Abierto al publico desde las 12:00 PM, hasta las 22:00 PM",
     image: "/img/logo/Sucursal2.jpeg",
     featured: true,
-    whatsapp: "59178787878", // Reemplazar con el número real
+    whatsapp: "59178557004", // Reemplazar con el número real
     type: "Rodizio Tradicional",
     status: "",
-    testimonial: "",
-    mapUrl: "",
+    mapUrl: "https://maps.app.goo.gl/JCHxQszooKH5mJ9S8?g_st=aw",
+    footerLogo: "/img/logo/LOGO2SF.png",
   },
   {
-    name: "Fast Grill",
+    name: "Rodizio",
     rating: 3.9,
     reviews: "100",
     address: "Las Brisas",
-    hours: "",
-    image: "/img/logo/Sucursal3.jpeg",
-    whatsapp: "59178556522", // Reemplazar con el número real
+    hours:
+      "Lunes a Sabado desde las 11:30 am a las 03:30 pm / 06:30 pm a las 22:00 pm / Domingo 11:30 am - 15:30 pm",
+    image: "/img/sucursales/RODIZIO.webp",
+    whatsapp: "59178555509", // Reemplazar con el número real
     type: "Restaurante",
     status: "",
     testimonial: "",
-    mapUrl: "",
-  }
+    mapUrl: "https://maps.app.goo.gl/xs1BckNvmFdErVG2A",
+    footerLogo: "/img/logo/LOGO3SF.png",
+  },
 ];
 ---
 
@@ -73,13 +75,16 @@ const sucursales = [
         class="text-5xl md:text-6xl font-bold text-white drop-shadow-[0_2px_8px_rgba(0,0,0,0.8)]"
       >
         <span
-          class="bg-gradient-to-r from-[#d4af37] via-[#f4d03f] to-[#d4af37] bg-clip-text text-transparent animate-gradient drop-shadow-[0_2px_8px_rgba(0,0,0,0.8)] "
+          class="bg-gradient-to-r from-[#d4af37] via-[#f4d03f] to-[#d4af37] bg-clip-text text-transparent animate-gradient drop-shadow-[0_2px_8px_rgba(0,0,0,0.8)]"
         >
           Encuentra tu Brasargent más cercano
         </span>
+        <br />
+        <br />
+        <br />
       </h2>
     </div>
-<br><br><br><br>
+    <div class="py-12"></div>
     <!-- Grid de Sucursales - Grid cuadrado centrado -->
     <div class="flex justify-center">
       <div
@@ -88,7 +93,7 @@ const sucursales = [
         {
           sucursales.map((sucursal, index) => (
             <div
-              class="group relative w-full min-h-[600px] bg-white rounded-2xl shadow-2xl hover:shadow-[0_20px_60px_rgba(0,0,0,0.5)] transition-all duration-300 flex flex-col pb-6"
+              class="group relative w-full min-h-[600px] bg-white rounded-3xl shadow-[0_10px_50px_rgba(0,0,0,0.1)] hover:shadow-[0_20px_70px_rgba(0,0,0,0.2)] border border-gray-100 transition-all duration-500 flex flex-col pb-6"
               data-aos="fade-up"
               data-aos-delay={index * 100}
             >
@@ -101,7 +106,7 @@ const sucursales = [
                 />
                 {/* Badge de destacado */}
                 {sucursal.featured && (
-                  <div class="absolute top-4 right-4 bg-gradient-to-r from-[#d4af37] to-[#f4d03f] text-black text-xs font-bold px-4 py-2 rounded-full shadow-lg">
+                  <div class="absolute top-4 right-4 bg-gradient-to-r from-[#d4af37] via-[#f4d03f] to-[#d4af37] text-black text-[10px] font-black px-4 py-2 rounded-full shadow-xl z-10 tracking-widest animate-pulse">
                     ⭐ DESTACADO
                   </div>
                 )}
@@ -110,59 +115,40 @@ const sucursales = [
               </div>
 
               {/* Contenido de la card - con grow para empujar botones abajo */}
-              <div class="p-8 flex flex-col grow">
+              <div class="p-8 flex flex-col grow items-center">
                 {/* Nombre y rating */}
-                <h3 class="text-3xl font-bold text-gray-900 mb-4 text-center">
+                <h3 class="text-3xl font-black text-gray-900 mb-4 text-center tracking-tight group-hover:text-[#9e2a2b] transition-colors duration-300">
                   {sucursal.name}
                 </h3>
 
-                <div class="flex items-center gap-2 mb-3">
-                  <div class="flex items-center gap-1">
+                <div class="flex items-center justify-center gap-3 mb-4 bg-gray-50 px-4 py-2 rounded-full">
+                  <div class="flex items-center gap-1.5">
                     <span class="text-[#d4af37] text-lg">★</span>
-                    <span class="text-gray-900 font-semibold">
+                    <span class="text-gray-900 font-black">
                       {sucursal.rating}
                     </span>
-                    <span class="text-gray-500 text-sm">
-                      ({sucursal.reviews})
+                    <span class="text-gray-400 text-xs font-bold">
+                      ({sucursal.reviews} reseñas)
                     </span>
                   </div>
                   {sucursal.price && (
-                    <span class="text-[#d4af37] font-semibold ml-auto">
-                      {sucursal.price}
-                    </span>
+                    <>
+                      <span class="w-1 h-1 bg-gray-300 rounded-full" />
+                      <span class="text-[#d4af37] font-black">
+                        {sucursal.price}
+                      </span>
+                    </>
                   )}
                 </div>
 
                 {/* Tipo */}
-                <p class="text-gray-600 text-sm mb-4">{sucursal.type}</p>
+                <p class="text-[#9e2a2b] text-xs font-black uppercase tracking-[0.2em] mb-6 text-center">
+                  {sucursal.type}
+                </p>
 
                 {/* Dirección */}
-                <div class="flex items-start gap-2 mb-3">
-                  <svg
-                    class="w-5 h-5 text-[#d4af37] mt-0.5 shrink-0"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                      stroke-width="2"
-                      d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"
-                    />
-                    <path
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                      stroke-width="2"
-                      d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"
-                    />
-                  </svg>
-                  <p class="text-gray-700 text-sm">{sucursal.address}</p>
-                </div>
-
-                {/* Horario */}
-                {sucursal.hours && (
-                  <div class="flex items-center gap-2 mb-4">
+                <div class="flex flex-col items-center gap-2 mb-5 text-center px-4">
+                  <div class="w-10 h-10 flex items-center justify-center bg-[#d4af37]/10 rounded-full mb-1">
                     <svg
                       class="w-5 h-5 text-[#d4af37]"
                       fill="none"
@@ -172,33 +158,73 @@ const sucursales = [
                       <path
                         stroke-linecap="round"
                         stroke-linejoin="round"
-                        stroke-width="2"
-                        d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+                        stroke-width="2.5"
+                        d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"
+                      />
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2.5"
+                        d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"
                       />
                     </svg>
-                    <div class="text-sm">
+                  </div>
+                  <p class="text-gray-600 text-sm font-medium leading-relaxed">
+                    {sucursal.address}
+                  </p>
+                </div>
+
+                {/* Horario */}
+                {sucursal.hours && (
+                  <div class="flex flex-col items-center gap-2 mb-6 text-center">
+                    <div class="w-10 h-10 flex items-center justify-center bg-[#9e2a2b]/10 rounded-full mb-1">
+                      <svg
+                        class="w-5 h-5 text-[#9e2a2b]"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                          stroke-width="2.5"
+                          d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+                        />
+                      </svg>
+                    </div>
+                    <div class="text-sm font-medium px-4">
                       {sucursal.status && (
-                        <span class="text-red-500 font-semibold">
+                        <span class="text-red-500 font-black block mb-1">
                           {sucursal.status}
                         </span>
                       )}
-                      <span class="text-gray-600"> · {sucursal.hours}</span>
+                      <span class="text-gray-500 leading-relaxed italic">
+                        {sucursal.hours}
+                      </span>
                     </div>
                   </div>
                 )}
 
                 {/* Testimonial */}
                 {sucursal.testimonial && (
-                  <p class="text-gray-600 italic text-sm mb-4 line-clamp-2">
-                    "{sucursal.testimonial}"
-                  </p>
+                  <div class="relative px-8 mb-6">
+                    <span class="absolute top-0 left-4 text-4xl text-gray-200 font-serif">
+                      “
+                    </span>
+                    <p class="text-gray-500 italic text-sm text-center relative z-10 line-clamp-2">
+                      {sucursal.testimonial}
+                    </p>
+                    <span class="absolute bottom-0 right-4 text-4xl text-gray-200 font-serif leading-none">
+                      ”
+                    </span>
+                  </div>
                 )}
 
                 {/* Spacer superior para centrar botones */}
                 <div class="grow" />
 
                 {/* Botones de Acción - Circulares - Centrados */}
-                <div class="flex gap-6 items-center justify-center py-6">
+                <div class="flex flex-row flex-nowrap gap-4 md:gap-6 items-center justify-center py-6">
                   {/* Botón Ver Ubicación - Verde Google (Circular) */}
                   <a
                     href={
@@ -276,11 +302,11 @@ const sucursales = [
                 <div class="grow" />
 
                 {/* Logo en el pie de la tarjeta */}
-                <div class="flex justify-center items-center pt-6 pb-2 border-t border-gray-100 mt-4">
+                <div class="flex justify-center items-center mt-20 h-10 w-full px-4 text-center">
                   <img
-                    src="/img/logo/logoRojo-SF.png"
+                    src={sucursal.footerLogo || "/img/logo/LOGO1SF.png"}
                     alt="Brasargent Logo"
-                    class="h-20 w-auto opacity-80 hover:opacity-100 transition-opacity duration-300"
+                    class="h-full w-auto object-contain opacity-100 hover:scale-105 transition-all duration-300 pointer-events-none"
                   />
                 </div>
               </div>
@@ -289,12 +315,14 @@ const sucursales = [
         }
       </div>
     </div>
+    <div class="h-32 md:h-48"></div>
+    <!-- Espaciador explícito -->
     {/* CTA Final */}
-    <div class="mt-16 text-center" data-aos="fade-up" data-aos-delay="200">
+    <div class="mt-20 text-center" data-aos="fade-up" data-aos-delay="200">
       <div
         class="inline-block bg-white/80 backdrop-blur-xl rounded-2xl border border-gray-200 shadow-lg p-8"
       >
-        <h3 class="text-2x1 font-bold text-gray-900 mb-4">
+        <h3 class="text-2xl font-bold text-gray-900 mb-4">
           ¿No encuentras tu sucursal más cercana?
         </h3>
         <p class="text-gray-600 mb-6">
@@ -309,10 +337,7 @@ const sucursales = [
       </div>
     </div>
   </div>
-  <br />
-  <br />
-  <br />
-  <br />
+  <div class="py-20"></div>
 
   {/* Modal del Menú */}
   <div
@@ -321,7 +346,8 @@ const sucursales = [
     data-modal="menu-modal"
   >
     <div
-      class="relative max-w-7xl w-full mx-auto bg-white rounded-[40px] border border-gray-200 shadow-5xl overflow-hidden animate-modal-enter transition-all duration-500"
+      class="relative max-w-7xl w-full mx-auto bg-white/90 backdrop-blur-md rounded-[40px] border border-gray-200 shadow-5xl overflow-hidden animate-modal-enter transition-all duration-500 bg-cover bg-center bg-no-repeat"
+      style="background-image: url('/img/fondo/modalSucursal.svg');"
     >
       <!-- Tech Accents -->
       <div
@@ -366,7 +392,7 @@ const sucursales = [
 
       {/* Header del Modal - Premium Gradient Design */}
       <div
-        class="relative bg-white px-4 py-8 md:py-10 shadow-sm z-20 border-b border-gray-100"
+        class="relative bg-white/20 backdrop-blur-sm px-4 py-8 md:py-10 shadow-sm z-20 border-b border-white/10"
       >
         <div class="relative flex items-center justify-center h-16 md:h-20">
           {/* Logo - Absoluto a la Izquierda */}
@@ -390,7 +416,7 @@ const sucursales = [
 
       {/* Barra de Navegación Estilo PC - Dark Theme */}
       <div
-        class="sticky top-0 z-10 bg-gray-50 border-b border-gray-200 shadow-sm"
+        class="sticky top-0 z-10 bg-white/10 backdrop-blur-md border-b border-white/10 shadow-lg"
       >
         <div class="max-w-7xl mx-auto">
           <nav
@@ -405,7 +431,7 @@ const sucursales = [
 
       {/* Contenido del Modal - Dinámico */}
       <div
-        class="max-h-[85vh] overflow-y-auto bg-white p-8 md:p-16 flex justify-center scroll-smooth no-scrollbar"
+        class="max-h-[85vh] overflow-y-auto bg-transparent p-8 md:p-16 flex justify-center scroll-smooth no-scrollbar"
         id="menu-content"
       >
         <div class="max-w-5xl w-full" id="menu-items-container">
@@ -558,6 +584,62 @@ const sucursales = [
         ],
         NOTAS:
           "TODOS LOS CORTES INCLUYEN BAR DE ENSALADAS Y 2 GUARNICIONES CALIENTES. AL COMPARTIR UN PLATO, TIENE UN COSTO ADICIONAL DE BS. 50 POR SALAD BAR.",
+      },
+      "Fast Grill": {
+        ENTRADAS: [
+          { name: "EMPANADAS TUCUMANAS", price: "10" },
+          { name: "MIX DE ACHURAS (Ubre, Riñón y Chinchulí)", price: "59" },
+        ],
+        "CORTES CLÁSICOS": [
+          { name: "PUNTA DE “S”", price: "85" },
+          { name: "BIFE DE CHORIZO", price: "78" },
+          { name: "OJO DE BIFE", price: "76" },
+          { name: "CUADRIL (Para 1 persona)", price: "75" },
+          { name: "CUADRIL (Para 2 personas)", price: "140" },
+          { name: "ASADO DE TIRA", price: "75" },
+          { name: "COSTELETA", price: "75" },
+          { name: "PACUMUTO DE RES", price: "56" },
+          { name: "PACUMUTO MIXTO", price: "54" },
+          { name: "PECHUGA DESHUESADA", price: "52" },
+          { name: "MUSLO DESHUESADO", price: "46" },
+          { name: "MATAMBRITO DE CERDO", price: "68" },
+          { name: "1/2 PACK DE COSTILLAS DE CERDO BBQ", price: "75" },
+          {
+            name: "PLATO VEGETARIANO",
+            price: "45",
+            desc: "Acompañado de 6 guarniciones.",
+          },
+        ],
+        "PLATOS PREMIUM": [
+          { name: "PICAÑA", price: "99" },
+          { name: "OJO DE BIFE", price: "93" },
+          { name: "BIFE DE CHORIZO", price: "87" },
+          { name: "ENTRAÑA", price: "81" },
+          { name: "TRADICIÓN ARGENTINA", price: "85" },
+          { name: "PARRILLA MIXTA (P/DOS)", price: "180" },
+          { name: "TOMAHAWK", price: "140" },
+        ],
+        "CORTES JUNIOR": [
+          { name: "PUNTA DE “S” JUNIOR", price: "63" },
+          { name: "CHURRASQUITO", price: "55" },
+          { name: "BABY BEEF", price: "53" },
+          { name: "ESPETINHO DE PICAÑA", price: "42" },
+          { name: "ESPETINHO DE CUPIM (JIBA)", price: "42" },
+          { name: "TOMAHAWK", price: "75" },
+        ],
+        EXTRAS: [
+          { name: "CHORIZO", price: "10" },
+          { name: "MORCILLA", price: "10" },
+          { name: "GUARNICIÓN (FRIA O CALIENTE)", price: "15" },
+        ],
+        "DOMINGOS Y FERIADOS": [{ name: "SOPA DE MANÍ", price: "25" }],
+        BEBIDAS: [
+          { name: "GASEOSAS", price: "12" },
+          { name: "JUGOS", price: "10" },
+        ],
+        POSTRES: [{ name: "PORCIÓN", price: "22" }],
+        NOTAS:
+          "TODOS LOS PLATOS CLÁSICOS Y PREMIUM VAN ACOMPAÑADOS DE 4 GUARNICIONES. LOS CORTES JUNIOR VIENEN ACOMPAÑADOS DE 3 GUARNICIONES.",
       },
       Rodizio: {
         "EL RODIZIO": [
