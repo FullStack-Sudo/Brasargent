@@ -1,0 +1,94 @@
+---
+import "../../../styles/global.css";
+import NavbarAdmin from "../../../components/NavbarAdmin.astro";
+import MenuSucursalCard from "../../../components/admin/MenuSucursalCard.astro";
+import { getSucursalesActivas } from "../../../lib/queries/menu";
+
+// Auth check
+const session = Astro.cookies.get("session");
+if (!session || session.value !== "authenticated") {
+    return Astro.redirect("/admin/login");
+}
+
+let sucursales = [];
+let error = "";
+
+try {
+    sucursales = await getSucursalesActivas();
+} catch (e) {
+    error = "No se pudieron cargar las sucursales. Inténtelo más tarde.";
+}
+---
+
+<!doctype html>
+<html lang="es">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Gestión de Menú - BRASARGENT Admin</title>
+        <link
+            href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,600;1,600&display=swap"
+            rel="stylesheet"
+        />
+    </head>
+    <body class="bg-[#fcf7ec] text-gray-800 font-sans antialiased min-h-screen flex flex-col">
+        <NavbarAdmin />
+
+        <main class="pb-12 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto flex-1 w-full" style="padding-top: 7rem">
+            <!-- Header Section -->
+            <div class="flex flex-col md:flex-row md:items-center justify-between mb-10 gap-4">
+                <div>
+                    <div class="flex items-center gap-3 mb-2">
+                        <a href="/admin/dashboard" class="text-gray-400 hover:text-[#9e2a2b] transition-colors flex items-center gap-1 text-sm font-medium">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
+                            Volver al Dashboard
+                        </a>
+                    </div>
+                    <h1 class="text-3xl font-serif text-gray-900 font-semibold flex items-center gap-3">
+                        <span>🍽️</span> Gestión de Menú
+                    </h1>
+                    <p class="text-gray-500 mt-1 pl-10">
+                        Administra los platos y disponibilidad por sucursal.
+                    </p>
+                </div>
+            </div>
+
+            {error ? (
+                <div class="bg-red-50 text-red-600 p-4 rounded-xl border border-red-100 flex items-center gap-3">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                    {error}
+                </div>
+            ) : (
+                <>
+                    <div class="mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                        <h2 class="text-xl font-serif text-gray-900 font-semibold">Sucursales Activas</h2>
+                        
+                        <div class="bg-white px-5 py-2.5 rounded-xl border border-gray-200 shadow-sm flex items-center gap-4 text-sm font-medium">
+                            <span class="text-gray-600">{sucursales.length} Sucursales</span>
+                            <div class="w-px h-5 bg-gray-200"></div>
+                            <span class="text-gray-900">{sucursales.reduce((acc, s) => acc + s.total_platos, 0)} Platos</span>
+                            <div class="w-px h-5 bg-gray-200"></div>
+                            <span class="text-green-600">{sucursales.reduce((acc, s) => acc + s.disponibles, 0)} Disponibles</span>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        {sucursales.map((sucursal, index) => (
+                            <div style={`animation-delay: ${index * 100}ms`}>
+                                <MenuSucursalCard sucursal={sucursal} />
+                            </div>
+                        ))}
+                    </div>
+                    
+                    {sucursales.length === 0 && (
+                        <div class="text-center py-12 bg-white rounded-2xl border border-gray-100 shadow-sm">
+                            <span class="text-4xl block mb-3">🏢</span>
+                            <h3 class="text-lg font-medium text-gray-900">No hay sucursales activas</h3>
+                            <p class="text-gray-500 mt-1">Actualmente no se encontraron sucursales registradas en el sistema.</p>
+                        </div>
+                    )}
+                </>
+            )}
+        </main>
+    </body>
+</html>

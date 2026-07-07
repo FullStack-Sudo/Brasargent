@@ -1,0 +1,64 @@
+---
+---
+
+<div id="modalImagenPlato" class="fixed inset-0 z-50 flex items-center justify-center opacity-0 pointer-events-none transition-opacity duration-300">
+    <div class="absolute inset-0 bg-black/50 backdrop-blur-sm" id="modalImagenOverlay"></div>
+    
+    <div class="relative bg-white rounded-2xl w-full max-w-md p-6 shadow-2xl transform scale-95 transition-transform duration-300" id="modalImagenContent">
+        <div class="flex justify-between items-center mb-5">
+            <h3 class="text-xl font-serif font-semibold text-gray-900">Subir Imagen</h3>
+            <button id="btnCerrarModalImagen" class="text-gray-400 hover:text-gray-600 transition-colors">
+                ✕
+            </button>
+        </div>
+        
+        <form id="formSubirImagen" class="space-y-4">
+            <input type="hidden" id="upload_plato_id" name="plato_id" />
+            
+            <div id="dropZone" class="border-2 border-dashed border-gray-300 rounded-2xl p-8 text-center hover:bg-gray-50 transition-colors cursor-pointer group">
+                <div class="upload-content flex flex-col items-center justify-center space-y-3">
+                    <span class="text-4xl group-hover:scale-110 transition-transform">📷</span>
+                    <p class="text-sm font-medium text-gray-700">Arrastra una imagen aquí o haz clic para seleccionar</p>
+                    <span class="text-xs text-gray-500">JPG, PNG, WEBP • Max 2MB</span>
+                </div>
+                <input type="file" id="fileInput" name="imagen" accept="image/jpeg, image/png, image/webp" class="hidden" />
+            </div>
+
+            <!-- Preview de la imagen seleccionada -->
+            <div id="previewContainer" class="hidden relative mt-4">
+                <div class="aspect-video w-full rounded-xl overflow-hidden bg-gray-100 border border-gray-200">
+                    <img id="previewImage" src="" alt="Vista previa" class="w-full h-full object-cover" />
+                </div>
+                <button type="button" id="btnRemoveImage" class="absolute top-2 right-2 bg-white text-gray-600 rounded-full w-8 h-8 flex items-center justify-center shadow-md hover:bg-red-50 hover:text-red-600 transition-colors">
+                    ✕
+                </button>
+            </div>
+            
+            <div class="pt-4 flex gap-3">
+                <button type="button" id="btnCancelarImagen" class="flex-1 px-4 py-2 border border-gray-200 text-gray-600 rounded-xl text-sm font-medium hover:bg-gray-50 transition-colors">
+                    Cancelar
+                </button>
+                <button type="submit" id="btnGuardarImagen" class="flex-1 px-4 py-2 bg-[#9e2a2b] text-white rounded-xl text-sm font-medium hover:bg-[#8a2426] transition-colors relative disabled:opacity-50 disabled:cursor-not-allowed" disabled>
+                    <span class="btn-text">Subir Imagen</span>
+                    <span class="loader hidden absolute inset-0 flex items-center justify-center">
+                        <svg class="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                    </span>
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<style>
+    .modal-img-active {
+        opacity: 1 !important;
+        pointer-events: auto !important;
+    }
+    .modal-img-active #modalImagenContent {
+        transform: scale(1) !important;
+    }
+    .drop-active {
+        border-color: #9e2a2b !important;
+        background-color: #fef2f2 !important;
+    }
+</style>

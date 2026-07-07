@@ -1,0 +1,630 @@
+---
+import "../../../../styles/global.css";
+import NavbarAdmin from "../../../../components/NavbarAdmin.astro";
+import PlatoCard from "../../../../components/admin/PlatoCard.astro";
+import ModalEditarPlato from "../../../../components/admin/ModalEditarPlato.astro";
+import ModalCrearPlato from "../../../../components/admin/ModalCrearPlato.astro";
+import ModalImagenPlato from "../../../../components/admin/ModalImagenPlato.astro";
+import { getMenuSucursal } from "../../../../lib/queries/menu";
+
+// Auth check
+const session = Astro.cookies.get("session");
+if (!session || session.value !== "authenticated") {
+    return Astro.redirect("/admin/login");
+}
+
+const sucursalId = Number(Astro.params.id);
+if (isNaN(sucursalId)) {
+    return Astro.redirect("/admin/menu");
+}
+
+let data;
+let error = "";
+
+try {
+    data = await getMenuSucursal(sucursalId);
+    if (!data.sucursal) {
+        return Astro.redirect("/admin/menu");
+    }
+} catch (e) {
+    error = "Error al cargar el menú de la sucursal.";
+}
+
+// Agrupar platos por categoría
+const categorias = {};
+if (data?.platos) {
+    data.platos.forEach(plato => {
+        if (!categorias[plato.categoria]) {
+            categorias[plato.categoria] = [];
+        }
+        categorias[plato.categoria].push(plato);
+    });
+}
+
+// Estadísticas rápidas
+const totalPlatos = data?.platos?.length || 0;
+const disponibles = data?.platos?.filter(p => p.disponible).length || 0;
+const agotados = totalPlatos - disponibles;
+---
+
+<!doctype html>
+<html lang="es">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Menú: {data?.sucursal?.nombre} - BRASARGENT Admin</title>
+        <link
+            href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,600;1,600&display=swap"
+            rel="stylesheet"
+        />
+        <style>
+            /* Utilidades para notificaciones toast */
+            .toast-enter {
+                transform: translateY(100%);
+                opacity: 0;
+            }
+            .toast-enter-active {
+                transform: translateY(0);
+                opacity: 1;
+                transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            }
+            .toast-exit {
+                transform: translateY(0);
+                opacity: 1;
+            }
+            .toast-exit-active {
+                transform: translateY(100%);
+                opacity: 0;
+                transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            }
+        </style>
+    </head>
+    <body class="bg-gray-50 text-gray-800 font-sans antialiased min-h-screen flex flex-col">
+        <NavbarAdmin />
+
+        <main class="pb-12 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto flex-1 w-full" style="padding-top: 7rem">
+            {error ? (
+                <div class="bg-red-50 text-red-600 p-4 rounded-xl border border-red-100 flex items-center gap-3">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                    {error}
+                </div>
+            ) : (
+                <>
+                    <!-- Header -->
+                    <div class="mb-8">
+                        <a href="/admin/menu" class="text-gray-500 hover:text-[#9e2a2b] transition-colors flex items-center gap-1 text-sm font-medium mb-4 w-fit">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
+                            Volver a Sucursales
+                        </a>
+                        <div class="flex flex-col md:flex-row md:items-end justify-between gap-4">
+                            <div>
+                                <h1 class="text-3xl font-serif text-gray-900 font-bold mb-2 flex items-center gap-3 uppercase">
+                                    <span>{data.sucursal.concepto === 'Churrasquería' ? '' : data.sucursal.concepto === 'Fast Grill' || data.sucursal.concepto === 'Rodizio Tradicional' ? '' : ''}</span> 
+                                    {data.sucursal.nombre}
+                                </h1>
+                                <p class="text-gray-500 text-sm flex items-center gap-2">
+                                    <span class="text-lg">📍</span> {data.sucursal.direccion}
+                                </p>
+                            </div>
+                            
+                            <!-- Actions & Stats Badge -->
+                            <div class="flex items-center gap-3">
+                                <button id="btnAñadirPlato" class="bg-[#9e2a2b] hover:bg-[#8a2426] text-[#fffaf0] px-4 py-3 rounded-xl text-sm font-medium transition-colors shadow-sm flex items-center gap-2">
+                                    <span>➕</span> Añadir Plato
+                                </button>
+                                
+                                <div class="bg-white px-5 py-3 rounded-xl border border-gray-200 shadow-sm flex items-center gap-4 text-sm hidden sm:flex">
+                                <div class="text-center">
+                                    <span class="block text-gray-500 font-medium">Total</span>
+                                    <span class="font-bold text-gray-900">{totalPlatos}</span>
+                                </div>
+                                <div class="w-px h-8 bg-gray-200"></div>
+                                <div class="text-center">
+                                    <span class="block text-green-600 font-medium">Disponibles</span>
+                                    <span class="font-bold text-green-700">{disponibles}</span>
+                                </div>
+                                <div class="w-px h-8 bg-gray-200"></div>
+                                <div class="text-center">
+                                    <span class="block text-red-500 font-medium">Agotados</span>
+                                    <span class="font-bold text-red-600">{agotados}</span>
+                                </div>
+                            </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Menu Content (Agrupado por categoría) -->
+                    <div class="space-y-12">
+                        {Object.keys(categorias).length === 0 ? (
+                            <div class="text-center py-16 bg-white rounded-2xl border border-gray-100 shadow-sm">
+                                <span class="text-4xl block mb-3">🍽️</span>
+                                <h3 class="text-lg font-medium text-gray-900">No hay platos registrados</h3>
+                                <p class="text-gray-500 mt-1">Esta sucursal aún no tiene elementos en su menú.</p>
+                            </div>
+                        ) : (
+                            Object.entries(categorias).map(([categoria, platosArr]) => (
+                                <section>
+                                    <h2 class="text-2xl font-serif font-semibold text-gray-800 mb-6 border-b border-gray-200 pb-2 flex items-center gap-2">
+                                        <span class="w-1.5 h-6 bg-[#9e2a2b] rounded-full inline-block"></span>
+                                        {categoria}
+                                        <span class="bg-gray-100 text-gray-500 text-sm font-normal px-2.5 py-0.5 rounded-full ml-2">
+                                            {(platosArr as any[]).length}
+                                        </span>
+                                    </h2>
+                                    
+                                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                                        {(platosArr as any[]).map(plato => (
+                                            <PlatoCard plato={plato} sucursalId={sucursalId} />
+                                        ))}
+                                    </div>
+                                </section>
+                            ))
+                        )}
+                    </div>
+                </>
+            )}
+        </main>
+
+        <!-- Modales -->
+        <ModalCrearPlato />
+        <ModalEditarPlato />
+        <ModalImagenPlato />
+        
+        <!-- Contenedor Toast -->
+        <div id="toastContainer" class="fixed bottom-5 right-5 z-50 flex flex-col gap-2"></div>
+
+        <!-- Scripts de interacción -->
+        <script>
+            // Utilidad para notificaciones Toast
+            function showToast(message: string, type: 'success' | 'error' = 'success') {
+                const container = document.getElementById('toastContainer');
+                if (!container) return;
+                
+                const toast = document.createElement('div');
+                toast.className = `flex items-center gap-3 px-4 py-3 rounded-xl shadow-lg border toast-enter ${
+                    type === 'success' 
+                    ? 'bg-white border-green-200 text-green-800' 
+                    : 'bg-white border-red-200 text-red-800'
+                }`;
+                
+                const icon = type === 'success' 
+                    ? `<svg class="w-5 h-5 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>`
+                    : `<svg class="w-5 h-5 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>`;
+                    
+                toast.innerHTML = `${icon} <span class="font-medium text-sm">${message}</span>`;
+                
+                container.appendChild(toast);
+                
+                // Animar entrada
+                requestAnimationFrame(() => {
+                    toast.classList.add('toast-enter-active');
+                    toast.classList.remove('toast-enter');
+                });
+                
+                // Remover después de 3s
+                setTimeout(() => {
+                    toast.classList.remove('toast-enter-active');
+                    toast.classList.add('toast-exit');
+                    requestAnimationFrame(() => {
+                        toast.classList.add('toast-exit-active');
+                    });
+                    
+                    setTimeout(() => {
+                        toast.remove();
+                    }, 300);
+                }, 3000);
+            }
+
+            document.addEventListener('DOMContentLoaded', () => {
+                // ==========================================
+                // LÓGICA TOGGLE DISPONIBILIDAD
+                // ==========================================
+                const toggleBtns = document.querySelectorAll('.btn-toggle-status');
+                toggleBtns.forEach(btn => {
+                    btn.addEventListener('click', async (e) => {
+                        const target = e.currentTarget as HTMLButtonElement;
+                        const platoId = target.dataset.id;
+                        const sucursalId = target.dataset.sucursal;
+                        const currentStatus = target.dataset.status === '1';
+                        
+                        // Optimistic UI update
+                        const newStatus = !currentStatus;
+                        target.dataset.status = newStatus ? '1' : '0';
+                        
+                        // Update UI button and badge immediately
+                        const card = target.closest('.plato-card');
+                        const badge = card?.querySelector('.status-badge');
+                        
+                        if (badge) {
+                            if (newStatus) {
+                                badge.textContent = '✅ Disponible';
+                                badge.className = 'status-badge inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold shadow-sm transition-colors border bg-[#10b981]/10 text-[#10b981] border-[#10b981]/20';
+                                target.className = 'btn-toggle-status p-2.5 rounded-xl transition-all shadow-sm border bg-white border-gray-200 text-gray-400 hover:text-[#ef4444] hover:bg-[#ef4444]/5 hover:border-[#ef4444]/30';
+                                target.title = 'Marcar como Agotado';
+                            } else {
+                                badge.textContent = '❌ Agotado';
+                                badge.className = 'status-badge inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold shadow-sm transition-colors border bg-[#ef4444]/10 text-[#ef4444] border-[#ef4444]/20';
+                                target.className = 'btn-toggle-status p-2.5 rounded-xl transition-all shadow-sm border bg-white border-gray-200 text-gray-400 hover:text-[#10b981] hover:bg-[#10b981]/5 hover:border-[#10b981]/30';
+                                target.title = 'Marcar como Disponible';
+                            }
+                        }
+
+                        // API Call
+                        try {
+                            const res = await fetch('/api/menu/plato/toggle', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({
+                                    plato_id: Number(platoId),
+                                    sucursal_id: Number(sucursalId),
+                                    disponible: newStatus
+                                })
+                            });
+                            
+                            const data = await res.json();
+                            if (!data.success) throw new Error(data.message);
+                            
+                            showToast(newStatus ? 'Plato marcado como disponible' : 'Plato marcado como agotado');
+                            
+                        } catch (error) {
+                            console.error(error);
+                            // Revert optimistic update
+                            showToast('Error al actualizar disponibilidad', 'error');
+                            setTimeout(() => window.location.reload(), 1000); // Simple revert by reload
+                        }
+                    });
+                });
+
+                // ==========================================
+                // LÓGICA MODAL CREAR PLATO
+                // ==========================================
+                const modalCrear = document.getElementById('modalCrearPlato');
+                const formCrear = document.getElementById('formCrearPlato') as HTMLFormElement;
+                
+                function openModalCrear() {
+                    if (!modalCrear) return;
+                    (document.getElementById('create_sucursal_id') as HTMLInputElement).value = window.location.pathname.split('/').pop() || '';
+                    modalCrear.classList.add('modal-active');
+                }
+                
+                function closeModalCrear() {
+                    modalCrear?.classList.remove('modal-active');
+                    formCrear?.reset();
+                }
+
+                document.getElementById('btnAñadirPlato')?.addEventListener('click', openModalCrear);
+                document.getElementById('btnCerrarModalCrear')?.addEventListener('click', closeModalCrear);
+                document.getElementById('btnCancelarCrear')?.addEventListener('click', closeModalCrear);
+                document.getElementById('modalCrearOverlay')?.addEventListener('click', closeModalCrear);
+
+                formCrear?.addEventListener('submit', async (e) => {
+                    e.preventDefault();
+                    
+                    // ============================================
+                    // VALIDACIONES DEL FORMULARIO
+                    // ============================================
+                    const errors = [];
+                    
+                    const formError = document.getElementById('formError');
+                    if (formError) formError.classList.add('hidden');
+                    
+                    // 1. Nombre
+                    const nombre = (document.getElementById('create_nombre') as HTMLInputElement).value.trim();
+                    if (!nombre || nombre.length < 3) {
+                        errors.push('El nombre debe tener al menos 3 caracteres');
+                        document.getElementById('create_nombre')?.classList.add('error');
+                    } else {
+                        document.getElementById('create_nombre')?.classList.remove('error');
+                    }
+                    
+                    // 2. Categoría
+                    const categoria = (document.getElementById('create_categoria') as HTMLSelectElement).value;
+                    if (!categoria) {
+                        errors.push('Debes seleccionar una categoría');
+                        document.getElementById('create_categoria')?.classList.add('error');
+                    } else {
+                        document.getElementById('create_categoria')?.classList.remove('error');
+                    }
+                    
+                    // 3. Precio
+                    const precio = (document.getElementById('create_precio') as HTMLInputElement).value;
+                    if (!precio || parseFloat(precio) <= 0) {
+                        errors.push('El precio debe ser mayor a 0');
+                        document.getElementById('create_precio')?.classList.add('error');
+                    } else {
+                        document.getElementById('create_precio')?.classList.remove('error');
+                    }
+                    
+                    // 4. Sucursales
+                    const sucursalesChecked = document.querySelectorAll('input[name="sucursales"]:checked');
+                    if (sucursalesChecked.length === 0) {
+                        errors.push('Debes seleccionar al menos una sucursal');
+                    }
+                    
+                    if (errors.length > 0) {
+                        if (formError) {
+                            formError.innerHTML = errors.map(err => `• ${err}`).join('<br>');
+                            formError.classList.remove('hidden');
+                        }
+                        return; // Detener si hay errores
+                    }
+
+                    const btn = document.getElementById('btnGuardarCrear') as HTMLButtonElement;
+                    const spinner = btn.querySelector('.btn-spinner');
+                    const text = btn.querySelector('.btn-text');
+                    
+                    try {
+                        btn.disabled = true;
+                        spinner?.classList.remove('hidden');
+                        text?.classList.add('invisible');
+                        
+                        const formData = new FormData(formCrear);
+                        const sucursalesArray = Array.from(sucursalesChecked).map(cb => Number((cb as HTMLInputElement).value));
+
+                        const data = {
+                            sucursal_id: Number(formData.get('sucursal_id')),
+                            nombre: nombre,
+                            descripcion: formData.get('descripcion'),
+                            precio: Number(precio),
+                            categoria_id: Number(categoria),
+                            destacado: formData.get('destacado') === '1' ? 1 : 0,
+                            sucursales: sucursalesArray
+                        };
+                        
+                        // Si hay imagen, la podríamos enviar (para la versión completa usar FormData en vez de JSON o subirla por separado)
+                        // Por simplicidad en este paso, enviamos el JSON estándar primero.
+                        
+                        const res = await fetch('/api/menu/plato/create', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(data)
+                        });
+                        
+                        const result = await res.json();
+                        if (!result.success) throw new Error(result.message);
+                        
+                        showToast('Plato añadido al menú exitosamente');
+                        closeModalCrear();
+                        
+                        setTimeout(() => window.location.reload(), 1000);
+                        
+                    } catch (error) {
+                        if (formError) {
+                            formError.textContent = error.message || 'Error al guardar el plato';
+                            formError.classList.remove('hidden');
+                        }
+                    } finally {
+                        btn.disabled = false;
+                        spinner?.classList.add('hidden');
+                        text?.classList.remove('invisible');
+                    }
+                });
+
+                // ==========================================
+                // LÓGICA MODAL EDITAR PLATO
+                // ==========================================
+                const modalEditar = document.getElementById('modalEditarPlato');
+                const formEditar = document.getElementById('formEditarPlato') as HTMLFormElement;
+                
+                function openModalEditar(dataset: any) {
+                    if (!modalEditar || !formEditar) return;
+                    
+                    // Fill data
+                    (document.getElementById('edit_plato_id') as HTMLInputElement).value = dataset.id;
+                    (document.getElementById('edit_nombre') as HTMLInputElement).value = dataset.nombre;
+                    (document.getElementById('edit_descripcion') as HTMLInputElement).value = dataset.descripcion || '';
+                    (document.getElementById('edit_precio') as HTMLInputElement).value = dataset.precio;
+                    
+                    // Set select category (mapped by text if id not present in dataset, using simple mapping for demo)
+                    const selectCat = document.getElementById('edit_categoria') as HTMLSelectElement;
+                    Array.from(selectCat.options).forEach(opt => {
+                        if (opt.text === dataset.categoria) opt.selected = true;
+                    });
+                    
+                    modalEditar.classList.add('modal-active');
+                }
+                
+                function closeModalEditar() {
+                    modalEditar?.classList.remove('modal-active');
+                }
+
+                document.querySelectorAll('.btn-edit-plato').forEach(btn => {
+                    btn.addEventListener('click', (e) => {
+                        const target = e.currentTarget as HTMLButtonElement;
+                        openModalEditar(target.dataset);
+                    });
+                });
+
+                document.getElementById('btnCerrarModalEditar')?.addEventListener('click', closeModalEditar);
+                document.getElementById('btnCancelarEditar')?.addEventListener('click', closeModalEditar);
+                document.getElementById('modalEditarOverlay')?.addEventListener('click', closeModalEditar);
+
+                formEditar?.addEventListener('submit', async (e) => {
+                    e.preventDefault();
+                    const btn = document.getElementById('btnGuardarEditar') as HTMLButtonElement;
+                    const loader = btn.querySelector('.loader');
+                    const text = btn.querySelector('.btn-text');
+                    
+                    try {
+                        btn.disabled = true;
+                        loader?.classList.remove('hidden');
+                        text?.classList.add('invisible');
+                        
+                        const formData = new FormData(formEditar);
+                        const data = {
+                            plato_id: Number(formData.get('plato_id')),
+                            nombre: formData.get('nombre'),
+                            descripcion: formData.get('descripcion'),
+                            precio: Number(formData.get('precio')),
+                            categoria_id: Number(formData.get('categoria_id'))
+                        };
+                        
+                        const res = await fetch('/api/menu/plato/update', {
+                            method: 'PUT',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(data)
+                        });
+                        
+                        const result = await res.json();
+                        if (!result.success) throw new Error(result.message);
+                        
+                        showToast('Plato actualizado exitosamente');
+                        closeModalEditar();
+                        
+                        // Recargar para ver cambios
+                        setTimeout(() => window.location.reload(), 1000);
+                        
+                    } catch (error) {
+                        showToast(error.message || 'Error al guardar', 'error');
+                    } finally {
+                        btn.disabled = false;
+                        loader?.classList.add('hidden');
+                        text?.classList.remove('invisible');
+                    }
+                });
+
+                // ==========================================
+                // LÓGICA MODAL IMAGEN (DRAG & DROP)
+                // ==========================================
+                const modalImagen = document.getElementById('modalImagenPlato');
+                const formImagen = document.getElementById('formSubirImagen') as HTMLFormElement;
+                const dropZone = document.getElementById('dropZone');
+                const fileInput = document.getElementById('fileInput') as HTMLInputElement;
+                const previewContainer = document.getElementById('previewContainer');
+                const previewImage = document.getElementById('previewImage') as HTMLImageElement;
+                const btnRemoveImage = document.getElementById('btnRemoveImage');
+                const btnGuardarImagen = document.getElementById('btnGuardarImagen') as HTMLButtonElement;
+                
+                let currentFile: File | null = null;
+
+                function openModalImagen(platoId: string) {
+                    if (!modalImagen) return;
+                    (document.getElementById('upload_plato_id') as HTMLInputElement).value = platoId;
+                    resetImageUploader();
+                    modalImagen.classList.add('modal-img-active');
+                }
+                
+                function closeModalImagen() {
+                    modalImagen?.classList.remove('modal-img-active');
+                }
+                
+                function resetImageUploader() {
+                    currentFile = null;
+                    if(fileInput) fileInput.value = '';
+                    dropZone?.classList.remove('hidden');
+                    previewContainer?.classList.add('hidden');
+                    btnGuardarImagen.disabled = true;
+                }
+
+                document.querySelectorAll('.btn-upload-img').forEach(btn => {
+                    btn.addEventListener('click', (e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        const target = e.currentTarget as HTMLButtonElement;
+                        openModalImagen(target.dataset.id || '');
+                    });
+                });
+
+                document.getElementById('btnCerrarModalImagen')?.addEventListener('click', closeModalImagen);
+                document.getElementById('btnCancelarImagen')?.addEventListener('click', closeModalImagen);
+                document.getElementById('modalImagenOverlay')?.addEventListener('click', closeModalImagen);
+
+                // Manejo de Drag and Drop
+                dropZone?.addEventListener('click', () => fileInput?.click());
+                
+                dropZone?.addEventListener('dragover', (e) => {
+                    e.preventDefault();
+                    dropZone.classList.add('drop-active');
+                });
+                
+                ['dragleave', 'dragend'].forEach(type => {
+                    dropZone?.addEventListener(type, () => {
+                        dropZone.classList.remove('drop-active');
+                    });
+                });
+                
+                dropZone?.addEventListener('drop', (e) => {
+                    e.preventDefault();
+                    dropZone.classList.remove('drop-active');
+                    
+                    if (e.dataTransfer?.files.length) {
+                        handleFileSelect(e.dataTransfer.files[0]);
+                    }
+                });
+                
+                fileInput?.addEventListener('change', (e) => {
+                    const target = e.target as HTMLInputElement;
+                    if (target.files?.length) {
+                        handleFileSelect(target.files[0]);
+                    }
+                });
+                
+                function handleFileSelect(file: File) {
+                    if (!file.type.match('image.*')) {
+                        showToast('Solo se permiten imágenes (JPG, PNG, WEBP)', 'error');
+                        return;
+                    }
+                    if (file.size > 2 * 1024 * 1024) {
+                        showToast('La imagen es muy pesada. Máximo 2MB', 'error');
+                        return;
+                    }
+                    
+                    currentFile = file;
+                    
+                    // Mostrar preview
+                    const reader = new FileReader();
+                    reader.onload = (e) => {
+                        if (previewImage && e.target?.result) {
+                            previewImage.src = e.target.result as string;
+                            dropZone?.classList.add('hidden');
+                            previewContainer?.classList.remove('hidden');
+                            btnGuardarImagen.disabled = false;
+                        }
+                    };
+                    reader.readAsDataURL(file);
+                }
+                
+                btnRemoveImage?.addEventListener('click', resetImageUploader);
+
+                formImagen?.addEventListener('submit', async (e) => {
+                    e.preventDefault();
+                    if (!currentFile) return;
+                    
+                    const loader = btnGuardarImagen.querySelector('.loader');
+                    const text = btnGuardarImagen.querySelector('.btn-text');
+                    
+                    try {
+                        btnGuardarImagen.disabled = true;
+                        loader?.classList.remove('hidden');
+                        text?.classList.add('invisible');
+                        
+                        const formData = new FormData();
+                        formData.append('plato_id', (document.getElementById('upload_plato_id') as HTMLInputElement).value);
+                        formData.append('imagen', currentFile);
+                        
+                        const res = await fetch('/api/menu/plato/imagen', {
+                            method: 'POST',
+                            body: formData
+                        });
+                        
+                        const result = await res.json();
+                        if (!result.success) throw new Error(result.message);
+                        
+                        showToast('Imagen subida exitosamente');
+                        closeModalImagen();
+                        
+                        // Recargar para ver la nueva imagen
+                        setTimeout(() => window.location.reload(), 1000);
+                        
+                    } catch (error) {
+                        showToast(error.message || 'Error al subir imagen', 'error');
+                    } finally {
+                        btnGuardarImagen.disabled = false;
+                        loader?.classList.add('hidden');
+                        text?.classList.remove('invisible');
+                    }
+                });
+            });
+        </script>
+    </body>
+</html>

@@ -1,414 +1,431 @@
-﻿---
-// Navbar minimalista fija - Logo, Menú, Contacto, Reservar
-const whatsappNumber = "59178555886"; // Número de WhatsApp con código de país
+---
+// Navbar Dinámico y Menú Premium
+const whatsappNumber = "59178555886";
 const whatsappMessage = encodeURIComponent(
-  "Hola! Me gustaría hacer una reserva en Brasargent Rodizio",
+  "Hola! Me gustaría hacer una reserva en Brasargent Rodizio"
 );
+const whatsappUrl = `https://wa.me/${whatsappNumber}?text=${whatsappMessage}`;
 ---
 
-<nav
-  id="navbar"
-  class="fixed top-0 left-0 right-0 z-50 transition-all duration-300 backdrop-blur-md bg-white/5"
->
+<nav id="navbar" class="fixed top-0 left-0 right-0 z-50 transition-all duration-300 ease-in-out bg-[#1a1a1a] border-b border-[#fffaf0]/10">
   <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-    <div class="flex justify-between items-center h-20">
-      <!-- Logo dinámico con alternancia -->
-      <a href="/" class="flex items-center group ml-8 relative">
+    <div class="flex justify-between items-center h-16 md:h-20">
+      
+      <!-- Logo -->
+      <a href="/" class="flex items-center group relative z-[60]">
         <img
-          id="logo-primary"
           src="/img/logo/LOGO1SF.png"
           alt="Brasargent Rodizio Logo"
-          class="h-12 w-auto object-contain transition-opacity duration-1000 absolute"
-        />
-        <img
-          id="logo-secondary"
-          src="/img/logo/LOGO2SF.png"
-          alt="Brasargent Rodizio Logo"
-          class="h-16 w-auto object-contain transition-opacity duration-1000 absolute opacity-0"
-        />
-        <img
-          id="logo-tertiary"
-          src="/img/logo/LOGO3SF.png"
-          alt="Brasargent Rodizio Logo"
-          class="h-12 w-auto object-contain transition-opacity duration-1000 opacity-0"
+          class="h-12 w-auto object-contain transition-transform duration-300 group-hover:scale-105"
         />
       </a>
 
-      <!-- Ocultar botones a la derecha (Cambiado a hidden siempre) -->
-      <div class="hidden items-center gap-8">
-        <a
-          href="/#inicio"
-          class="nav-link text-white hover:text-[#3f371f] transition-colors font-medium"
-        >
-          Inicio
-        </a>
-        <a
-          href="/#menu"
-          class="nav-link text-white hover:text-[#3f371f] transition-colors font-medium"
-        >
-          Recuerdos
-        </a>
-        <a
-          href="/#contacto"
-          class="nav-link text-white hover:text-[#3f371f] transition-colors font-medium"
-        >
-          Contacto
-        </a>
-        <a
-          href="/sucursales"
-          class="nav-link text-white hover:text-[#3f371f] transition-colors font-medium"
-        >
+      <!-- Desktop Menu -->
+      <div class="hidden md:flex items-center gap-8 z-[60]">
+        <a href="/#inicio" class="nav-link text-[#fffaf0]/80 hover:text-[#fffaf0] transition-colors text-sm font-medium">Inicio</a>
+        <a href="/#menu" class="nav-link text-[#fffaf0]/80 hover:text-[#fffaf0] transition-colors text-sm font-medium">Nuestros Platos</a>
+        <a href="/#testimonios" class="nav-link text-[#fffaf0]/80 hover:text-[#fffaf0] transition-colors text-sm font-medium">Testimonios</a>
+        <a href="/sucursales" class="nav-link text-[#fffaf0]/80 hover:text-[#fffaf0] transition-colors text-sm font-medium relative">
           Sucursales
+          <span class="absolute -top-2 -right-6 text-[9px] font-bold bg-[#9e2a2b] text-white px-1.5 py-0.5 rounded-full animate-pulse-badge">
+            NEW
+          </span>
         </a>
-        <a
-          href="/#contacto"
-          class="bg-[#9e2a2b] text-white px-8 py-3 rounded-lg font-semibold hover:bg-[#8a2426] hover:shadow-xl hover:shadow-[#9e2a2b]/50 transition-all duration-300 hover:scale-105 border border-[#9e2a2b] hover:border-[#d4af37]"
-        >
-          Reservar Mesa
-        </a>
+        <a href="/#contacto" class="nav-link text-[#fffaf0]/80 hover:text-[#fffaf0] transition-colors text-sm font-medium">Contacto</a>
+        
+        <div class="flex items-center gap-4 pl-4 border-l border-[#fffaf0]/20 nav-divider transition-colors duration-300">
+          <a href="/admin/login" class="nav-link text-[#fffaf0] hover:text-[#d4af37] hover:text-[#d4af37] transition-colors font-semibold text-sm tracking-wide">
+            INICIAR SESIÓN
+          </a>
+          <a id="btnReservar" 
+             href={whatsappUrl} 
+             target="_blank"
+             rel="noopener noreferrer"
+             class="bg-[#9e2a2b] hover:bg-[#8a2426] text-[#fffaf0] px-5 py-2 rounded-full text-sm font-semibold transition-all hover:scale-105 shadow-lg shadow-[#9e2a2b]/25">
+            Reservar
+          </a>
+        </div>
       </div>
 
-      <!-- Botón menú móvil animado -->
-      <button
-        id="mobile-menu-btn"
-        class="relative w-20 h-10 text-white focus:outline-none z-50 flex items-center justify-center transition-opacity duration-300 mr-8"
-        aria-label="Abrir menú"
-      >
+      <!-- Mobile Menu Button -->
+      <button id="hamburgerBtn" class="md:hidden relative w-10 h-10 flex items-center justify-center rounded-lg hover:bg-[#fffaf0]/10 transition-colors group z-[60]" aria-label="Toggle menu" aria-expanded="false">
         <div class="relative w-6 h-5">
-          <span class="hamburger-line top-0"></span>
-          <span class="hamburger-line top-1/2 -translate-y-1/2"></span>
-          <span class="hamburger-line bottom-0"></span>
+          <span id="line1" class="absolute top-0 left-0 w-full h-0.5 bg-[#fffaf0] transition-all duration-300"></span>
+          <span id="line2" class="absolute top-2 left-0 w-full h-0.5 bg-[#fffaf0] transition-all duration-300"></span>
+          <span id="line3" class="absolute top-4 left-0 w-full h-0.5 bg-[#fffaf0] transition-all duration-300"></span>
         </div>
       </button>
+
+    </div>
+  </div>
+
+  <!-- MENU FULLSCREEN PREMIUM -->
+  <div id="mobileMenu" 
+       class="md:hidden fixed inset-0 z-50 
+              bg-[#1a1a1a]/98 backdrop-blur-[20px]
+              opacity-0 pointer-events-none
+              transition-all duration-500 ease-[cubic-bezier(0.4,0,0.2,1)]
+              overflow-hidden">
+    
+    <div class="flex flex-col items-center justify-center w-full h-full px-6 py-8 relative">
+      
+      
+      <!-- Enlaces principales -->
+      <div class="flex flex-col items-center gap-6 md:gap-8 max-w-2xl w-full mt-10">
+        <a href="/#inicio" class="menu-link group flex items-center gap-3 text-4xl md:text-5xl lg:text-6xl font-serif text-[#fffaf0]/80 hover:text-[#fffaf0] transition-all duration-300 hover:translate-x-3">
+          <span class="text-2xl group-hover:rotate-12 transition-transform duration-300"></span>
+          <span class="relative">
+            Inicio
+            <span class="absolute -bottom-2 left-0 w-0 h-0.5 bg-gradient-to-r from-[#9e2a2b] to-[#d4af37] transition-all duration-300 group-hover:w-full"></span>
+          </span>
+        </a>
+        
+        <a href="/#menu" class="menu-link group flex items-center gap-3 text-4xl md:text-5xl lg:text-6xl font-serif text-[#fffaf0]/80 hover:text-[#fffaf0] transition-all duration-300 hover:translate-x-3">
+          <span class="text-2xl group-hover:rotate-12 transition-transform duration-300"></span>
+          <span class="relative">
+            Nuestros Platos
+            <span class="absolute -bottom-2 left-0 w-0 h-0.5 bg-gradient-to-r from-[#9e2a2b] to-[#d4af37] transition-all duration-300 group-hover:w-full"></span>
+          </span>
+        </a>
+        
+        <a href="/#testimonios" class="menu-link group flex items-center gap-3 text-4xl md:text-5xl lg:text-6xl font-serif text-[#fffaf0]/80 hover:text-[#fffaf0] transition-all duration-300 hover:translate-x-3">
+          <span class="text-2xl group-hover:rotate-12 transition-transform duration-300"></span>
+          <span class="relative">
+            Testimonios
+            <span class="absolute -bottom-2 left-0 w-0 h-0.5 bg-gradient-to-r from-[#9e2a2b] to-[#d4af37] transition-all duration-300 group-hover:w-full"></span>
+          </span>
+        </a>
+        
+        <a href="/sucursales" class="menu-link group flex items-center gap-3 text-4xl md:text-5xl lg:text-6xl font-serif text-[#fffaf0]/80 hover:text-[#fffaf0] transition-all duration-300 hover:translate-x-3">
+          <span class="text-2xl group-hover:rotate-12 transition-transform duration-300"></span>
+          <span class="relative flex items-center gap-3">
+            Sucursales
+            <span class="text-xs bg-gradient-to-r from-[#9e2a2b] to-[#d4af37] text-white px-3 py-1 rounded-full animate-pulse-badge shadow-lg shadow-[#9e2a2b]/30">
+              🔥 NEW
+            </span>
+          </span>
+        </a>
+        
+        <a href="/#contacto" class="menu-link group flex items-center gap-3 text-4xl md:text-5xl lg:text-6xl font-serif text-[#fffaf0]/80 hover:text-[#fffaf0] transition-all duration-300 hover:translate-x-3">
+          <span class="text-2xl group-hover:rotate-12 transition-transform duration-300"></span>
+          <span class="relative">
+            Contacto
+            <span class="absolute -bottom-2 left-0 w-0 h-0.5 bg-gradient-to-r from-[#9e2a2b] to-[#d4af37] transition-all duration-300 group-hover:w-full"></span>
+          </span>
+        </a>
+        
+        <a href="/admin/login" class="menu-link group flex items-center gap-3 text-4xl md:text-5xl lg:text-6xl font-serif text-[#fffaf0]/80 hover:text-[#fffaf0] transition-all duration-300 hover:translate-x-3">
+          <span class="text-2xl group-hover:rotate-12 transition-transform duration-300"></span>
+          <span class="relative">
+            Iniciar Sesión
+            <span class="absolute -bottom-2 left-0 w-0 h-0.5 bg-gradient-to-r from-[#9e2a2b] to-[#d4af37] transition-all duration-300 group-hover:w-full"></span>
+          </span>
+        </a>
+      </div>
+      
+      <!-- Divisor elegante -->
+      <div class="flex items-center gap-4 my-8 w-64">
+        <div class="flex-1 h-px bg-gradient-to-r from-transparent via-[#d4af37]/50 to-transparent"></div>
+        <span class="text-[#d4af37]/60 text-sm">✦</span>
+        <div class="flex-1 h-px bg-gradient-to-r from-transparent via-[#d4af37]/50 to-transparent"></div>
+      </div>
+      
+      <!-- CTA WhatsApp -->
+      <a href={whatsappUrl}
+         target="_blank"
+         rel="noopener noreferrer"
+         class="group w-full max-w-sm relative overflow-hidden bg-gradient-to-r from-[#9e2a2b] to-[#8a2426] text-[#fffaf0] text-center py-4 px-6 rounded-xl font-semibold text-lg transition-all duration-300 hover:scale-105 shadow-lg shadow-[#9e2a2b]/30">
+        
+        <!-- Efecto Shimmer -->
+        <span class="absolute inset-0 w-full h-full bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></span>
+        
+        📱 Reservar por WhatsApp
+      </a>
+      
+      <!-- Redes Sociales -->
+      <div class="flex gap-8 mt-8">
+        <a href="https://facebook.com/brasargent" target="_blank" rel="noopener noreferrer" class="text-[#fffaf0]/40 hover:text-[#fffaf0] transition-all duration-300 hover:scale-110 hover:rotate-6" aria-label="Facebook">
+          <svg class="w-8 h-8" fill="currentColor" viewBox="0 0 24 24">
+            <path d="M22 12c0-5.523-4.477-10-10-10S2 6.477 2 12c0 4.991 3.657 9.128 8.438 9.878v-6.99h-2.54V12h2.54V9.797c0-2.506 1.492-3.89 3.777-3.89 1.094 0 2.238.195 2.238.195v2.46h-1.26c-1.243 0-1.63.771-1.63 1.562V12h2.773l-.443 2.89h-2.33v6.988C18.343 21.128 22 16.991 22 12z"/>
+          </svg>
+        </a>
+        <a href="https://instagram.com/brasargent" target="_blank" rel="noopener noreferrer" class="text-[#fffaf0]/40 hover:text-[#fffaf0] transition-all duration-300 hover:scale-110 hover:-rotate-6" aria-label="Instagram">
+          <svg class="w-8 h-8" fill="currentColor" viewBox="0 0 24 24">
+            <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 100 12.324 6.162 6.162 0 000-12.324zM12 16a4 4 0 110-8 4 4 0 010 8zm6.406-11.845a1.44 1.44 0 100 2.881 1.44 1.44 0 000-2.881z"/>
+          </svg>
+        </a>
+      </div>
+      
+      <!-- Copyright -->
+      <p class="text-[#fffaf0]/20 text-xs mt-8 tracking-wider">© 2026 BRASARGENT - Todos los derechos reservados</p>
     </div>
   </div>
 </nav>
 
-<!-- Menú móvil moderno - Pantalla completa -->
-<div
-  id="mobile-menu"
-  class="fixed inset-0 z-[9999] transform translate-x-full transition-transform duration-500 ease-out"
->
-  <!-- Overlay oscuro completo con mejor opacidad -->
-  <div class="absolute inset-0 bg-black/95 backdrop-blur-md"></div>
+<script>
+  document.addEventListener('DOMContentLoaded', () => {
+    // =========================================
+    // 1. SCROLL DETECTION - NAVBAR DINÁMICO
+    // =========================================
+    const navbar = document.getElementById('navbar');
+    const navLinks = document.querySelectorAll('.nav-link');
+    const navDivider = document.querySelector('.nav-divider');
+    const btnReservar = document.getElementById('btnReservar');
+    const hamburgerBtn = document.getElementById('hamburgerBtn');
+    
+    if (!navbar || !hamburgerBtn) return;
 
-  <!-- Contenido del menú -->
-  <div
-    class="relative h-full flex flex-col justify-center items-center px-6 py-4"
-  >
-    <!-- Botón de cierre (X) - Esquina superior derecha -->
-    <div class="absolute top-6 right-6 z-50">
-      <button
-        id="mobile-close-btn"
-        class="mobile-link w-12 h-12 flex items-center justify-center bg-white/10 hover:bg-white/20 rounded-full transition-all duration-300 hover:scale-110 hover:rotate-90 border-2 border-white/20 hover:border-[#d4af37]"
-        aria-label="Cerrar menú"
-        style="animation-delay: 0s"
-      >
-        <svg
-          class="w-6 h-6 text-white"
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
-        >
-          <path
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            stroke-width="2.5"
-            d="M6 18L18 6M6 6l12 12"></path>
-        </svg>
-      </button>
-    </div>
-
-    <!-- Contenedor central compacto -->
-    <div class="flex flex-col items-center w-full max-w-sm mt-8">
-      <!-- Logo en el menú móvil (Dinámico) -->
-      <div
-        class="mobile-link mb-6 relative h-24 w-full flex justify-center items-center"
-        style="animation-delay: 0.1s"
-      >
-        <!-- Destello blanco para legibilidad - Intensificado -->
-        <div
-          class="absolute w-56 h-56 bg-white/50 blur-[60px] rounded-full pointer-events-none"
-        >
-        </div>
-
-        <img
-          id="mobile-logo-primary"
-          src="/img/logo/LOGO1SF.png"
-          alt="Brasargent Logo"
-          class="h-12 w-auto absolute transition-opacity duration-1000"
-        />
-        <img
-          id="mobile-logo-secondary"
-          src="/img/logo/LOGO2SF.png"
-          alt="Brasargent Logo"
-          class="h-14 w-auto absolute transition-opacity duration-1000 opacity-0"
-        />
-        <img
-          id="mobile-logo-tertiary"
-          src="/img/logo/LOGO3SF.png"
-          alt="Brasargent Logo"
-          class="h-12 w-auto absolute transition-opacity duration-1000 opacity-0"
-        />
-      </div>
-
-      <!-- Links del menú con mejor espaciado -->
-      <nav class="flex flex-col space-y-3 text-center w-full">
-        <a
-          href="/#inicio"
-          class="mobile-link block text-white text-2xl sm:text-3xl font-bold hover:text-[#d4af37] transition-all duration-300 transform hover:scale-105 py-1 px-6 rounded-lg hover:bg-white/5"
-          style="animation-delay: 0.15s"
-        >
-          Inicio
-        </a>
-
-        <!-- Separador sutil -->
-        <div
-          class="h-px bg-gradient-to-r from-transparent via-white/20 to-transparent"
-        >
-        </div>
-
-        <a
-          href="/#menu"
-          class="mobile-link block text-white text-2xl sm:text-3xl font-bold hover:text-[#d4af37] transition-all duration-300 transform hover:scale-105 py-1 px-6 rounded-lg hover:bg-white/5"
-          style="animation-delay: 0.2s"
-        >
-          Recuerdos
-        </a>
-
-        <!-- Separador sutil -->
-        <div
-          class="h-px bg-gradient-to-r from-transparent via-white/20 to-transparent"
-        >
-        </div>
-
-        <a
-          href="/#contacto"
-          class="mobile-link block text-white text-2xl sm:text-3xl font-bold hover:text-[#d4af37] transition-all duration-300 transform hover:scale-105 py-1 px-6 rounded-lg hover:bg-white/5"
-          style="animation-delay: 0.25s"
-        >
-          Contacto
-        </a>
-
-        <!-- Separador sutil -->
-        <div
-          class="h-px bg-gradient-to-r from-transparent via-white/20 to-transparent"
-        >
-        </div>
-
-        <a
-          href="/sucursales"
-          class="mobile-link block text-white text-2xl sm:text-3xl font-bold hover:text-[#d4af37] transition-all duration-300 transform hover:scale-105 py-1 px-6 rounded-lg hover:bg-white/5"
-          style="animation-delay: 0.3s"
-        >
-          Sucursales
-        </a>
-      </nav>
-
-      <!-- Botón de reserva destacado con mejor espaciado -->
-      <div class="mobile-link w-full mt-6" style="animation-delay: 0.35s">
-        <a
-          href="/#contacto"
-          class="block w-full bg-gradient-to-r from-[#9e2a2b] to-[#8a2426] text-white px-8 py-4 rounded-xl font-bold text-xl text-center hover:shadow-[0_0_40px_rgba(158,42,43,0.7)] hover:scale-105 transition-all duration-300 border-2 border-[#9e2a2b] hover:border-[#d4af37]"
-        >
-          🍖 Reservar Mesa
-        </a>
-      </div>
-
-      <!-- Decoración mejorada -->
-      <div
-        class="absolute top-20 right-10 w-40 h-40 bg-[#d4af37]/10 rounded-full blur-3xl pointer-events-none"
-      >
-      </div>
-      <div
-        class="absolute bottom-20 left-10 w-40 h-40 bg-[#9e2a2b]/10 rounded-full blur-3xl pointer-events-none"
-      >
-      </div>
-    </div>
-  </div>
-
-  <!-- Espaciador para compensar navbar fija -->
-  <div class="h-20"></div>
-
-  <script>
-    // Alternancia dinámica del logo (Header y Móvil) - Ciclo de 3 imágenes
-    const logosP = [
-      document.getElementById("logo-primary"),
-      document.getElementById("logo-secondary"),
-      document.getElementById("logo-tertiary"),
+    const lines = [
+      document.getElementById('line1'),
+      document.getElementById('line2'),
+      document.getElementById('line3')
     ];
-    const logosM = [
-      document.getElementById("mobile-logo-primary"),
-      document.getElementById("mobile-logo-secondary"),
-      document.getElementById("mobile-logo-tertiary"),
-    ];
-    let currentIndex = 0;
+    
+    const SCROLL_THRESHOLD = 50;
+    let isScrolled = false;
 
-    function alternateLogo() {
-      // Ocultar logo actual
-      logosP[currentIndex]?.classList.add("opacity-0");
-      logosM[currentIndex]?.classList.add("opacity-0");
+    window.addEventListener('scroll', () => {
+      const scrollY = window.scrollY;
+      
+      if (scrollY > SCROLL_THRESHOLD && !isScrolled) {
+        // Cambiar a modo "scroll" (fondo claro)
+        isScrolled = true;
+        navbar.classList.remove('bg-[#1a1a1a]', 'border-[#fffaf0]/10');
+        navbar.classList.add('bg-[#fffaf0]', 'shadow-lg', 'shadow-black/10', 'border-[#1a1a1a]/10');
+        
+        
+        
+        // Links oscuros
+        navLinks.forEach(link => {
+          link.classList.remove('text-[#fffaf0]/80', 'hover:text-[#fffaf0]', 'text-[#fffaf0]');
+          link.classList.add('text-[#1a1a1a]/70', 'hover:text-[#1a1a1a]');
+        });
 
-      // Incrementar índice
-      currentIndex = (currentIndex + 1) % logosP.length;
-
-      // Mostrar siguiente logo
-      logosP[currentIndex]?.classList.remove("opacity-0");
-      logosM[currentIndex]?.classList.remove("opacity-0");
-    }
-
-    // Alternar cada 3 segundos
-    setInterval(alternateLogo, 3000);
-
-    // Toggle menú móvil con animaciones
-    const mobileMenuBtn = document.getElementById("mobile-menu-btn");
-    const mobileCloseBtn = document.getElementById("mobile-close-btn");
-    const mobileMenu = document.getElementById("mobile-menu");
-    const navbar = document.getElementById("navbar");
-    const hamburgerLines = document.querySelectorAll(".hamburger-line");
-    const mobileLinkElements = document.querySelectorAll(".mobile-link");
-    let isMenuOpen = false;
-
-    // Función para abrir el menú
-    function openMenu() {
-      isMenuOpen = true;
-      // Abrir menú
-      mobileMenu?.classList.remove("translate-x-full");
-      document.body.style.overflow = "hidden";
-
-      // Ocultar el botón hamburger para evitar doble X
-      if (mobileMenuBtn) {
-        mobileMenuBtn.style.opacity = "0";
-        mobileMenuBtn.style.pointerEvents = "none";
-      }
-
-      // Animar links con delay
-      mobileLinkElements.forEach((link, index) => {
-        setTimeout(() => {
-          link.classList.add("fade-in");
-        }, index * 100);
-      });
-    }
-
-    // Función para cerrar el menú
-    function closeMenu() {
-      isMenuOpen = false;
-      // Cerrar menú
-      mobileMenu?.classList.add("translate-x-full");
-      document.body.style.overflow = "";
-
-      // Mostrar el botón hamburger nuevamente
-      if (mobileMenuBtn) {
-        mobileMenuBtn.style.opacity = "1";
-        mobileMenuBtn.style.pointerEvents = "auto";
-      }
-
-      // Remover animación de links
-      mobileLinkElements.forEach((link) => {
-        link.classList.remove("fade-in");
-      });
-    }
-
-    // Event listener para el botón hamburger
-    mobileMenuBtn?.addEventListener("click", () => {
-      if (isMenuOpen) {
-        closeMenu();
-      } else {
-        openMenu();
-      }
-    });
-
-    // Event listener para el botón de cierre (X)
-    mobileCloseBtn?.addEventListener("click", () => {
-      closeMenu();
-    });
-
-    // Cerrar menú móvil al hacer clic en un enlace
-    mobileLinkElements?.forEach((link) => {
-      link.addEventListener("click", () => {
-        if (isMenuOpen) {
-          closeMenu();
+        // Divisor oscuro
+        if (navDivider) {
+          navDivider.classList.remove('border-[#fffaf0]/20');
+          navDivider.classList.add('border-[#1a1a1a]/20');
         }
-      });
-    });
-
-    // Cambiar fondo del navbar y color de letras al hacer scroll
-    const navLinks = document.querySelectorAll(".nav-link");
-
-    window.addEventListener("scroll", () => {
-      if (window.scrollY > 50) {
-        // Scroll hacia abajo: plomo claro con blur y letras negras
-        navbar?.classList.remove("bg-white/5", "bg-black/30");
-        navbar?.classList.add("bg-gray-200/95", "shadow-lg");
-
-        // Cambiar letras a negro
-        navLinks.forEach((link) => {
-          link.classList.remove("text-white");
-          link.classList.add("text-black");
+        
+        // Botón reservar oscuro
+        if (btnReservar) {
+          btnReservar.classList.remove('bg-[#9e2a2b]', 'shadow-[#9e2a2b]/25');
+          btnReservar.classList.add('bg-[#1a1a1a]', 'shadow-[#1a1a1a]/25');
+        }
+        
+        // Líneas hamburguesa oscuras (solo si menú cerrado)
+        if (!menu.isOpen) {
+          lines.forEach(line => {
+            if (line) {
+              line.classList.remove('bg-[#fffaf0]');
+              line.classList.add('bg-[#1a1a1a]');
+            }
+          });
+        }
+        
+      } else if (scrollY <= SCROLL_THRESHOLD && isScrolled) {
+        // Volver a modo "inicial" (fondo oscuro)
+        isScrolled = false;
+        navbar.classList.remove('bg-[#fffaf0]', 'shadow-lg', 'shadow-black/10', 'border-[#1a1a1a]/10');
+        navbar.classList.add('bg-[#1a1a1a]', 'border-[#fffaf0]/10');
+        
+        
+        
+        // Links claros
+        navLinks.forEach(link => {
+          link.classList.remove('text-[#1a1a1a]/70', 'hover:text-[#1a1a1a]');
+          if (link.textContent?.includes('SESIÓN')) {
+             link.classList.add('text-[#fffaf0]', 'hover:text-[#d4af37]');
+          } else {
+             link.classList.add('text-[#fffaf0]/80', 'hover:text-[#fffaf0]');
+          }
         });
 
-        // Cambiar hamburger a negro
-        hamburgerLines.forEach((line) => {
-          (line as HTMLElement).style.backgroundColor = "black";
-        });
-      } else {
-        // Arriba: transparente con blur y letras blancas
-        navbar?.classList.add("bg-white/5");
-        navbar?.classList.remove("bg-gray-200/95", "shadow-lg", "bg-black/30");
-
-        // Cambiar letras a blanco
-        navLinks.forEach((link) => {
-          link.classList.add("text-white");
-          link.classList.remove("text-black");
-        });
-
-        // Cambiar hamburger a blanco
-        hamburgerLines.forEach((line) => {
-          (line as HTMLElement).style.backgroundColor = "white";
-        });
+        // Divisor claro
+        if (navDivider) {
+          navDivider.classList.remove('border-[#1a1a1a]/20');
+          navDivider.classList.add('border-[#fffaf0]/20');
+        }
+        
+        // Botón reservar terracota
+        if (btnReservar) {
+          btnReservar.classList.remove('bg-[#1a1a1a]', 'shadow-[#1a1a1a]/25');
+          btnReservar.classList.add('bg-[#9e2a2b]', 'shadow-[#9e2a2b]/25');
+        }
+        
+        // Líneas hamburguesa claras (solo si menú cerrado)
+        if (!menu.isOpen) {
+          lines.forEach(line => {
+            if (line) {
+              line.classList.remove('bg-[#1a1a1a]');
+              line.classList.add('bg-[#fffaf0]');
+            }
+          });
+        }
       }
     });
 
-    // Smooth scroll para todos los enlaces con #
-    document.querySelectorAll('a[href^="#"]').forEach((anchor) => {
-      anchor.addEventListener("click", (e) => {
-        const href = (anchor as HTMLAnchorElement).getAttribute("href");
-        if (href && href !== "#") {
-          e.preventDefault();
-          const target = document.querySelector(href);
-          if (target) {
-            target.scrollIntoView({ behavior: "smooth", block: "start" });
+    // =========================================
+    // 2. MENÚ HAMBURGUESA FULLSCREEN
+    // =========================================
+    const mobileMenu = document.getElementById('mobileMenu');
+    const menuLinks = document.querySelectorAll('.menu-link');
+    
+    if (!mobileMenu) return;
+
+    const menu = {
+      isOpen: false,
+      
+      toggle() {
+        this.isOpen ? this.close() : this.open();
+      },
+      
+      open() {
+        this.isOpen = true;
+        hamburgerBtn.setAttribute('aria-expanded', 'true');
+        mobileMenu.classList.remove('opacity-0', 'pointer-events-none');
+        mobileMenu.classList.add('opacity-100', 'pointer-events-auto');
+        document.body.style.overflow = 'hidden';
+        
+        // Transformar hamburguesa a X
+        if (lines[0] && lines[1] && lines[2]) {
+          lines[0].style.transform = 'rotate(45deg)';
+          lines[0].style.top = '8px';
+          lines[1].style.opacity = '0';
+          lines[2].style.transform = 'rotate(-45deg)';
+          lines[2].style.top = '8px';
+        }
+        
+        // Forzar color crema en líneas cuando menú abierto
+        lines.forEach(line => {
+          if (line) {
+            line.classList.remove('bg-[#1a1a1a]', 'bg-[#fffaf0]');
+            line.classList.add('bg-[#fffaf0]');
+          }
+        });
+        
+        // Stagger animation para enlaces
+        menuLinks.forEach((link, i) => {
+          (link as HTMLElement).style.transitionDelay = `${i * 80 + 100}ms`;
+          (link as HTMLElement).style.transform = 'translateX(0) scale(1)';
+          (link as HTMLElement).style.opacity = '1';
+        });
+      },
+      
+      close() {
+        this.isOpen = false;
+        hamburgerBtn.setAttribute('aria-expanded', 'false');
+        mobileMenu.classList.remove('opacity-100', 'pointer-events-auto');
+        mobileMenu.classList.add('opacity-0', 'pointer-events-none');
+        document.body.style.overflow = '';
+        
+        // Resetear hamburguesa a líneas
+        if (lines[0] && lines[1] && lines[2]) {
+          lines[0].style.transform = 'rotate(0deg)';
+          lines[0].style.top = '0px';
+          lines[1].style.opacity = '1';
+          lines[2].style.transform = 'rotate(0deg)';
+          lines[2].style.top = '16px';
+        }
+        
+        // Restaurar color según scroll
+        const currentScroll = window.scrollY;
+        const isScrolledNow = currentScroll > SCROLL_THRESHOLD;
+        lines.forEach(line => {
+          if (line) {
+            line.classList.remove('bg-[#fffaf0]', 'bg-[#1a1a1a]');
+            line.classList.add(isScrolledNow ? 'bg-[#1a1a1a]' : 'bg-[#fffaf0]');
+          }
+        });
+        
+        // Resetear stagger
+        menuLinks.forEach((link) => {
+          (link as HTMLElement).style.transitionDelay = '0ms';
+          (link as HTMLElement).style.transform = 'translateX(-20px) scale(0.95)';
+          (link as HTMLElement).style.opacity = '0';
+        });
+      }
+    };
+
+    // Event listeners
+    hamburgerBtn.addEventListener('click', () => menu.toggle());
+
+    // Cerrar al hacer clic en enlace
+    menuLinks.forEach(link => {
+      link.addEventListener('click', (e) => {
+        const targetId = link.getAttribute('href');
+        if (targetId && targetId.startsWith('/#')) {
+          const id = targetId.substring(1);
+          if (window.location.pathname === '/') {
+            e.preventDefault();
+            menu.close();
+            setTimeout(() => {
+              document.querySelector(id)?.scrollIntoView({ 
+                behavior: 'smooth',
+                block: 'start' 
+              });
+            }, 400);
           }
         }
       });
     });
-  </script>
 
-  <style>
-    /* Hamburger lines */
-    .hamburger-line {
-      position: absolute;
-      width: 100%;
-      height: 2px;
-      background-color: white;
-      border-radius: 9999px;
-      transition: all 0.3s ease;
-    }
-
-    /* Animacin de fade-in para links */
-    @keyframes fadeIn {
-      from {
-        opacity: 0;
-        transform: translateY(20px);
+    // Cerrar con ESC
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && menu.isOpen) {
+        menu.close();
       }
-      to {
-        opacity: 1;
-        transform: translateY(0);
-      }
-    }
+    });
 
-    .fade-in {
-      animation: fadeIn 0.5s ease-out forwards;
+    // Cerrar al redimensionar a desktop
+    window.addEventListener('resize', () => {
+      if (window.innerWidth > 768 && menu.isOpen) {
+        menu.close();
+      }
+    });
+
+    // Inicializar enlaces ocultos para stagger
+    menuLinks.forEach((link) => {
+      (link as HTMLElement).style.transform = 'translateX(-20px) scale(0.95)';
+      (link as HTMLElement).style.opacity = '0';
+      (link as HTMLElement).style.transition = 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)';
+    });
+    
+    // Smooth scroll para desktop links
+    document.querySelectorAll('.nav-link').forEach(anchor => {
+      anchor.addEventListener('click', function (e) {
+        const href = this.getAttribute('href');
+        if (href && href.startsWith('/#')) {
+          const targetId = href.substring(1);
+          const target = document.querySelector(targetId);
+          if (target && window.location.pathname === '/') {
+            e.preventDefault();
+            target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          }
+        }
+      });
+    });
+  });
+</script>
+
+<style>
+  html {
+    scroll-behavior: smooth;
+  }
+  
+  /* Animación para el badge de NOVEDADES / SUCURSALES */
+  @keyframes pulse-badge {
+    0%, 100% {
+      transform: scale(1);
+      opacity: 1;
     }
-  </style>
-</div>
+    50% {
+      transform: scale(1.1);
+      opacity: 0.7;
+    }
+  }
+  
+  .animate-pulse-badge {
+    animation: pulse-badge 2s ease-in-out infinite;
+  }
+</style>

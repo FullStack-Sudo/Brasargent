@@ -1,0 +1,111 @@
+---
+// Navbar Admin - Variante clara y minimalista para el Dashboard
+const whatsappNumber = "59178555886";
+const whatsappMessage = encodeURIComponent(
+  "Hola! Necesito soporte administrativo"
+);
+const whatsappUrl = `https://wa.me/${whatsappNumber}?text=${whatsappMessage}`;
+---
+
+<nav id="navbar-admin" class="fixed top-0 left-0 right-0 z-50 bg-[#fffaf0] border-b border-[#1a1a1a]/10 shadow-sm transition-all duration-300">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div class="flex justify-between items-center h-16 md:h-20">
+      
+      <!-- Logo -->
+      <a href="/admin/dashboard" class="flex items-center group relative z-[60]">
+        <img
+          src="/img/logo/LOGO1SF.png"
+          alt="Brasargent Rodizio Logo"
+          class="h-12 w-auto object-contain transition-transform duration-300 group-hover:scale-105"
+        />
+      </a>
+
+      <!-- Desktop Menu -->
+      <div class="hidden md:flex items-center gap-8 z-[60]">
+        <a href="/admin/dashboard" class="text-[#1a1a1a]/80 hover:text-[#9e2a2b] transition-colors text-sm font-medium">Resumen</a>
+        <a href="#" class="text-[#1a1a1a]/80 hover:text-[#9e2a2b] transition-colors text-sm font-medium">Reservas</a>
+        <a href="/admin/menu" class="text-[#1a1a1a]/80 hover:text-[#9e2a2b] transition-colors text-sm font-medium">Menú</a>
+        <a href="#" class="text-[#1a1a1a]/80 hover:text-[#9e2a2b] transition-colors text-sm font-medium">Clientes</a>
+        
+        <div class="flex items-center gap-4 pl-4 border-l border-[#1a1a1a]/20">
+          <button id="navLogoutBtn" class="text-[#1a1a1a]/70 hover:text-[#9e2a2b] transition-colors font-semibold text-sm tracking-wide flex items-center gap-2">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path></svg>
+            CERRAR SESIÓN
+          </button>
+        </div>
+      </div>
+
+      <!-- Mobile Menu Button -->
+      <button id="hamburgerAdminBtn" class="md:hidden relative w-10 h-10 flex items-center justify-center rounded-lg hover:bg-[#1a1a1a]/5 transition-colors group z-[60]" aria-label="Toggle menu" aria-expanded="false">
+        <div class="relative w-6 h-5">
+          <span class="admin-line absolute top-0 left-0 w-full h-0.5 bg-[#1a1a1a] transition-all duration-300"></span>
+          <span class="admin-line absolute top-2 left-0 w-full h-0.5 bg-[#1a1a1a] transition-all duration-300"></span>
+          <span class="admin-line absolute top-4 left-0 w-full h-0.5 bg-[#1a1a1a] transition-all duration-300"></span>
+        </div>
+      </button>
+
+    </div>
+  </div>
+
+  <!-- MENU MOBILE -->
+  <div id="mobileAdminMenu" 
+       class="md:hidden fixed inset-0 z-50 
+              bg-[#fffaf0]/98 backdrop-blur-[20px]
+              opacity-0 pointer-events-none
+              transition-all duration-500 ease-[cubic-bezier(0.4,0,0.2,1)]
+              overflow-hidden">
+    
+    <div class="flex flex-col items-center justify-center w-full h-full px-6 py-8 relative">
+      <div class="flex flex-col items-center gap-6 max-w-2xl w-full mt-10">
+        <a href="/admin/dashboard" class="text-3xl font-serif text-[#1a1a1a]/80 hover:text-[#9e2a2b] transition-all">Resumen</a>
+        <a href="#" class="text-3xl font-serif text-[#1a1a1a]/80 hover:text-[#9e2a2b] transition-all">Reservas</a>
+        <a href="/admin/menu" class="text-3xl font-serif text-[#1a1a1a]/80 hover:text-[#9e2a2b] transition-all">Menú</a>
+        <button id="mobileLogoutBtn" class="mt-8 text-xl font-medium text-[#9e2a2b] border-t border-[#1a1a1a]/10 pt-8 w-full text-center">Cerrar Sesión</button>
+      </div>
+    </div>
+  </div>
+</nav>
+
+<script>
+  document.addEventListener('DOMContentLoaded', () => {
+    // Mobile Menu Toggle
+    const hamburgerBtn = document.getElementById('hamburgerAdminBtn');
+    const mobileMenu = document.getElementById('mobileAdminMenu');
+    const lines = document.querySelectorAll('.admin-line');
+    let isOpen = false;
+
+    if (hamburgerBtn && mobileMenu) {
+      hamburgerBtn.addEventListener('click', () => {
+        isOpen = !isOpen;
+        if (isOpen) {
+          mobileMenu.classList.remove('opacity-0', 'pointer-events-none');
+          mobileMenu.classList.add('opacity-100', 'pointer-events-auto');
+          if (lines[0]) (lines[0] as HTMLElement).style.transform = 'rotate(45deg) translate(5px, 6px)';
+          if (lines[1]) (lines[1] as HTMLElement).style.opacity = '0';
+          if (lines[2]) (lines[2] as HTMLElement).style.transform = 'rotate(-45deg) translate(5px, -6px)';
+        } else {
+          mobileMenu.classList.remove('opacity-100', 'pointer-events-auto');
+          mobileMenu.classList.add('opacity-0', 'pointer-events-none');
+          if (lines[0]) (lines[0] as HTMLElement).style.transform = 'rotate(0deg)';
+          if (lines[1]) (lines[1] as HTMLElement).style.opacity = '1';
+          if (lines[2]) (lines[2] as HTMLElement).style.transform = 'rotate(0deg)';
+        }
+      });
+    }
+
+    // Handle Logout
+    const handleLogout = (e: Event) => {
+      e.preventDefault();
+      document.cookie = 'session=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
+      document.cookie = 'user_name=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
+      document.cookie = 'user_id=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
+      window.location.href = '/admin/login';
+    };
+
+    const navLogoutBtn = document.getElementById('navLogoutBtn');
+    const mobileLogoutBtn = document.getElementById('mobileLogoutBtn');
+    
+    if (navLogoutBtn) navLogoutBtn.addEventListener('click', handleLogout);
+    if (mobileLogoutBtn) mobileLogoutBtn.addEventListener('click', handleLogout);
+  });
+</script>

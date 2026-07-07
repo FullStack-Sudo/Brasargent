@@ -1,0 +1,751 @@
+---
+// ============================================
+// FRONTMATTER - Lógica del servidor (Simulada para desarrollo)
+// ============================================
+
+// Verificar si ya está autenticado
+const session = Astro.cookies.get("session");
+if (session && session.value === "authenticated") {
+    return Astro.redirect("/admin/dashboard");
+}
+
+let error = "";
+let emailValue = "";
+
+import "../../styles/global.css";
+import NavbarSimple from "../../components/NavbarSimple.astro";
+---
+
+<!doctype html>
+<html lang="es">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Iniciar Sesión - BRASARGENT Admin</title>
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+        <link
+            href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Inter:wght@300;400;500;600;700&display=swap"
+            rel="stylesheet"
+        />
+
+        <style>
+            /* ============================================
+           ESTILOS COMPLETOS
+           ============================================ */
+
+            * {
+                margin: 0;
+                padding: 0;
+                box-sizing: border-box;
+            }
+
+            body {
+                font-family: "Inter", sans-serif;
+                background: #1a1a1a;
+                min-height: 100vh;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                overflow: hidden;
+            }
+
+            .font-serif {
+                font-family: "Playfair Display", serif;
+            }
+
+            /* Fondo con imagen y overlay */
+            .login-bg {
+                position: fixed;
+                inset: 0;
+                background:
+                    linear-gradient(
+                        135deg,
+                        rgba(26, 26, 26, 0.92) 0%,
+                        rgba(26, 26, 26, 0.85) 100%
+                    ),
+                    url("https://images.unsplash.com/photo-1558030006-4506843936d7?w=1920&q=80");
+                background-size: cover;
+                background-position: center;
+                z-index: 0;
+            }
+
+            /* Efecto de partículas (decorativo) */
+            .particles {
+                position: fixed;
+                inset: 0;
+                z-index: 1;
+                pointer-events: none;
+                overflow: hidden;
+            }
+
+            .particle {
+                position: absolute;
+                width: 4px;
+                height: 4px;
+                background: rgba(212, 175, 55, 0.3);
+                border-radius: 50%;
+                animation: float-particle linear infinite;
+            }
+
+            @keyframes float-particle {
+                0% {
+                    transform: translateY(100vh) scale(0);
+                    opacity: 0;
+                }
+                10% {
+                    opacity: 1;
+                }
+                90% {
+                    opacity: 1;
+                }
+                100% {
+                    transform: translateY(-10vh) scale(1);
+                    opacity: 0;
+                }
+            }
+
+            /* Contenedor principal */
+            .login-container {
+                position: relative;
+                z-index: 2;
+                width: 100%;
+                max-width: 440px;
+                padding: 20px;
+                margin-top: 100px; /* Para que no lo tape el navbar */
+            }
+
+            /* Tarjeta de login con glassmorphism */
+            .login-card {
+                background: rgba(255, 250, 240, 0.06);
+                backdrop-filter: blur(20px);
+                -webkit-backdrop-filter: blur(20px);
+                border: 1px solid rgba(255, 250, 240, 0.1);
+                border-radius: 24px;
+                padding: 48px 40px 40px;
+                box-shadow:
+                    0 25px 60px rgba(0, 0, 0, 0.6),
+                    inset 0 1px 0 rgba(255, 255, 255, 0.05);
+                animation: fadeUp 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+            }
+
+            @keyframes fadeUp {
+                from {
+                    opacity: 0;
+                    transform: translateY(30px) scale(0.98);
+                }
+                to {
+                    opacity: 1;
+                    transform: translateY(0) scale(1);
+                }
+            }
+
+            /* Logo */
+            .logo {
+                text-align: center;
+                margin-bottom: 32px;
+            }
+
+            .logo img {
+                height: 60px;
+                width: auto;
+                object-fit: contain;
+                margin: 0 auto;
+                position: relative;
+                display: inline-block;
+            }
+
+            .logo .subtitle {
+                color: rgba(255, 250, 240, 0.4);
+                font-size: 0.85rem;
+                font-weight: 300;
+                letter-spacing: 3px;
+                text-transform: uppercase;
+                margin-top: 4px;
+            }
+
+            /* Efecto de brillo en el logo */
+            .logo-shimmer {
+                position: relative;
+            }
+
+            .logo-shimmer::after {
+                content: "";
+                position: absolute;
+                top: -50%;
+                left: -50%;
+                width: 200%;
+                height: 200%;
+                background: linear-gradient(
+                    90deg,
+                    transparent 0%,
+                    rgba(212, 175, 55, 0.05) 20%,
+                    rgba(212, 175, 55, 0.15) 40%,
+                    rgba(212, 175, 55, 0.05) 60%,
+                    transparent 80%
+                );
+                background-size: 200% 100%;
+                animation: shimmerLogo 3s ease-in-out infinite;
+                pointer-events: none;
+            }
+
+            @keyframes shimmerLogo {
+                0% {
+                    transform: translateX(-100%) rotate(0deg);
+                }
+                100% {
+                    transform: translateX(100%) rotate(0deg);
+                }
+            }
+
+            /* Campos del formulario */
+            .form-group {
+                margin-bottom: 20px;
+            }
+
+            .form-group label {
+                display: block;
+                color: rgba(255, 250, 240, 0.7);
+                font-size: 0.8rem;
+                font-weight: 500;
+                margin-bottom: 6px;
+                letter-spacing: 0.5px;
+            }
+
+            .input-wrapper {
+                position: relative;
+            }
+
+            .input-wrapper .icon {
+                position: absolute;
+                left: 14px;
+                top: 50%;
+                transform: translateY(-50%);
+                color: rgba(255, 250, 240, 0.3);
+                font-size: 1.1rem;
+                pointer-events: none;
+                transition: color 0.3s ease;
+            }
+
+            .input-wrapper .icon-right {
+                position: absolute;
+                right: 14px;
+                top: 50%;
+                transform: translateY(-50%);
+                color: rgba(255, 250, 240, 0.4);
+                font-size: 1.2rem;
+                cursor: pointer;
+                background: none;
+                border: none;
+                padding: 4px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                transition: color 0.3s ease;
+            }
+
+            .input-wrapper .icon-right:hover {
+                color: #fffaf0;
+            }
+
+            .input-wrapper input[type="password"],
+            .input-wrapper input.password-toggle {
+                padding-right: 46px;
+            }
+
+            .input-wrapper input {
+                width: 100%;
+                padding: 14px 14px 14px 46px;
+                background: rgba(255, 250, 240, 0.05);
+                border: 1.5px solid rgba(255, 250, 240, 0.08);
+                border-radius: 12px;
+                color: #fffaf0;
+                font-size: 0.95rem;
+                transition: all 0.3s ease;
+                outline: none;
+                font-family: "Inter", sans-serif;
+            }
+
+            .input-wrapper input::placeholder {
+                color: rgba(255, 250, 240, 0.25);
+            }
+
+            .input-wrapper input:focus {
+                border-color: #9e2a2b;
+                background: rgba(255, 250, 240, 0.08);
+                box-shadow: 0 0 0 4px rgba(158, 42, 43, 0.15);
+            }
+
+            .input-wrapper input:focus + .icon,
+            .input-wrapper input:focus ~ .icon {
+                color: #9e2a2b;
+            }
+
+            .input-wrapper input.error {
+                border-color: #ef4444;
+                box-shadow: 0 0 0 4px rgba(239, 68, 68, 0.15);
+            }
+
+            .input-wrapper .error-message {
+                color: #ef4444;
+                font-size: 0.75rem;
+                margin-top: 4px;
+                display: none;
+            }
+
+            .input-wrapper .error-message.show {
+                display: block;
+            }
+
+            /* Checkbox recordarme */
+            .remember-group {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                margin: 24px 0 28px;
+            }
+
+            .remember-group label {
+                display: flex;
+                align-items: center;
+                gap: 10px;
+                color: rgba(255, 250, 240, 0.5);
+                font-size: 0.85rem;
+                cursor: pointer;
+            }
+
+            .remember-group input[type="checkbox"] {
+                width: 18px;
+                height: 18px;
+                accent-color: #9e2a2b;
+                cursor: pointer;
+                border-radius: 4px;
+                border: 1.5px solid rgba(255, 250, 240, 0.2);
+                background: transparent;
+                transition: all 0.2s ease;
+            }
+
+            .remember-group input[type="checkbox"]:checked {
+                border-color: #9e2a2b;
+            }
+
+            .remember-group a {
+                color: rgba(255, 250, 240, 0.3);
+                font-size: 0.85rem;
+                text-decoration: none;
+                transition: color 0.3s ease;
+            }
+
+            .remember-group a:hover {
+                color: #9e2a2b;
+            }
+
+            /* Botón */
+            .btn-login {
+                width: 100%;
+                padding: 16px;
+                background: linear-gradient(135deg, #9e2a2b 0%, #7a2021 100%);
+                border: none;
+                border-radius: 12px;
+                color: #fffaf0;
+                font-size: 1rem;
+                font-weight: 600;
+                font-family: "Inter", sans-serif;
+                cursor: pointer;
+                transition: all 0.3s ease;
+                position: relative;
+                overflow: hidden;
+                letter-spacing: 0.5px;
+            }
+
+            .btn-login:hover {
+                transform: scale(1.02);
+                box-shadow: 0 8px 30px rgba(158, 42, 43, 0.4);
+            }
+
+            .btn-login:active {
+                transform: scale(0.98);
+            }
+
+            /* Efecto shimmer en botón */
+            .btn-login::before {
+                content: "";
+                position: absolute;
+                inset: 0;
+                background: linear-gradient(
+                    90deg,
+                    transparent 0%,
+                    rgba(255, 255, 255, 0.1) 30%,
+                    rgba(255, 255, 255, 0.2) 50%,
+                    rgba(255, 255, 255, 0.1) 70%,
+                    transparent 100%
+                );
+                transform: translateX(-100%);
+                transition: transform 0.6s ease;
+            }
+
+            .btn-login:hover::before {
+                transform: translateX(100%);
+            }
+
+            .btn-login:disabled {
+                opacity: 0.6;
+                cursor: not-allowed;
+                transform: none !important;
+            }
+
+            .btn-login .spinner {
+                display: none;
+                width: 20px;
+                height: 20px;
+                border: 2px solid rgba(255, 250, 240, 0.2);
+                border-top-color: #fffaf0;
+                border-radius: 50%;
+                animation: spin 0.8s linear infinite;
+                margin: 0 auto;
+            }
+
+            .btn-login.loading .spinner {
+                display: block;
+            }
+
+            .btn-login.loading .btn-text {
+                display: none;
+            }
+
+            @keyframes spin {
+                to {
+                    transform: rotate(360deg);
+                }
+            }
+
+            /* Mensaje de error general */
+            .error-alert {
+                background: rgba(239, 68, 68, 0.1);
+                border: 1px solid rgba(239, 68, 68, 0.2);
+                border-radius: 12px;
+                padding: 12px 16px;
+                margin-bottom: 20px;
+                display: none;
+                align-items: center;
+                gap: 10px;
+                color: #fca5a5;
+                font-size: 0.9rem;
+            }
+
+            .error-alert.show {
+                display: flex;
+            }
+
+            .error-alert .icon {
+                font-size: 1.2rem;
+            }
+
+            /* Footer */
+            .login-footer {
+                text-align: center;
+                margin-top: 24px;
+                color: rgba(255, 250, 240, 0.15);
+                font-size: 0.75rem;
+                letter-spacing: 1px;
+            }
+
+            /* Versión responsive */
+            @media (max-width: 480px) {
+                .login-card {
+                    padding: 32px 24px 28px;
+                }
+
+                .logo h1 {
+                    font-size: 2rem;
+                }
+
+                .input-wrapper input {
+                    padding: 12px 12px 12px 42px;
+                    font-size: 0.9rem;
+                }
+            }
+        </style>
+    </head>
+    <body>
+        <NavbarSimple />
+        <!-- ============================================
+    FONDO
+    ============================================ -->
+        <div class="login-bg"></div>
+
+        <!-- ============================================
+    PARTÍCULAS DECORATIVAS
+    ============================================ -->
+        <div class="particles" id="particles"></div>
+
+        <!-- ============================================
+    CONTENEDOR PRINCIPAL
+    ============================================ -->
+        <div class="login-container">
+            <div class="login-card" id="loginCard">
+                <!-- LOGO -->
+                <div class="logo">
+                    <div class="logo-shimmer">
+                        <img
+                            src="/img/logo/LOGO1SF.png"
+                            alt="Brasargent Logo"
+                        />
+                    </div>
+                    <p class="subtitle">Panel de Administración</p>
+                </div>
+
+                <!-- MENSAJE DE ERROR GENERAL (Server) -->
+                {
+                    error && (
+                        <div class="error-alert show" id="errorAlert">
+                            <span class="icon">⚠️</span>
+                            <span>{error}</span>
+                        </div>
+                    )
+                }
+
+                <!-- MENSAJE DE ERROR JS -->
+                <div class="error-alert" id="errorAlertJS">
+                    <span class="icon">⚠️</span>
+                    <span id="errorMessage">Error al iniciar sesión</span>
+                </div>
+
+                <!-- FORMULARIO -->
+                <form id="loginForm" method="POST">
+                    <!-- Email -->
+                    <div class="form-group">
+                        <label for="email">Correo Electrónico</label>
+                        <div class="input-wrapper">
+                            <input
+                                type="email"
+                                id="email"
+                                name="email"
+                                placeholder="admin@brasargent.com"
+                                value={emailValue}
+                                required
+                                autocomplete="email"
+                                autofocus
+                            />
+                            <span class="icon">✉️</span>
+                        </div>
+                    </div>
+
+                    <!-- Contraseña -->
+                    <div class="form-group">
+                        <label for="password">Contraseña</label>
+                        <div class="input-wrapper">
+                            <input
+                                type="password"
+                                id="password"
+                                name="password"
+                                placeholder="••••••••"
+                                required
+                                autocomplete="current-password"
+                                class="password-toggle"
+                            />
+                            <span class="icon">🔒</span>
+                            <button
+                                type="button"
+                                id="togglePassword"
+                                class="icon-right"
+                                aria-label="Mostrar contraseña"
+                            >
+                                👁️
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Recordarme -->
+                    <div class="remember-group">
+                        <label>
+                            <input type="checkbox" name="remember" checked />
+                            Recordarme
+                        </label>
+                        <a href="#">¿Olvidaste tu contraseña?</a>
+                    </div>
+
+                    <!-- Botón -->
+                    <button type="submit" class="btn-login" id="loginBtn">
+                        <span class="btn-text">Iniciar Sesión</span>
+                        <div class="spinner"></div>
+                    </button>
+                </form>
+
+                <!-- Footer -->
+                <div class="login-footer">
+                    © 2026 BRASARGENT - Todos los derechos reservados
+                </div>
+            </div>
+        </div>
+
+        <!-- ============================================
+    SCRIPT - LÓGICA COMPLETA
+    ============================================ -->
+        <script>
+            document.addEventListener("DOMContentLoaded", function () {
+                // ========================================
+                // 1. GENERAR PARTÍCULAS
+                // ========================================
+                const particlesContainer = document.getElementById("particles");
+                for (let i = 0; i < 30; i++) {
+                    const particle = document.createElement("div");
+                    particle.className = "particle";
+                    particle.style.left = Math.random() * 100 + "%";
+                    particle.style.width = 2 + Math.random() * 4 + "px";
+                    particle.style.height = particle.style.width;
+                    particle.style.animationDuration =
+                        15 + Math.random() * 25 + "s";
+                    particle.style.animationDelay = Math.random() * 20 + "s";
+                    particle.style.opacity = 0.2 + Math.random() * 0.3;
+                    particlesContainer.appendChild(particle);
+                }
+
+                // ========================================
+                // 2. VALIDACIÓN Y ENVÍO DEL FORMULARIO
+                // ========================================
+                const form = document.getElementById("loginForm");
+                const emailInput = document.getElementById("email");
+                const passwordInput = document.getElementById("password");
+                const loginBtn = document.getElementById("loginBtn");
+                const errorAlertJS = document.getElementById("errorAlertJS");
+                const errorMessage = document.getElementById("errorMessage");
+                const togglePasswordBtn =
+                    document.getElementById("togglePassword");
+
+                // Toggle de contraseña
+                if (togglePasswordBtn && passwordInput) {
+                    togglePasswordBtn.addEventListener("click", function () {
+                        const type =
+                            passwordInput.getAttribute("type") === "password"
+                                ? "text"
+                                : "password";
+                        passwordInput.setAttribute("type", type);
+                        this.textContent = type === "password" ? "👁️" : "🙈";
+                    });
+                }
+
+                // Ocultar error inicial de JS
+                if (errorAlertJS) errorAlertJS.classList.remove("show");
+
+                // Validar campos en tiempo real
+                emailInput.addEventListener("input", function () {
+                    this.classList.remove("error");
+                });
+
+                passwordInput.addEventListener("input", function () {
+                    this.classList.remove("error");
+                });
+
+                // Envío del formulario
+                form.addEventListener("submit", async function (e) {
+                    e.preventDefault();
+
+                    // Resetear errores
+                    emailInput.classList.remove("error");
+                    passwordInput.classList.remove("error");
+                    if (errorAlertJS) errorAlertJS.classList.remove("show");
+
+                    // Ocultar también cualquier error del server que exista
+                    const serverError = document.getElementById("errorAlert");
+                    if (serverError) {
+                        serverError.classList.remove("show");
+                        serverError.style.display = "none";
+                    }
+
+                    // Validar client-side
+                    const email = emailInput.value.trim();
+                    const password = passwordInput.value.trim();
+
+                    let hasError = false;
+
+                    if (
+                        !email ||
+                        !email.includes("@") ||
+                        !email.includes(".")
+                    ) {
+                        emailInput.classList.add("error");
+                        hasError = true;
+                    }
+
+                    if (!password || password.length < 6) {
+                        passwordInput.classList.add("error");
+                        hasError = true;
+                    }
+
+                    if (hasError) {
+                        if (errorMessage)
+                            errorMessage.textContent =
+                                "Por favor, completa todos los campos correctamente";
+                        if (errorAlertJS) errorAlertJS.classList.add("show");
+                        return;
+                    }
+
+                    // Estado de carga
+                    loginBtn.disabled = true;
+                    loginBtn.classList.add("loading");
+
+                    try {
+                        // Simular petición a la base de datos (Backend Mock)
+                        await new Promise((resolve) =>
+                            setTimeout(resolve, 800),
+                        );
+
+                        if (email !== "admin@brasargent.com") {
+                            throw new Error("Usuario no encontrado");
+                        }
+
+                        if (password !== "brasargent2026") {
+                            throw new Error("Contraseña incorrecta");
+                        }
+
+                        // Configurar sesión (Client-side simulación)
+                        const maxAge = 60 * 60 * 24;
+                        document.cookie = `session=authenticated; max-age=${maxAge}; path=/`;
+                        document.cookie = `user_name=Admin Brasargent; max-age=${maxAge}; path=/`;
+                        document.cookie = `user_id=1; max-age=${maxAge}; path=/`;
+
+                        // Redirigir al dashboard
+                        window.location.href = "/admin/dashboard";
+                    } catch (error) {
+                        if (errorMessage && errorAlertJS) {
+                            errorMessage.textContent =
+                                error.message || "Error al iniciar sesión";
+                            errorAlertJS.classList.add("show");
+                        }
+                    } finally {
+                        loginBtn.disabled = false;
+                        loginBtn.classList.remove("loading");
+                    }
+                });
+
+                // ========================================
+                // 3. ANIMACIÓN DE ENTRADA
+                // ========================================
+                const card = document.getElementById("loginCard");
+                if (card) {
+                    card.style.opacity = "0";
+                    card.style.transform = "translateY(30px) scale(0.98)";
+
+                    setTimeout(() => {
+                        card.style.transition =
+                            "all 0.8s cubic-bezier(0.4, 0, 0.2, 1)";
+                        card.style.opacity = "1";
+                        card.style.transform = "translateY(0) scale(1)";
+                    }, 100);
+                }
+
+                // ========================================
+                // 4. AUTOCOMPLETAR EN DESARROLLO
+                // ========================================
+                // Autocompletado simulado para probar el login rápidamente
+                setTimeout(() => {
+                    if (!emailInput.value) {
+                        emailInput.value = "admin@brasargent.com";
+                        passwordInput.value = "brasargent2026";
+                    }
+                }, 500);
+            });
+        </script>
+    </body>
+</html>

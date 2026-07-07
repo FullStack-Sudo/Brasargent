@@ -1,0 +1,306 @@
+---
+import "../../styles/global.css";
+import NavbarAdmin from "../../components/NavbarAdmin.astro";
+import mesaGif from "../../assets/dashboard/mesa.gif";
+import dolarGif from "../../assets/dashboard/dolar.gif";
+import genteGif from "../../assets/dashboard/gente-celebrando.gif";
+import experienciaGif from "../../assets/dashboard/experiencia-del-cliente.gif";
+---
+
+<!doctype html>
+<html lang="es">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Panel de Control - BRASARGENT</title>
+        <link
+            href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,600;1,600&display=swap"
+            rel="stylesheet"
+        />
+    </head>
+    <body class="bg-gray-50 text-gray-800 font-sans antialiased">
+        <NavbarAdmin />
+
+        <!-- Dashboard Content -->
+        <main class="pb-12 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto min-h-screen" style="padding-top: 7rem">
+            <!-- Header Section -->
+            <div class="flex flex-col md:flex-row md:items-center justify-between mb-10 gap-4 mt-16 md:mt-24">
+                <div>
+                    <h1 class="text-3xl font-serif text-gray-900 font-semibold" id="welcomeText">
+                        ¡Hola, Admin!
+                    </h1>
+                    <p class="text-gray-500 mt-1">
+                        Resumen de actividad y gestión de tu restaurante.
+                    </p>
+                </div>
+                <div class="flex items-center gap-3">
+                    <button class="bg-white border border-gray-200 text-gray-700 px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors shadow-sm flex items-center gap-2">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg>
+                        Exportar Reporte
+                    </button>
+                    <button id="logoutBtn" class="bg-[#9e2a2b] hover:bg-[#8a2426] text-[#fffaf0] px-4 py-2 rounded-lg text-sm font-medium transition-colors shadow-sm flex items-center gap-2">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path></svg>
+                        Cerrar Sesión
+                    </button>
+                </div>
+            </div>
+
+            <!-- Stats Grid -->
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
+                <!-- Stat 1 -->
+                <div class="bg-white rounded-2xl p-6 border border-gray-100 shadow-[0_2px_10px_-3px_rgba(0,0,0,0.05)] transition-transform hover:-translate-y-1">
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <p class="text-sm font-medium text-gray-500 mb-1">
+                                Reservas de Hoy
+                            </p>
+                            <h3 class="text-3xl font-bold text-gray-900">42</h3>
+                        </div>
+                        <div class="p-2">
+                            <img src={mesaGif.src} alt="Reservas de Hoy" class="w-12 h-12 object-contain mix-blend-multiply" />
+                        </div>
+                    </div>
+                    <div class="mt-4 flex items-center text-sm">
+                        <span class="text-green-600 font-medium flex items-center">
+                            <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path></svg>
+                            12%
+                        </span>
+                        <span class="text-gray-400 ml-2">vs ayer</span>
+                    </div>
+                </div>
+
+                <!-- Stat 2 -->
+                <div class="bg-white rounded-2xl p-6 border border-gray-100 shadow-[0_2px_10px_-3px_rgba(0,0,0,0.05)] transition-transform hover:-translate-y-1">
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <p class="text-sm font-medium text-gray-500 mb-1">
+                                Ingresos Estimados
+                            </p>
+                            <h3 class="text-3xl font-bold text-gray-900">
+                                $3.4K
+                            </h3>
+                        </div>
+                        <div class="p-2">
+                            <img src={dolarGif.src} alt="Ingresos Estimados" class="w-12 h-12 object-contain mix-blend-multiply" />
+                        </div>
+                    </div>
+                    <div class="mt-4 flex items-center text-sm">
+                        <span class="text-green-600 font-medium flex items-center">
+                            <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path></svg>
+                            8%
+                        </span>
+                        <span class="text-gray-400 ml-2">vs ayer</span>
+                    </div>
+                </div>
+
+                <!-- Stat 3 -->
+                <div class="bg-white rounded-2xl p-6 border border-gray-100 shadow-[0_2px_10px_-3px_rgba(0,0,0,0.05)] transition-transform hover:-translate-y-1">
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <p class="text-sm font-medium text-gray-500 mb-1">
+                                Comensales
+                            </p>
+                            <h3 class="text-3xl font-bold text-gray-900">
+                                128
+                            </h3>
+                        </div>
+                        <div class="p-2">
+                            <img src={genteGif.src} alt="Comensales" class="w-12 h-12 object-contain mix-blend-multiply" />
+                        </div>
+                    </div>
+                    <div class="mt-4 flex items-center text-sm">
+                        <span class="text-red-500 font-medium flex items-center">
+                            <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 17h8m0 0v-8m0 8l-8-8-4 4-6-6"></path></svg>
+                            3%
+                        </span>
+                        <span class="text-gray-400 ml-2">vs ayer</span>
+                    </div>
+                </div>
+
+                <!-- Stat 4 -->
+                <div class="bg-white rounded-2xl p-6 border border-gray-100 shadow-[0_2px_10px_-3px_rgba(0,0,0,0.05)] transition-transform hover:-translate-y-1">
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <p class="text-sm font-medium text-gray-500 mb-1">
+                                Satisfacción
+                            </p>
+                            <h3 class="text-3xl font-bold text-gray-900">
+                                4.9<span class="text-base font-normal text-gray-400">/5</span>
+                            </h3>
+                        </div>
+                        <div class="p-2">
+                            <img src={experienciaGif.src} alt="Satisfacción del Cliente" class="w-12 h-12 object-contain mix-blend-multiply" />
+                        </div>
+                    </div>
+                    <div class="mt-4 flex items-center text-sm">
+                        <span class="text-gray-500 font-medium flex items-center">
+                            <svg class="w-4 h-4 mr-1 text-[#d4af37]" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"></path></svg>
+                            12 reseñas nuevas
+                        </span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Main Content Area -->
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                <!-- Tabla de Reservas Recientes -->
+                <div class="lg:col-span-2 bg-white rounded-2xl border border-gray-100 shadow-[0_2px_10px_-3px_rgba(0,0,0,0.05)] overflow-hidden">
+                    <div class="p-6 border-b border-gray-100 flex justify-between items-center">
+                        <h2 class="text-lg font-semibold text-gray-900">
+                            Próximas Reservas
+                        </h2>
+                        <a href="#" class="text-sm font-medium text-[#9e2a2b] hover:text-[#8a2426]">Ver todas</a>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left text-sm">
+                            <thead class="bg-gray-50/50 text-gray-500 font-medium">
+                                <tr>
+                                    <th class="py-4 px-6">Cliente</th>
+                                    <th class="py-4 px-6">Hora</th>
+                                    <th class="py-4 px-6">Personas</th>
+                                    <th class="py-4 px-6">Estado</th>
+                                    <th class="py-4 px-6 text-right">Acción</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-gray-50 text-gray-700">
+                                <tr class="hover:bg-gray-50/50 transition-colors">
+                                    <td class="py-4 px-6">
+                                        <div class="flex items-center gap-3">
+                                            <div class="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center text-gray-600 font-semibold text-xs">
+                                                CM
+                                            </div>
+                                            <span class="font-medium text-gray-900">Carlos Mendoza</span>
+                                        </div>
+                                    </td>
+                                    <td class="py-4 px-6">20:30</td>
+                                    <td class="py-4 px-6">4 Personas</td>
+                                    <td class="py-4 px-6">
+                                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">Confirmado</span>
+                                    </td>
+                                    <td class="py-4 px-6 text-right">
+                                        <button class="text-gray-400 hover:text-[#9e2a2b] transition-colors">
+                                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path></svg>
+                                        </button>
+                                    </td>
+                                </tr>
+                                <tr class="hover:bg-gray-50/50 transition-colors">
+                                    <td class="py-4 px-6">
+                                        <div class="flex items-center gap-3">
+                                            <div class="w-8 h-8 rounded-full bg-[#d4a574] text-white flex items-center justify-center font-semibold text-xs">
+                                                AR
+                                            </div>
+                                            <span class="font-medium text-gray-900">Ana Rodríguez</span>
+                                        </div>
+                                    </td>
+                                    <td class="py-4 px-6">21:00</td>
+                                    <td class="py-4 px-6">2 Personas</td>
+                                    <td class="py-4 px-6">
+                                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-800">Pendiente</span>
+                                    </td>
+                                    <td class="py-4 px-6 text-right">
+                                        <button class="text-gray-400 hover:text-[#9e2a2b] transition-colors">
+                                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path></svg>
+                                        </button>
+                                    </td>
+                                </tr>
+                                <tr class="hover:bg-gray-50/50 transition-colors">
+                                    <td class="py-4 px-6">
+                                        <div class="flex items-center gap-3">
+                                            <div class="w-8 h-8 rounded-full bg-[#1a1a1a] text-[#d4af37] flex items-center justify-center font-semibold text-xs">
+                                                LG
+                                            </div>
+                                            <span class="font-medium text-gray-900">Luis Gómez (VIP)</span>
+                                        </div>
+                                    </td>
+                                    <td class="py-4 px-6">21:45</td>
+                                    <td class="py-4 px-6">8 Personas</td>
+                                    <td class="py-4 px-6">
+                                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">Confirmado</span>
+                                    </td>
+                                    <td class="py-4 px-6 text-right">
+                                        <button class="text-gray-400 hover:text-[#9e2a2b] transition-colors">
+                                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path></svg>
+                                        </button>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Acciones Rápidas -->
+                <div class="bg-white rounded-2xl border border-gray-100 shadow-[0_2px_10px_-3px_rgba(0,0,0,0.05)] p-6">
+                    <h2 class="text-lg font-semibold text-gray-900 mb-6">
+                        Acciones Rápidas
+                    </h2>
+                    <div class="space-y-3">
+                        <button class="w-full flex items-center justify-between p-4 rounded-xl border border-gray-100 hover:border-[#9e2a2b] hover:bg-red-50/50 transition-all group">
+                            <div class="flex items-center gap-3 text-gray-700 group-hover:text-[#9e2a2b]">
+                                <div class="p-2 bg-gray-50 rounded-lg group-hover:bg-white group-hover:shadow-sm transition-all">
+                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+                                </div>
+                                <span class="font-medium">Nueva Reserva</span>
+                            </div>
+                            <svg class="w-5 h-5 text-gray-300 group-hover:text-[#9e2a2b]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+                        </button>
+
+                        <a href="/admin/menu" class="w-full flex items-center justify-between p-4 rounded-xl border border-gray-100 hover:border-[#d4a574] hover:bg-orange-50/50 transition-all group">
+                            <div class="flex items-center gap-3 text-gray-700 group-hover:text-[#d4a574]">
+                                <div class="p-2 bg-gray-50 rounded-lg group-hover:bg-white group-hover:shadow-sm transition-all">
+                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"></path></svg>
+                                </div>
+                                <span class="font-medium">Gestionar Menú</span>
+                            </div>
+                            <svg class="w-5 h-5 text-gray-300 group-hover:text-[#d4a574]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+                        </a>
+
+                        <button class="w-full flex items-center justify-between p-4 rounded-xl border border-gray-100 hover:border-[#1a1a1a] hover:bg-gray-50 transition-all group">
+                            <div class="flex items-center gap-3 text-gray-700 group-hover:text-[#1a1a1a]">
+                                <div class="p-2 bg-gray-50 rounded-lg group-hover:bg-white group-hover:shadow-sm transition-all">
+                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
+                                </div>
+                                <span class="font-medium">Directorio de Clientes</span>
+                            </div>
+                            <svg class="w-5 h-5 text-gray-300 group-hover:text-[#1a1a1a]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </main>
+        
+        <script>
+            document.addEventListener('DOMContentLoaded', () => {
+                // Client-side authentication check
+                if (!document.cookie.includes('session=authenticated')) {
+                    window.location.href = '/admin/login';
+                }
+                
+                // Extract username from cookie if available
+                const cookies = document.cookie.split(';');
+                for (const cookie of cookies) {
+                    const [name, value] = cookie.trim().split('=');
+                    if (name === 'user_name') {
+                        const welcomeText = document.getElementById('welcomeText');
+                        if (welcomeText) {
+                            const fullName = decodeURIComponent(value);
+                            const firstName = fullName.split(' ')[0] || 'Admin';
+                            welcomeText.textContent = `¡Hola, ${firstName}!`;
+                        }
+                    }
+                }
+                
+                // Logout logic
+                const logoutBtn = document.getElementById('logoutBtn');
+                if (logoutBtn) {
+                    logoutBtn.addEventListener('click', (e) => {
+                        e.preventDefault();
+                        document.cookie = 'session=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
+                        document.cookie = 'user_name=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
+                        document.cookie = 'user_id=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
+                        window.location.href = '/admin/login';
+                    });
+                }
+            });
+        </script>
+    </body>
+</html>

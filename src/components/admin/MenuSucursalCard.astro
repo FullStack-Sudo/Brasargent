@@ -1,0 +1,114 @@
+---
+import { SUCURSAL_META } from "../../lib/queries/menu";
+
+interface Props {
+    sucursal: {
+        id: number;
+        nombre: string;
+        direccion: string;
+        telefono: string;
+        horario: string;
+        capacidad: number;
+        total_platos: number;
+        disponibles: number;
+        agotados: number;
+        concepto?: string;
+        rating?: number;
+        reseñas?: string;
+    };
+}
+
+const { sucursal } = Astro.props;
+const meta = SUCURSAL_META[sucursal.id] || SUCURSAL_META[1]; // Fallback to 1
+
+// Concept Colors
+const conceptColors: Record<number, string> = {
+    1: 'text-[#9e2a2b]', // Churrasquería (Terracota)
+    2: 'text-[#d4a574]', // Fast Grill (Dorado)
+    3: 'text-[#5c3a21]', // Rodizio (Madera Oscura)
+};
+const colorClass = conceptColors[sucursal.id] || 'text-gray-900';
+---
+
+<div class="bg-white rounded-2xl border border-gray-200 shadow-sm hover:shadow-md transition-all flex flex-col h-full overflow-hidden animate-fade-up">
+    <!-- Card Header -->
+    <div class="p-6 pb-4 border-b border-gray-100 flex justify-between items-start">
+        <div>
+            <h3 class={`text-2xl font-serif font-bold uppercase flex items-center gap-2 ${colorClass}`}>
+                <span>{meta.icon}</span> {sucursal.nombre}
+            </h3>
+            <p class="text-xs font-semibold text-gray-500 uppercase tracking-widest mt-1 ml-10">
+                {sucursal.concepto}
+            </p>
+        </div>
+        <div class="flex flex-col items-end">
+            <div class="flex items-center gap-1 text-[#d4af37]">
+                <span>★</span>
+                <span class="font-bold text-gray-800">{sucursal.rating}</span>
+            </div>
+            <span class="text-xs text-gray-400">({sucursal.reseñas})</span>
+        </div>
+    </div>
+    
+    <!-- Info Section -->
+    <div class="p-6 py-4 flex-1 space-y-3">
+        <p class="text-sm text-gray-600 flex items-start gap-3">
+            <span class="text-lg leading-none mt-0.5">📍</span>
+            <span class="leading-snug">{sucursal.direccion}</span>
+        </p>
+        <p class="text-sm text-gray-600 flex items-start gap-3">
+            <span class="text-lg leading-none mt-0.5">🕐</span>
+            <span class="leading-snug">{sucursal.horario}</span>
+        </p>
+        <p class="text-sm text-gray-600 flex items-center gap-3">
+            <span class="text-lg leading-none">📞</span>
+            <span>{sucursal.telefono}</span>
+        </p>
+        <p class="text-sm text-gray-600 flex items-center gap-3">
+            <span class="text-lg leading-none">💺</span>
+            <span>Capacidad: {sucursal.capacidad} personas</span>
+        </p>
+    </div>
+
+    <!-- Stats Footer -->
+    <div class="px-6 pb-4">
+        <div class="bg-gray-50 rounded-xl p-3 flex justify-around items-center text-sm border border-gray-100 mb-5">
+            <div class="flex items-center gap-2">
+                <span class="text-lg">🍽️</span>
+                <span class="font-bold text-gray-900">{sucursal.total_platos}</span>
+                <span class="text-xs text-gray-500 font-medium hidden sm:inline">Platos</span>
+            </div>
+            <div class="w-px h-6 bg-gray-200"></div>
+            <div class="flex items-center gap-2">
+                <span class="text-lg">✅</span>
+                <span class="font-bold text-green-700">{sucursal.disponibles}</span>
+                <span class="text-xs text-green-600 font-medium hidden sm:inline">Disp.</span>
+            </div>
+            <div class="w-px h-6 bg-gray-200"></div>
+            <div class="flex items-center gap-2">
+                <span class="text-lg">❌</span>
+                <span class="font-bold text-red-600">{sucursal.agotados}</span>
+                <span class="text-xs text-red-500 font-medium hidden sm:inline">Agot.</span>
+            </div>
+        </div>
+
+        <div class="flex gap-3">
+            <a href={`/admin/menu/sucursal/${sucursal.id}`} class={`flex-1 bg-gray-900 hover:bg-black text-white text-center font-medium py-2.5 px-4 rounded-xl transition-colors text-sm shadow-sm flex items-center justify-center gap-2 group`}>
+                <span class="group-hover:scale-110 transition-transform">👁️</span> Ver Menú
+            </a>
+            <button class="bg-white border border-gray-200 text-gray-600 hover:bg-gray-50 hover:text-gray-900 transition-colors py-2.5 px-4 rounded-xl text-sm font-medium shadow-sm flex items-center justify-center gap-2">
+                ✏️ Editar
+            </button>
+        </div>
+    </div>
+</div>
+
+<style>
+    @keyframes fadeUp {
+        from { opacity: 0; transform: translateY(10px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+    .animate-fade-up {
+        animation: fadeUp 0.5s ease-out forwards;
+    }
+</style>
