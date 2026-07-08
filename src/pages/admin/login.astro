@@ -686,24 +686,17 @@ import NavbarSimple from "../../components/NavbarSimple.astro";
                     loginBtn.classList.add("loading");
 
                     try {
-                        // Simular petición a la base de datos (Backend Mock)
-                        await new Promise((resolve) =>
-                            setTimeout(resolve, 800),
-                        );
-
-                        if (email !== "admin@brasargent.com") {
-                            throw new Error("Usuario no encontrado");
+                        const response = await fetch('/api/auth/login', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ email, password })
+                        });
+                        
+                        const result = await response.json();
+                        
+                        if (!result.success) {
+                            throw new Error(result.error || 'Error al iniciar sesión');
                         }
-
-                        if (password !== "brasargent2026") {
-                            throw new Error("Contraseña incorrecta");
-                        }
-
-                        // Configurar sesión (Client-side simulación)
-                        const maxAge = 60 * 60 * 24;
-                        document.cookie = `session=authenticated; max-age=${maxAge}; path=/`;
-                        document.cookie = `user_name=Admin Brasargent; max-age=${maxAge}; path=/`;
-                        document.cookie = `user_id=1; max-age=${maxAge}; path=/`;
 
                         // Redirigir al dashboard
                         window.location.href = "/admin/dashboard";

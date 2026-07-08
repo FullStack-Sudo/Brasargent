@@ -1,0 +1,815 @@
+---
+// src/pages/admin/reservas.astro
+// Página completa de gestión de reservas
+import AdminLayout from '../../layouts/AdminLayout.astro';
+import pool from '../../lib/db';
+
+// Obtener parámetros de filtro
+const url = new URL(Astro.request.url);
+const sucursalId = url.searchParams.get('sucursal') || '';
+const estado = url.searchParams.get('estado') || '';
+const fechaInicio = url.searchParams.get('fecha_inicio') || '';
+const fechaFin = url.searchParams.get('fecha_fin') || '';
+
+// Construir query de reservas
+let sql = `
+    SELECT 
+        r.id,
+        r.nombre_cliente,
+        r.telefono,
+        r.telefono_completo,
+        r.codigo_pais,
+        r.fecha,
+        r.hora,
+        r.numero_personas,
+        r.estado,
+        r.observaciones,
+        r.created_at,
+        r.fecha_confirmacion,
+        r.fecha_rechazo,
+        r.mensaje_admin,
+        r.cubiertos_reservados,
+        s.nombre AS sucursal_nombre,
+        s.id AS sucursal_id,
+        s.cubiertos_disponibles
+    FROM reservas r
+    JOIN sucursales s ON r.sucursal_id = s.id
+    WHERE 1=1
+`;
+
+const params: any[] = [];
+
+if (sucursalId) {
+    sql += ` AND r.sucursal_id = ?`;
+    params.push(parseInt(sucursalId));
+}
+
+if (estado) {
+    sql += ` AND r.estado = ?`;
+    params.push(estado);
+}
+
+if (fechaInicio) {
+    sql += ` AND r.fecha >= ?`;
+    params.push(fechaInicio);
+}
+
+if (fechaFin) {
+    sql += ` AND r.fecha <= ?`;
+    params.push(fechaFin);
+}
+
+sql += ` ORDER BY r.fecha DESC, r.hora DESC`;
+
+const [reservasRows] = await pool.query(sql, params) as any[];
+const reservas = reservasRows;
+
+// Obtener sucursales para el filtro
+const [sucursalesRows] = await pool.query(
+    `SELECT id, nombre FROM sucursales WHERE activo = 1 ORDER BY nombre`
+) as any[];
+const sucursales = sucursalesRows;
+
+// Estadísticas
+const estadisticas = {
+    total: reservas.length,
+    pendientes: reservas.filter((r: any) => r.estado === 'pendiente').length,
+    confirmadas: reservas.filter((r: any) => r.estado === 'confirmada').length,
+    rechazadas: reservas.filter((r: any) => r.estado === 'rechazada').length,
+    canceladas: reservas.filter((r: any) => r.estado === 'cancelada').length
+};
+
+// Formatear fecha
+const formatearFecha = (fecha: string) => {
+    return new Date(fecha).toLocaleDateString('es-ES', {
+        weekday: 'short',
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric'
+    });
+};
+
+// Estado badge
+const estadoBadge = (estado: string) => {
+    const clases = {
+        'pendiente': 'badge-pendiente',
+        'confirmada': 'badge-confirmada',
+        'rechazada': 'badge-rechazada',
+        'cancelada': 'badge-cancelada'
+    };
+    return clases[estado as keyof typeof clases] || 'badge-pendiente';
+};
+
+const estadoTexto = (estado: string) => {
+    const textos = {
+        'pendiente': '⏳ Pendiente',
+        'confirmada': '✅ Confirmada',
+        'rechazada': '❌ Rechazada',
+        'cancelada': '⏰ Cancelada'
+    };
+    return textos[estado as keyof typeof textos] || estado;
+};
+---
+
+<AdminLayout title="Reservas" description="Gestión completa de todas las reservas">
+    <!-- Estadísticas -->
+        <div class="estadisticas-grid">
+            <div class="stat-card">
+                <span class="stat-icon">📋</span>
+                <div>
+                    <span class="stat-number">{estadisticas.total}</span>
+                    <span class="stat-label">Total Reservas</span>
+                </div>
+            </div>
+            <div class="stat-card stat-pendiente">
+                <span class="stat-icon">⏳</span>
+                <div>
+                    <span class="stat-number">{estadisticas.pendientes}</span>
+                    <span class="stat-label">Pendientes</span>
+                </div>
+            </div>
+            <div class="stat-card stat-confirmada">
+                <span class="stat-icon">✅</span>
+                <div>
+                    <span class="stat-number">{estadisticas.confirmadas}</span>
+                    <span class="stat-label">Confirmadas</span>
+                </div>
+            </div>
+            <div class="stat-card stat-rechazada">
+                <span class="stat-icon">❌</span>
+                <div>
+                    <span class="stat-number">{estadisticas.rechazadas}</span>
+                    <span class="stat-label">Rechazadas</span>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Filtros -->
+        <div class="filtros-container">
+            <form method="GET" class="filtros-form">
+                <div class="filtro-group">
+                    <label>Sucursal</label>
+                    <select name="sucursal">
+                        <option value="">Todas</option>
+                        {sucursales.map((s: any) => (
+                            <option value={s.id} selected={sucursalId === String(s.id)}>
+                                {s.nombre}
+                            </option>
+                        ))}
+                    </select>
+                </div>
+                
+                <div class="filtro-group">
+                    <label>Estado</label>
+                    <select name="estado">
+                        <option value="">Todos</option>
+                        <option value="pendiente" selected={estado === 'pendiente'}>Pendiente</option>
+                        <option value="confirmada" selected={estado === 'confirmada'}>Confirmada</option>
+                        <option value="rechazada" selected={estado === 'rechazada'}>Rechazada</option>
+                        <option value="cancelada" selected={estado === 'cancelada'}>Cancelada</option>
+                    </select>
+                </div>
+                
+                <div class="filtro-group">
+                    <label>Fecha Inicio</label>
+                    <input type="date" name="fecha_inicio" value={fechaInicio} />
+                </div>
+                
+                <div class="filtro-group">
+                    <label>Fecha Fin</label>
+                    <input type="date" name="fecha_fin" value={fechaFin} />
+                </div>
+                
+                <div class="filtro-actions">
+                    <button type="submit" class="btn-filtrar">🔍 Filtrar</button>
+                    <a href="/admin/reservas" class="btn-limpiar">✕ Limpiar</a>
+                </div>
+            </form>
+        </div>
+        
+        <!-- Tabla de Reservas -->
+        <div class="section-card">
+            {reservas.length === 0 ? (
+                <div class="empty-state">
+                    <span class="empty-icon">📭</span>
+                    <p>No hay reservas</p>
+                    <span class="empty-sub">Ajusta los filtros para ver más resultados</span>
+                </div>
+            ) : (
+                <div class="table-wrapper">
+                    <table class="tabla-reservas">
+                        <thead>
+                            <tr>
+                                <th>Cliente</th>
+                                <th>Teléfono</th>
+                                <th>Sucursal</th>
+                                <th>Fecha</th>
+                                <th>Hora</th>
+                                <th>Personas</th>
+                                <th>Cubiertos</th>
+                                <th>Estado</th>
+                                <th>Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {reservas.map((reserva: any) => (
+                                <tr class={`row-estado-${reserva.estado}`}>
+                                    <td>
+                                        <strong>{reserva.nombre_cliente}</strong>
+                                    </td>
+                                    <td>
+                                        <a href={`https://wa.me/${reserva.telefono_completo || '591' + reserva.telefono}`} 
+                                           target="_blank" 
+                                           class="whatsapp-link">
+                                            💬 {reserva.codigo_pais || '591'} {reserva.telefono}
+                                        </a>
+                                    </td>
+                                    <td>{reserva.sucursal_nombre}</td>
+                                    <td>{formatearFecha(reserva.fecha)}</td>
+                                    <td>{reserva.hora}</td>
+                                    <td>{reserva.numero_personas}</td>
+                                    <td>{reserva.cubiertos_reservados || '-'}</td>
+                                    <td>
+                                        <span class={`badge ${estadoBadge(reserva.estado)}`}>
+                                            {estadoTexto(reserva.estado)}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <div class="acciones-btns">
+                                            {reserva.estado === 'pendiente' && (
+                                                <>
+                                                    <button class="btn-aprobar" 
+                                                            onclick={`aprobarReserva(${reserva.id}, ${reserva.sucursal_id}, ${reserva.numero_personas}, ${reserva.cubiertos_disponibles})`}>
+                                                        ✅
+                                                    </button>
+                                                    <button class="btn-rechazar" 
+                                                            onclick={`rechazarReserva(${reserva.id})`}>
+                                                        ❌
+                                                    </button>
+                                                </>
+                                            )}
+                                            <button class="btn-whatsapp" 
+                                                    onclick={`enviarWhatsAppAdmin('${reserva.telefono_completo || '591' + reserva.telefono}', '${reserva.nombre_cliente}', '${reserva.sucursal_nombre}', '${reserva.fecha}', '${reserva.hora}')`}>
+                                                💬
+                                            </button>
+                                            <button class="btn-detalle" 
+                                                    onclick={`verDetalle(${reserva.id})`} title="Ver detalle">
+                                                📋
+                                            </button>
+                                            <button class="btn-eliminar" 
+                                                    onclick={`borrarReserva(${reserva.id})`} title="Eliminar reserva">
+                                                🗑️
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                </div>
+            )}
+        </div>
+</AdminLayout>
+
+<script>
+// ============================================
+// FUNCIONES DE ACCIÓN
+// ============================================
+
+window.aprobarReserva = async function(id, sucursalId, personas, disponibles) {
+    if (personas > disponibles) {
+        alert(`❌ No hay suficientes cubiertos. Disponibles: ${disponibles}`);
+        return;
+    }
+    
+    if (!confirm(`¿Aprobar reserva de ${personas} personas?`)) return;
+    
+    try {
+        const response = await fetch(`/api/reservas/${id}/aprobar`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ accion: 'aprobar' })
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            alert('✅ Reserva aprobada exitosamente');
+            location.reload();
+        } else {
+            alert('❌ Error: ' + result.error);
+        }
+    } catch (error) {
+        alert('❌ Error de conexión');
+    }
+}
+
+window.rechazarReserva = async function(id) {
+    const motivo = prompt('Motivo del rechazo:', 'No hay disponibilidad');
+    if (motivo === null) return;
+    
+    if (!confirm('¿Rechazar esta reserva?')) return;
+    
+    try {
+        const response = await fetch(`/api/reservas/${id}/aprobar`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ 
+                accion: 'rechazar',
+                mensaje: motivo
+            })
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            alert('❌ Reserva rechazada');
+            location.reload();
+        } else {
+            alert('❌ Error: ' + result.error);
+        }
+    } catch (error) {
+        alert('❌ Error de conexión');
+    }
+}
+
+window.enviarWhatsAppAdmin = function(telefono, nombre, sucursal, fecha, hora) {
+    let fechaObj = new Date(fecha);
+    
+    // Si por alguna razón viene en formato YYYY-MM-DD simple y da error por zona horaria (raro en este caso)
+    if (isNaN(fechaObj.getTime())) {
+        fechaObj = new Date(fecha + 'T00:00:00');
+    }
+    
+    const fechaFormateada = isNaN(fechaObj.getTime()) ? fecha : fechaObj.toLocaleDateString('es-ES', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric'
+    });
+    
+    const mensaje = `BRASARGENT - Confirmación de Reserva\n\nHola ${nombre}!\n\nTu reserva en ${sucursal} está:\n📅 ${fechaFormateada}\n🕐 ${hora}\n\n¿Confirmas tu asistencia?\n¡Te esperamos! 🔥`;
+    
+    window.open(`https://wa.me/${telefono}?text=${encodeURIComponent(mensaje)}`, '_blank');
+}
+
+window.verDetalle = async function(id) {
+    try {
+        const response = await fetch(`/api/reservas/${id}`);
+        const result = await response.json();
+        
+        if (!response.ok || !result.data) {
+            alert(result.error || 'Error al obtener los detalles de la reserva.');
+            return;
+        }
+
+        const reserva = result.data;
+        
+        const existente = document.getElementById('modalReservaIndividual');
+        if (existente) existente.remove();
+
+        const formatFecha = (f) => new Date(f).toLocaleDateString('es-ES', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+        
+        const modalHTML = `
+            <div class="modal-overlay" id="modalReservaIndividual" onclick="window.cerrarModalDetalleIndividual()">
+                <div class="modal-container" onclick="event.stopPropagation()">
+                    <div class="modal-header">
+                        <h2>Detalles de la Reserva</h2>
+                        <button class="modal-close" onclick="window.cerrarModalDetalleIndividual()">✕</button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="detalle-grid">
+                            <div class="detalle-item">
+                                <span class="detalle-label">Cliente</span>
+                                <span class="detalle-valor"><strong>${reserva.nombre_cliente}</strong></span>
+                            </div>
+                            <div class="detalle-item">
+                                <span class="detalle-label">Teléfono</span>
+                                <span class="detalle-valor"> ${reserva.codigo_pais || '591'} ${reserva.telefono}</span>
+                            </div>
+                            <div class="detalle-item">
+                                <span class="detalle-label">Sucursal</span>
+                                <span class="detalle-valor"> ${reserva.sucursal || 'Desconocida'}</span>
+                            </div>
+                            <div class="detalle-item">
+                                <span class="detalle-label">Fecha y Hora</span>
+                                <span class="detalle-valor"> ${formatFecha(reserva.fecha)} a las  ${reserva.hora}</span>
+                            </div>
+                            <div class="detalle-item">
+                                <span class="detalle-label">Personas</span>
+                                <span class="detalle-valor"> ${reserva.numero_personas} personas</span>
+                            </div>
+                            <div class="detalle-item">
+                                <span class="detalle-label">Estado</span>
+                                <span class="detalle-valor"> ${reserva.estado.toUpperCase()}</span>
+                            </div>
+                        </div>
+                        
+                        <div class="observaciones-box">
+                            <span class="detalle-label">Mensaje / Observaciones del comensal:</span>
+                            <div class="mensaje-texto">
+                                ${reserva.observaciones ? reserva.observaciones : '<em>El cliente no dejó ningún mensaje u observación.</em>'}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button class="btn-cancel" onclick="window.cerrarModalDetalleIndividual()">Cerrar</button>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        document.body.insertAdjacentHTML('beforeend', modalHTML);
+        document.body.classList.add('modal-open');
+        
+    } catch (error) {
+        console.error('Error fetching reservation details:', error);
+        alert('Error de conexión al obtener detalles.');
+    }
+}
+
+window.cerrarModalDetalleIndividual = function() {
+    const modal = document.getElementById('modalReservaIndividual');
+    if (modal) {
+        modal.style.opacity = '0';
+        setTimeout(() => {
+            modal.remove();
+            document.body.classList.remove('modal-open');
+        }, 300);
+    }
+}
+
+window.borrarReserva = async function(id) {
+    if (confirm(`¿Estás seguro de que deseas eliminar esta reserva?\n\nEsta acción no se puede deshacer.`)) {
+        try {
+            const response = await fetch(`/api/reservas/${id}`, {
+                method: 'DELETE'
+            });
+            const result = await response.json();
+            
+            if (result.success) {
+                location.reload();
+            } else {
+                alert(result.error || 'Hubo un error al eliminar la reserva.');
+            }
+        } catch (error) {
+            console.error('Error:', error);
+            alert('Error de conexión al intentar eliminar.');
+        }
+    }
+}
+</script>
+
+<style is:global>
+/* ============================================
+   MODAL DE DETALLES - ESTILOS (GLOBALES PARA JS)
+   ============================================ */
+.modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(4px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+    padding: 20px;
+    animation: fadeIn 0.3s ease;
+}
+
+.modal-container {
+    background: #fffaf0;
+    border-radius: 20px;
+    max-width: 520px;
+    width: 100%;
+    max-height: 90vh;
+    overflow-y: auto;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    animation: slideUp 0.3s ease;
+}
+
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+
+.modal-header {
+    padding: 20px 24px 16px;
+    border-bottom: 1px solid rgba(26, 26, 26, 0.06);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+.modal-header h2 { font-family: 'Playfair Display', serif; font-size: 1.3rem; margin: 0; color: #1a1a1a; }
+.modal-close { background: none; border: none; font-size: 1.2rem; cursor: pointer; color: #1a1a1a; }
+.modal-body { padding: 24px; }
+.modal-footer { padding: 16px 24px; border-top: 1px solid rgba(26, 26, 26, 0.06); text-align: right; }
+.btn-cancel { padding: 10px 28px; border: 1.5px solid rgba(26, 26, 26, 0.1); border-radius: 10px; background: transparent; cursor: pointer; font-family: 'Inter', sans-serif; font-size: 0.95rem; }
+.btn-cancel:hover { background: rgba(26, 26, 26, 0.04); }
+
+.detalle-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 24px; }
+.detalle-item { display: flex; flex-direction: column; gap: 4px; }
+.detalle-label { font-size: 0.8rem; color: rgba(26, 26, 26, 0.5); text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600; }
+.detalle-valor { font-size: 1rem; color: #1a1a1a; }
+.observaciones-box { background: rgba(158, 42, 43, 0.05); border: 1px solid rgba(158, 42, 43, 0.1); border-radius: 12px; padding: 16px; }
+.mensaje-texto { margin-top: 8px; font-size: 0.95rem; color: #1a1a1a; line-height: 1.5; font-style: italic; }
+</style>
+
+<style is:global>
+/* ============================================
+   ESTILOS DE RESERVAS
+   ============================================ */
+.filtros-container {
+    background: white;
+    padding: 16px 20px;
+    border-radius: 12px;
+    margin-bottom: 24px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+
+.filtros-form {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+    align-items: flex-end;
+}
+
+.filtro-group {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.filtro-group label {
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: rgba(26, 26, 26, 0.4);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.filtro-group select,
+.filtro-group input {
+    padding: 8px 14px;
+    border: 1.5px solid rgba(26, 26, 26, 0.08);
+    border-radius: 8px;
+    font-size: 0.9rem;
+    background: white;
+    min-width: 140px;
+    transition: all 0.3s ease;
+    font-family: 'Inter', sans-serif;
+}
+
+.filtro-group select:focus,
+.filtro-group input:focus {
+    outline: none;
+    border-color: #9e2a2b;
+    box-shadow: 0 0 0 3px rgba(158, 42, 43, 0.08);
+}
+
+.filtro-actions {
+    display: flex;
+    gap: 8px;
+}
+
+.btn-filtrar {
+    padding: 8px 24px;
+    background: #9e2a2b;
+    color: #fffaf0;
+    border: none;
+    border-radius: 8px;
+    font-size: 0.85rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-family: 'Inter', sans-serif;
+}
+
+.btn-filtrar:hover {
+    background: #7a2021;
+}
+
+.btn-limpiar {
+    padding: 8px 16px;
+    background: transparent;
+    color: #1a1a1a;
+    border: 1.5px solid rgba(26, 26, 26, 0.08);
+    border-radius: 8px;
+    font-size: 0.85rem;
+    text-decoration: none;
+    transition: all 0.3s ease;
+}
+
+.btn-limpiar:hover {
+    background: rgba(26, 26, 26, 0.04);
+}
+
+/* Tabla */
+.section-card {
+    background: white;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+
+.table-wrapper {
+    overflow-x: auto;
+}
+
+.tabla-reservas {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.tabla-reservas thead {
+    background: #f8f5f0;
+}
+
+.tabla-reservas th {
+    padding: 12px 16px;
+    text-align: left;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: rgba(26, 26, 26, 0.5);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    border-bottom: 1px solid rgba(26, 26, 26, 0.06);
+}
+
+.tabla-reservas td {
+    padding: 12px 16px;
+    font-size: 0.9rem;
+    color: #1a1a1a;
+    border-bottom: 1px solid rgba(26, 26, 26, 0.04);
+    vertical-align: middle;
+}
+
+.tabla-reservas tr:hover td {
+    background: rgba(255, 250, 240, 0.3);
+}
+
+.row-estado-pendiente { border-left: 3px solid #f59e0b; }
+.row-estado-confirmada { border-left: 3px solid #10b981; }
+.row-estado-rechazada { border-left: 3px solid #ef4444; }
+.row-estado-cancelada { border-left: 3px solid #6b7280; }
+
+/* Badges */
+.badge {
+    display: inline-block;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-weight: 500;
+}
+
+.badge-pendiente { background: rgba(245, 158, 11, 0.1); color: #f59e0b; }
+.badge-confirmada { background: rgba(16, 185, 129, 0.1); color: #10b981; }
+.badge-rechazada { background: rgba(239, 68, 68, 0.1); color: #ef4444; }
+.badge-cancelada { background: rgba(107, 114, 128, 0.1); color: #6b7280; }
+
+/* Acciones */
+.acciones-btns {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+}
+
+.acciones-btns button {
+    width: 32px;
+    height: 32px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.btn-aprobar {
+    background: rgba(16, 185, 129, 0.1);
+    color: #10b981;
+}
+
+.btn-aprobar:hover {
+    background: rgba(16, 185, 129, 0.2);
+    transform: scale(1.1);
+}
+
+.btn-rechazar {
+    background: rgba(239, 68, 68, 0.1);
+    color: #ef4444;
+}
+
+.btn-rechazar:hover {
+    background: rgba(239, 68, 68, 0.2);
+    transform: scale(1.1);
+}
+
+.btn-whatsapp {
+    background: rgba(37, 211, 102, 0.1);
+    color: #25d366;
+}
+
+.btn-whatsapp:hover {
+    background: rgba(37, 211, 102, 0.2);
+    transform: scale(1.1);
+}
+
+.btn-detalle {
+    background: rgba(59, 130, 246, 0.1);
+    color: #3b82f6;
+}
+
+.btn-detalle:hover {
+    background: rgba(59, 130, 246, 0.2);
+    transform: scale(1.1);
+}
+
+.btn-eliminar {
+    background: rgba(239, 68, 68, 0.1);
+    color: #ef4444;
+}
+
+.btn-eliminar:hover {
+    background: rgba(239, 68, 68, 0.2);
+    transform: scale(1.1);
+}
+
+/* WhatsApp Link */
+.whatsapp-link {
+    color: #25d366;
+    text-decoration: none;
+    font-weight: 500;
+    transition: all 0.3s ease;
+}
+
+.whatsapp-link:hover {
+    color: #1da851;
+    text-decoration: underline;
+}
+
+/* Empty State */
+.empty-state {
+    text-align: center;
+    padding: 48px 24px;
+}
+
+.empty-icon {
+    font-size: 3rem;
+    display: block;
+    margin-bottom: 12px;
+}
+
+.empty-state p {
+    font-size: 1.1rem;
+    font-weight: 500;
+    color: #1a1a1a;
+    margin: 0;
+}
+
+.empty-sub {
+    color: rgba(26, 26, 26, 0.3);
+    font-size: 0.9rem;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .estadisticas-grid {
+        grid-template-columns: 1fr 1fr;
+    }
+    
+    .filtros-form {
+        flex-direction: column;
+    }
+    
+    .filtro-group {
+        width: 100%;
+    }
+    
+    .filtro-group select,
+    .filtro-group input {
+        width: 100%;
+    }
+    
+    .filtro-actions {
+        width: 100%;
+    }
+    
+    .btn-filtrar,
+    .btn-limpiar {
+        flex: 1;
+        text-align: center;
+    }
+    
+    .page-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 12px;
+    }
+    
+    .tabla-reservas td,
+    .tabla-reservas th {
+        padding: 8px 12px;
+        font-size: 0.8rem;
+    }
+}
+</style>

@@ -1,0 +1,516 @@
+---
+// src/pages/admin/configuracion/index.astro
+// Gestión de usuarios y roles
+
+import AdminLayout from '../../../layouts/AdminLayout.astro';
+import pool from '../../../lib/db';
+
+// Obtener todos los usuarios
+const usuariosData = await pool.query(`
+    SELECT 
+        u.id,
+        u.nombre,
+        u.apellido,
+        u.email,
+        u.telefono,
+        u.rol,
+        u.activo,
+        s.nombre AS sucursal_nombre,
+        u.created_at
+    FROM usuarios u
+    LEFT JOIN sucursales s ON u.sucursal_id = s.id
+    ORDER BY u.created_at DESC
+`) as any[];
+
+const usuarios = usuariosData[0] || [];
+
+// Obtener sucursales para asignar
+const sucursalesData = await pool.query(`
+    SELECT id, nombre FROM sucursales WHERE activo = 1
+`) as any[];
+const sucursales = sucursalesData[0] || [];
+
+// Estadísticas por rol
+const totalUsuarios = usuarios.length;
+const admins = usuarios.filter((u: any) => u.rol === 'admin').length;
+const meseros = usuarios.filter((u: any) => u.rol === 'mesero').length;
+const cocineros = usuarios.filter((u: any) => u.rol === 'cocinero').length;
+
+const roles = ['admin', 'mesero', 'cocinero'];
+const rolLabels: Record<string, string> = {
+    'admin': '👑 Administrador',
+    'mesero': '🍽️ Mesero',
+    'cocinero': '👨‍🍳 Cocinero'
+};
+const rolColors: Record<string, string> = {
+    'admin': '#9e2a2b',
+    'mesero': '#3b82f6',
+    'cocinero': '#f59e0b'
+};
+---
+
+<AdminLayout title="Configuración" description="Gestión de usuarios y roles del sistema">
+    <!-- Estadísticas -->
+    <div class="stats-grid">
+        <div class="stat-card">
+            <div class="stat-icon" style="background: rgba(59, 130, 246, 0.1); color: #3b82f6;">👥</div>
+            <div class="stat-info">
+                <span class="stat-number">{totalUsuarios}</span>
+                <span class="stat-label">Total Usuarios</span>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon" style="background: rgba(158, 42, 43, 0.1); color: #9e2a2b;">👑</div>
+            <div class="stat-info">
+                <span class="stat-number">{admins}</span>
+                <span class="stat-label">Administradores</span>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon" style="background: rgba(59, 130, 246, 0.1); color: #3b82f6;">🍽️</div>
+            <div class="stat-info">
+                <span class="stat-number">{meseros}</span>
+                <span class="stat-label">Meseros</span>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon" style="background: rgba(245, 158, 11, 0.1); color: #f59e0b;">👨‍🍳</div>
+            <div class="stat-info">
+                <span class="stat-number">{cocineros}</span>
+                <span class="stat-label">Cocineros</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Formulario para crear usuario -->
+    <div class="section-card" style="margin-bottom: 24px;">
+        <div class="section-header">
+            <h2 style="font-size: 1.1rem; font-weight: 600; color: #1a1a1a; margin-bottom: 16px;">👤 Crear Nuevo Usuario</h2>
+        </div>
+        <form id="formCrearUsuario" class="crear-usuario-form">
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Nombre *</label>
+                    <input type="text" id="nombreUsuario" placeholder="Carlos" required />
+                </div>
+                <div class="form-group">
+                    <label>Apellido</label>
+                    <input type="text" id="apellidoUsuario" placeholder="Gómez" />
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Email *</label>
+                    <input type="email" id="emailUsuario" placeholder="carlos@brasargent.com" required />
+                </div>
+                <div class="form-group">
+                    <label>Teléfono</label>
+                    <input type="tel" id="telefonoUsuario" placeholder="70000111" />
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Contraseña *</label>
+                    <input type="password" id="passwordUsuario" placeholder="••••••••" required minlength="6" />
+                </div>
+                <div class="form-group">
+                    <label>Rol *</label>
+                    <select id="rolUsuario" required>
+                        <option value="">Seleccionar rol</option>
+                        <option value="admin">👑 Administrador</option>
+                        <option value="mesero">🍽️ Mesero</option>
+                        <option value="cocinero">👨‍🍳 Cocinero</option>
+                    </select>
+                </div>
+            </div>
+            <div class="form-group">
+                <label>Sucursal</label>
+                <select id="sucursalUsuario">
+                    <option value="">Sin asignar</option>
+                    {sucursales.map((s: any) => (
+                        <option value={s.id}>{s.nombre}</option>
+                    ))}
+                </select>
+            </div>
+            <button type="submit" class="btn-crear" style="margin-top: 16px;">➕ Crear Usuario</button>
+        </form>
+    </div>
+
+    <!-- Tabla de Usuarios -->
+    <div class="section-card">
+        <div class="section-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+            <h2 style="font-size: 1.1rem; font-weight: 600; color: #1a1a1a; margin: 0;">👥 Usuarios del Sistema</h2>
+            <span class="usuarios-total">{totalUsuarios} usuarios</span>
+        </div>
+        
+        {usuarios.length === 0 ? (
+            <div class="empty-state">
+                <span class="empty-icon">👤</span>
+                <p>No hay usuarios registrados</p>
+            </div>
+        ) : (
+            <div class="table-wrapper">
+                <table class="tabla-usuarios">
+                    <thead>
+                        <tr>
+                            <th>Usuario</th>
+                            <th>Email</th>
+                            <th>Teléfono</th>
+                            <th>Rol</th>
+                            <th>Sucursal</th>
+                            <th>Estado</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {usuarios.map((usuario: any) => (
+                            <tr>
+                                <td>
+                                    <strong>{usuario.nombre} {usuario.apellido || ''}</strong>
+                                </td>
+                                <td>{usuario.email}</td>
+                                <td>{usuario.telefono || '-'}</td>
+                                <td>
+                                    <span class="badge-rol" style={`background: ${rolColors[usuario.rol] || '#6b7280'}20; color: ${rolColors[usuario.rol] || '#6b7280'}`}>
+                                        {rolLabels[usuario.rol] || usuario.rol}
+                                    </span>
+                                </td>
+                                <td>{usuario.sucursal_nombre || 'Sin asignar'}</td>
+                                <td>
+                                    <span class={`badge ${usuario.activo ? 'badge-activo' : 'badge-inactivo'}`}>
+                                        {usuario.activo ? '✅ Activo' : '❌ Inactivo'}
+                                    </span>
+                                </td>
+                                <td>
+                                    <div class="acciones-btns">
+                                        <button class="btn-editar-usuario" onclick={`editarUsuario(${usuario.id})`}>✏️</button>
+                                        <button class="btn-toggle" onclick={`toggleUsuario(${usuario.id})`}>🔄</button>
+                                    </div>
+                                </td>
+                            </tr>
+                        ))}
+                    </tbody>
+                </table>
+            </div>
+        )}
+    </div>
+</AdminLayout>
+
+<style is:global>
+/* ============================================
+   ESTILOS DE CONFIGURACIÓN
+   ============================================ */
+.section-card {
+    background: white;
+    border-radius: 12px;
+    padding: 24px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+
+.crear-usuario-form {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.crear-usuario-form .form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+}
+
+.crear-usuario-form .form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.crear-usuario-form .form-group label {
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: #1a1a1a;
+}
+
+.crear-usuario-form .form-group input,
+.crear-usuario-form .form-group select {
+    padding: 10px 14px;
+    border: 1.5px solid rgba(26, 26, 26, 0.08);
+    border-radius: 10px;
+    font-size: 0.9rem;
+    font-family: 'Inter', sans-serif;
+    transition: all 0.3s ease;
+    background: white;
+    color: #1a1a1a;
+}
+
+.crear-usuario-form .form-group input:focus,
+.crear-usuario-form .form-group select:focus {
+    outline: none;
+    border-color: #9e2a2b;
+    box-shadow: 0 0 0 3px rgba(158, 42, 43, 0.08);
+}
+
+.btn-crear {
+    padding: 12px 28px;
+    background: #9e2a2b;
+    color: #fffaf0;
+    border: none;
+    border-radius: 10px;
+    font-size: 0.95rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-family: 'Inter', sans-serif;
+    align-self: flex-start;
+}
+
+.btn-crear:hover {
+    background: #7a2021;
+    transform: scale(1.02);
+}
+
+.usuarios-total {
+    font-size: 0.85rem;
+    color: rgba(26, 26, 26, 0.4);
+}
+
+.badge-rol {
+    display: inline-block;
+    padding: 4px 14px;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-weight: 500;
+}
+
+.table-wrapper {
+    overflow-x: auto;
+}
+
+.tabla-usuarios {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.tabla-usuarios thead {
+    background: #f8f5f0;
+}
+
+.tabla-usuarios th {
+    padding: 10px 14px;
+    text-align: left;
+    font-size: 0.7rem;
+    font-weight: 600;
+    color: rgba(26, 26, 26, 0.4);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    border-bottom: 1px solid rgba(26, 26, 26, 0.06);
+}
+
+.tabla-usuarios td {
+    padding: 10px 14px;
+    font-size: 0.85rem;
+    color: #1a1a1a;
+    border-bottom: 1px solid rgba(26, 26, 26, 0.04);
+    vertical-align: middle;
+}
+
+.tabla-usuarios tr:hover td {
+    background: rgba(255, 250, 240, 0.3);
+}
+
+.acciones-btns {
+    display: flex;
+    gap: 6px;
+}
+
+.acciones-btns button {
+    width: 32px;
+    height: 32px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.btn-editar-usuario {
+    background: rgba(59, 130, 246, 0.1);
+    color: #3b82f6;
+}
+
+.btn-editar-usuario:hover {
+    background: rgba(59, 130, 246, 0.2);
+    transform: scale(1.1);
+}
+
+.btn-toggle {
+    background: rgba(245, 158, 11, 0.1);
+    color: #f59e0b;
+}
+
+.btn-toggle:hover {
+    background: rgba(245, 158, 11, 0.2);
+    transform: scale(1.1);
+}
+
+.badge-activo { background: rgba(16, 185, 129, 0.1); color: #10b981; }
+.badge-inactivo { background: rgba(239, 68, 68, 0.1); color: #ef4444; }
+.badge { display: inline-block; padding: 4px 12px; border-radius: 20px; font-size: 0.75rem; font-weight: 500; }
+
+@media (max-width: 768px) {
+    .crear-usuario-form .form-row {
+        grid-template-columns: 1fr;
+    }
+    
+    .btn-crear {
+        width: 100%;
+        text-align: center;
+    }
+}
+</style>
+
+<script>
+// ============================================
+// CREAR USUARIO
+// ============================================
+document.getElementById('formCrearUsuario')?.addEventListener('submit', async function(e) {
+    e.preventDefault();
+    
+    const btn = document.querySelector('.btn-crear') as HTMLButtonElement;
+    const originalText = btn.textContent;
+    btn.textContent = '⏳ Creando...';
+    btn.disabled = true;
+    
+    const data = {
+        nombre: (document.getElementById('nombreUsuario') as HTMLInputElement).value.trim(),
+        apellido: (document.getElementById('apellidoUsuario') as HTMLInputElement).value.trim(),
+        email: (document.getElementById('emailUsuario') as HTMLInputElement).value.trim(),
+        telefono: (document.getElementById('telefonoUsuario') as HTMLInputElement).value.trim(),
+        password: (document.getElementById('passwordUsuario') as HTMLInputElement).value,
+        rol: (document.getElementById('rolUsuario') as HTMLSelectElement).value,
+        sucursal_id: (document.getElementById('sucursalUsuario') as HTMLSelectElement).value || null
+    };
+    
+    if (!data.nombre) {
+        alert('❌ El nombre es obligatorio');
+        btn.textContent = originalText;
+        btn.disabled = false;
+        return;
+    }
+    
+    if (!data.email || !data.email.includes('@')) {
+        alert('❌ Ingresa un email válido');
+        btn.textContent = originalText;
+        btn.disabled = false;
+        return;
+    }
+    
+    if (!data.password || data.password.length < 6) {
+        alert('❌ La contraseña debe tener al menos 6 caracteres');
+        btn.textContent = originalText;
+        btn.disabled = false;
+        return;
+    }
+    
+    if (!data.rol) {
+        alert('❌ Selecciona un rol');
+        btn.textContent = originalText;
+        btn.disabled = false;
+        return;
+    }
+    
+    try {
+        console.log('📤 Enviando datos:', data);
+        
+        const response = await fetch('/api/usuarios/crear', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+        });
+        
+        console.log('📥 Respuesta recibida:', response.status);
+        
+        let result;
+        try {
+            result = await response.json();
+        } catch (parseError) {
+            console.error('Error al parsear respuesta:', parseError);
+            throw new Error('Error al procesar la respuesta del servidor');
+        }
+        
+        if (result.success) {
+            alert('✅ Usuario creado exitosamente');
+            location.reload();
+        } else {
+            alert('❌ Error: ' + (result.error || 'Error desconocido'));
+            console.error('Error detallado:', result);
+        }
+    } catch (error: any) {
+        console.error('❌ Error de conexión:', error);
+        alert('❌ Error de conexión. Verifica: \n' +
+              '1. Que el servidor esté corriendo\n' +
+              '2. Que la base de datos esté activa\n' +
+              '3. Revisa la consola para más detalles\n\n' +
+              'Error: ' + (error.message || 'Error desconocido'));
+    } finally {
+        if (btn) {
+            btn.textContent = originalText;
+            btn.disabled = false;
+        }
+    }
+});
+
+// ============================================
+// PRUEBA DE CONEXIÓN AL CARGAR LA PÁGINA
+// ============================================
+async function testConnection() {
+    try {
+        const response = await fetch('/api/usuarios/test');
+        const result = await response.json();
+        if (result.success) {
+            console.log('✅ Conexión a la API exitosa');
+        } else {
+            console.warn('⚠️ La API responde pero con error:', result);
+        }
+    } catch (error) {
+        console.error('❌ No se puede conectar a la API:', error);
+    }
+}
+
+document.addEventListener('DOMContentLoaded', testConnection);
+
+// ============================================
+// EDITAR USUARIO
+// ============================================
+(window as any).editarUsuario = function(id: number) {
+    // Redirigir a página de edición
+    window.location.href = `/admin/configuracion/editar/${id}`;
+};
+
+// ============================================
+// TOGGLE USUARIO (Activar/Desactivar)
+// ============================================
+(window as any).toggleUsuario = async function(id: number) {
+    if (!confirm('¿Cambiar el estado de este usuario?')) return;
+    
+    try {
+        const response = await fetch(`/api/usuarios/${id}/toggle`, {
+            method: 'POST'
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            alert('✅ Estado actualizado');
+            location.reload();
+        } else {
+            alert('❌ Error: ' + result.error);
+        }
+    } catch (error) {
+        alert('❌ Error de conexión');
+    }
+};
+</script>

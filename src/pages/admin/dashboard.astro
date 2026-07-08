@@ -1,306 +1,490 @@
 ---
-import "../../styles/global.css";
-import NavbarAdmin from "../../components/NavbarAdmin.astro";
-import mesaGif from "../../assets/dashboard/mesa.gif";
-import dolarGif from "../../assets/dashboard/dolar.gif";
-import genteGif from "../../assets/dashboard/gente-celebrando.gif";
-import experienciaGif from "../../assets/dashboard/experiencia-del-cliente.gif";
+// src/pages/admin/dashboard.astro
+// Dashboard del administrador con layout unificado
+
+import AdminLayout from '../../layouts/AdminLayout.astro';
+import pool from '../../lib/db';
+
+// Obtener estadísticas
+const [stats] = await pool.query(`
+    SELECT 
+        (SELECT COUNT(*) FROM reservas) AS total_reservas,
+        (SELECT COUNT(*) FROM reservas WHERE estado = 'pendiente') AS pendientes,
+        (SELECT COUNT(*) FROM reservas WHERE estado = 'confirmada') AS confirmadas,
+        (SELECT COUNT(*) FROM reservas WHERE estado = 'rechazada') AS rechazadas,
+        (SELECT COUNT(*) FROM clientes) AS total_clientes
+`) as any[];
+
+// Obtener reservas recientes
+const [reservasRecientes] = await pool.query(`
+    SELECT 
+        r.id,
+        r.nombre_cliente,
+        r.telefono,
+        r.telefono_completo,
+        r.codigo_pais,
+        r.fecha,
+        r.hora,
+        r.numero_personas,
+        r.estado,
+        s.nombre AS sucursal_nombre
+    FROM reservas r
+    JOIN sucursales s ON r.sucursal_id = s.id
+    ORDER BY r.created_at DESC
+    LIMIT 5
+`) as any[];
+
+// Obtener cubiertos por sucursal
+const [cubiertos] = await pool.query(`
+    SELECT 
+        id,
+        nombre,
+        capacidad_total,
+        cubiertos_disponibles,
+        cubiertos_ocupados
+    FROM sucursales
+    WHERE activo = 1
+`) as any[];
 ---
 
-<!doctype html>
-<html lang="es">
-    <head>
-        <meta charset="UTF-8" />
-        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-        <title>Panel de Control - BRASARGENT</title>
-        <link
-            href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,600;1,600&display=swap"
-            rel="stylesheet"
-        />
-    </head>
-    <body class="bg-gray-50 text-gray-800 font-sans antialiased">
-        <NavbarAdmin />
-
-        <!-- Dashboard Content -->
-        <main class="pb-12 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto min-h-screen" style="padding-top: 7rem">
-            <!-- Header Section -->
-            <div class="flex flex-col md:flex-row md:items-center justify-between mb-10 gap-4 mt-16 md:mt-24">
-                <div>
-                    <h1 class="text-3xl font-serif text-gray-900 font-semibold" id="welcomeText">
-                        ¡Hola, Admin!
-                    </h1>
-                    <p class="text-gray-500 mt-1">
-                        Resumen de actividad y gestión de tu restaurante.
-                    </p>
-                </div>
-                <div class="flex items-center gap-3">
-                    <button class="bg-white border border-gray-200 text-gray-700 px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors shadow-sm flex items-center gap-2">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg>
-                        Exportar Reporte
-                    </button>
-                    <button id="logoutBtn" class="bg-[#9e2a2b] hover:bg-[#8a2426] text-[#fffaf0] px-4 py-2 rounded-lg text-sm font-medium transition-colors shadow-sm flex items-center gap-2">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path></svg>
-                        Cerrar Sesión
-                    </button>
-                </div>
+<AdminLayout title="Dashboard" description="Resumen de actividad y gestión de tu restaurante">
+    <!-- Tarjetas de estadísticas -->
+    <div class="stats-grid">
+        <div class="stat-card">
+            <div class="stat-icon" style="background: rgba(59, 130, 246, 0.1); color: #3b82f6;">📋</div>
+            <div class="stat-info">
+                <span class="stat-number">{stats[0]?.total_reservas || 0}</span>
+                <span class="stat-label">Total Reservas</span>
             </div>
-
-            <!-- Stats Grid -->
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
-                <!-- Stat 1 -->
-                <div class="bg-white rounded-2xl p-6 border border-gray-100 shadow-[0_2px_10px_-3px_rgba(0,0,0,0.05)] transition-transform hover:-translate-y-1">
-                    <div class="flex justify-between items-start">
-                        <div>
-                            <p class="text-sm font-medium text-gray-500 mb-1">
-                                Reservas de Hoy
-                            </p>
-                            <h3 class="text-3xl font-bold text-gray-900">42</h3>
-                        </div>
-                        <div class="p-2">
-                            <img src={mesaGif.src} alt="Reservas de Hoy" class="w-12 h-12 object-contain mix-blend-multiply" />
-                        </div>
-                    </div>
-                    <div class="mt-4 flex items-center text-sm">
-                        <span class="text-green-600 font-medium flex items-center">
-                            <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path></svg>
-                            12%
-                        </span>
-                        <span class="text-gray-400 ml-2">vs ayer</span>
-                    </div>
-                </div>
-
-                <!-- Stat 2 -->
-                <div class="bg-white rounded-2xl p-6 border border-gray-100 shadow-[0_2px_10px_-3px_rgba(0,0,0,0.05)] transition-transform hover:-translate-y-1">
-                    <div class="flex justify-between items-start">
-                        <div>
-                            <p class="text-sm font-medium text-gray-500 mb-1">
-                                Ingresos Estimados
-                            </p>
-                            <h3 class="text-3xl font-bold text-gray-900">
-                                $3.4K
-                            </h3>
-                        </div>
-                        <div class="p-2">
-                            <img src={dolarGif.src} alt="Ingresos Estimados" class="w-12 h-12 object-contain mix-blend-multiply" />
-                        </div>
-                    </div>
-                    <div class="mt-4 flex items-center text-sm">
-                        <span class="text-green-600 font-medium flex items-center">
-                            <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path></svg>
-                            8%
-                        </span>
-                        <span class="text-gray-400 ml-2">vs ayer</span>
-                    </div>
-                </div>
-
-                <!-- Stat 3 -->
-                <div class="bg-white rounded-2xl p-6 border border-gray-100 shadow-[0_2px_10px_-3px_rgba(0,0,0,0.05)] transition-transform hover:-translate-y-1">
-                    <div class="flex justify-between items-start">
-                        <div>
-                            <p class="text-sm font-medium text-gray-500 mb-1">
-                                Comensales
-                            </p>
-                            <h3 class="text-3xl font-bold text-gray-900">
-                                128
-                            </h3>
-                        </div>
-                        <div class="p-2">
-                            <img src={genteGif.src} alt="Comensales" class="w-12 h-12 object-contain mix-blend-multiply" />
-                        </div>
-                    </div>
-                    <div class="mt-4 flex items-center text-sm">
-                        <span class="text-red-500 font-medium flex items-center">
-                            <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 17h8m0 0v-8m0 8l-8-8-4 4-6-6"></path></svg>
-                            3%
-                        </span>
-                        <span class="text-gray-400 ml-2">vs ayer</span>
-                    </div>
-                </div>
-
-                <!-- Stat 4 -->
-                <div class="bg-white rounded-2xl p-6 border border-gray-100 shadow-[0_2px_10px_-3px_rgba(0,0,0,0.05)] transition-transform hover:-translate-y-1">
-                    <div class="flex justify-between items-start">
-                        <div>
-                            <p class="text-sm font-medium text-gray-500 mb-1">
-                                Satisfacción
-                            </p>
-                            <h3 class="text-3xl font-bold text-gray-900">
-                                4.9<span class="text-base font-normal text-gray-400">/5</span>
-                            </h3>
-                        </div>
-                        <div class="p-2">
-                            <img src={experienciaGif.src} alt="Satisfacción del Cliente" class="w-12 h-12 object-contain mix-blend-multiply" />
-                        </div>
-                    </div>
-                    <div class="mt-4 flex items-center text-sm">
-                        <span class="text-gray-500 font-medium flex items-center">
-                            <svg class="w-4 h-4 mr-1 text-[#d4af37]" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"></path></svg>
-                            12 reseñas nuevas
-                        </span>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Main Content Area -->
-            <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                <!-- Tabla de Reservas Recientes -->
-                <div class="lg:col-span-2 bg-white rounded-2xl border border-gray-100 shadow-[0_2px_10px_-3px_rgba(0,0,0,0.05)] overflow-hidden">
-                    <div class="p-6 border-b border-gray-100 flex justify-between items-center">
-                        <h2 class="text-lg font-semibold text-gray-900">
-                            Próximas Reservas
-                        </h2>
-                        <a href="#" class="text-sm font-medium text-[#9e2a2b] hover:text-[#8a2426]">Ver todas</a>
-                    </div>
-                    <div class="overflow-x-auto">
-                        <table class="w-full text-left text-sm">
-                            <thead class="bg-gray-50/50 text-gray-500 font-medium">
-                                <tr>
-                                    <th class="py-4 px-6">Cliente</th>
-                                    <th class="py-4 px-6">Hora</th>
-                                    <th class="py-4 px-6">Personas</th>
-                                    <th class="py-4 px-6">Estado</th>
-                                    <th class="py-4 px-6 text-right">Acción</th>
-                                </tr>
-                            </thead>
-                            <tbody class="divide-y divide-gray-50 text-gray-700">
-                                <tr class="hover:bg-gray-50/50 transition-colors">
-                                    <td class="py-4 px-6">
-                                        <div class="flex items-center gap-3">
-                                            <div class="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center text-gray-600 font-semibold text-xs">
-                                                CM
-                                            </div>
-                                            <span class="font-medium text-gray-900">Carlos Mendoza</span>
-                                        </div>
-                                    </td>
-                                    <td class="py-4 px-6">20:30</td>
-                                    <td class="py-4 px-6">4 Personas</td>
-                                    <td class="py-4 px-6">
-                                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">Confirmado</span>
-                                    </td>
-                                    <td class="py-4 px-6 text-right">
-                                        <button class="text-gray-400 hover:text-[#9e2a2b] transition-colors">
-                                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path></svg>
-                                        </button>
-                                    </td>
-                                </tr>
-                                <tr class="hover:bg-gray-50/50 transition-colors">
-                                    <td class="py-4 px-6">
-                                        <div class="flex items-center gap-3">
-                                            <div class="w-8 h-8 rounded-full bg-[#d4a574] text-white flex items-center justify-center font-semibold text-xs">
-                                                AR
-                                            </div>
-                                            <span class="font-medium text-gray-900">Ana Rodríguez</span>
-                                        </div>
-                                    </td>
-                                    <td class="py-4 px-6">21:00</td>
-                                    <td class="py-4 px-6">2 Personas</td>
-                                    <td class="py-4 px-6">
-                                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-800">Pendiente</span>
-                                    </td>
-                                    <td class="py-4 px-6 text-right">
-                                        <button class="text-gray-400 hover:text-[#9e2a2b] transition-colors">
-                                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path></svg>
-                                        </button>
-                                    </td>
-                                </tr>
-                                <tr class="hover:bg-gray-50/50 transition-colors">
-                                    <td class="py-4 px-6">
-                                        <div class="flex items-center gap-3">
-                                            <div class="w-8 h-8 rounded-full bg-[#1a1a1a] text-[#d4af37] flex items-center justify-center font-semibold text-xs">
-                                                LG
-                                            </div>
-                                            <span class="font-medium text-gray-900">Luis Gómez (VIP)</span>
-                                        </div>
-                                    </td>
-                                    <td class="py-4 px-6">21:45</td>
-                                    <td class="py-4 px-6">8 Personas</td>
-                                    <td class="py-4 px-6">
-                                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">Confirmado</span>
-                                    </td>
-                                    <td class="py-4 px-6 text-right">
-                                        <button class="text-gray-400 hover:text-[#9e2a2b] transition-colors">
-                                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path></svg>
-                                        </button>
-                                    </td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-
-                <!-- Acciones Rápidas -->
-                <div class="bg-white rounded-2xl border border-gray-100 shadow-[0_2px_10px_-3px_rgba(0,0,0,0.05)] p-6">
-                    <h2 class="text-lg font-semibold text-gray-900 mb-6">
-                        Acciones Rápidas
-                    </h2>
-                    <div class="space-y-3">
-                        <button class="w-full flex items-center justify-between p-4 rounded-xl border border-gray-100 hover:border-[#9e2a2b] hover:bg-red-50/50 transition-all group">
-                            <div class="flex items-center gap-3 text-gray-700 group-hover:text-[#9e2a2b]">
-                                <div class="p-2 bg-gray-50 rounded-lg group-hover:bg-white group-hover:shadow-sm transition-all">
-                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
-                                </div>
-                                <span class="font-medium">Nueva Reserva</span>
-                            </div>
-                            <svg class="w-5 h-5 text-gray-300 group-hover:text-[#9e2a2b]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
-                        </button>
-
-                        <a href="/admin/menu" class="w-full flex items-center justify-between p-4 rounded-xl border border-gray-100 hover:border-[#d4a574] hover:bg-orange-50/50 transition-all group">
-                            <div class="flex items-center gap-3 text-gray-700 group-hover:text-[#d4a574]">
-                                <div class="p-2 bg-gray-50 rounded-lg group-hover:bg-white group-hover:shadow-sm transition-all">
-                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"></path></svg>
-                                </div>
-                                <span class="font-medium">Gestionar Menú</span>
-                            </div>
-                            <svg class="w-5 h-5 text-gray-300 group-hover:text-[#d4a574]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
-                        </a>
-
-                        <button class="w-full flex items-center justify-between p-4 rounded-xl border border-gray-100 hover:border-[#1a1a1a] hover:bg-gray-50 transition-all group">
-                            <div class="flex items-center gap-3 text-gray-700 group-hover:text-[#1a1a1a]">
-                                <div class="p-2 bg-gray-50 rounded-lg group-hover:bg-white group-hover:shadow-sm transition-all">
-                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
-                                </div>
-                                <span class="font-medium">Directorio de Clientes</span>
-                            </div>
-                            <svg class="w-5 h-5 text-gray-300 group-hover:text-[#1a1a1a]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
-                        </button>
-                    </div>
-                </div>
-            </div>
-        </main>
+        </div>
         
-        <script>
-            document.addEventListener('DOMContentLoaded', () => {
-                // Client-side authentication check
-                if (!document.cookie.includes('session=authenticated')) {
-                    window.location.href = '/admin/login';
-                }
-                
-                // Extract username from cookie if available
-                const cookies = document.cookie.split(';');
-                for (const cookie of cookies) {
-                    const [name, value] = cookie.trim().split('=');
-                    if (name === 'user_name') {
-                        const welcomeText = document.getElementById('welcomeText');
-                        if (welcomeText) {
-                            const fullName = decodeURIComponent(value);
-                            const firstName = fullName.split(' ')[0] || 'Admin';
-                            welcomeText.textContent = `¡Hola, ${firstName}!`;
-                        }
-                    }
-                }
-                
-                // Logout logic
-                const logoutBtn = document.getElementById('logoutBtn');
-                if (logoutBtn) {
-                    logoutBtn.addEventListener('click', (e) => {
-                        e.preventDefault();
-                        document.cookie = 'session=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
-                        document.cookie = 'user_name=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
-                        document.cookie = 'user_id=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
-                        window.location.href = '/admin/login';
-                    });
-                }
-            });
-        </script>
-    </body>
-</html>
+        <div class="stat-card">
+            <div class="stat-icon" style="background: rgba(245, 158, 11, 0.1); color: #f59e0b;">⏳</div>
+            <div class="stat-info">
+                <span class="stat-number">{stats[0]?.pendientes || 0}</span>
+                <span class="stat-label">Pendientes</span>
+            </div>
+        </div>
+        
+        <div class="stat-card">
+            <div class="stat-icon" style="background: rgba(16, 185, 129, 0.1); color: #10b981;">✅</div>
+            <div class="stat-info">
+                <span class="stat-number">{stats[0]?.confirmadas || 0}</span>
+                <span class="stat-label">Confirmadas</span>
+            </div>
+        </div>
+        
+        <div class="stat-card">
+            <div class="stat-icon" style="background: rgba(239, 68, 68, 0.1); color: #ef4444;">❌</div>
+            <div class="stat-info">
+                <span class="stat-number">{stats[0]?.rechazadas || 0}</span>
+                <span class="stat-label">Rechazadas</span>
+            </div>
+        </div>
+        
+        <div class="stat-card">
+            <div class="stat-icon" style="background: rgba(158, 42, 43, 0.1); color: #9e2a2b;">👥</div>
+            <div class="stat-info">
+                <span class="stat-number">{stats[0]?.total_clientes || 0}</span>
+                <span class="stat-label">Clientes Registrados</span>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Cubiertos por Sucursal -->
+    <div class="section-card">
+        <div class="section-header">
+            <h2>🪑 Capacidad y Cubiertos</h2>
+        </div>
+        <div class="cubiertos-grid">
+            {cubiertos.map((sucursal: any) => {
+                const porcentaje = Math.round((sucursal.cubiertos_ocupados / sucursal.capacidad_total) * 100);
+                const color = porcentaje > 80 ? '#ef4444' : porcentaje > 60 ? '#f59e0b' : '#10b981';
+                return (
+                    <div class="cubiertos-card" style={`border-left-color: ${color}`}>
+                        <div class="cubiertos-header">
+                            <span class="cubiertos-icon">
+                                {sucursal.nombre === 'Churrasquería' ? '🔥' :
+                                 sucursal.nombre === 'Fast Grill' ? '⚡' : '🥩'}
+                            </span>
+                            <strong>{sucursal.nombre}</strong>
+                        </div>
+                        <div class="cubiertos-numeros">
+                            <div>
+                                <span class="cubiertos-label">TOTAL</span>
+                                <span class="cubiertos-valor">{sucursal.capacidad_total}</span>
+                            </div>
+                            <div>
+                                <span class="cubiertos-label">OCUPADOS</span>
+                                <span class="cubiertos-valor ocupado">{sucursal.cubiertos_ocupados}</span>
+                            </div>
+                            <div>
+                                <span class="cubiertos-label">DISPONIBLES</span>
+                                <span class="cubiertos-valor disponible" style={`color: ${color}`}>
+                                    {sucursal.cubiertos_disponibles}
+                                </span>
+                            </div>
+                        </div>
+                        <div class="cubiertos-bar">
+                            <div class="cubiertos-progreso" style={`width: ${porcentaje}%; background: ${color}`}></div>
+                        </div>
+                        <div class="cubiertos-footer">
+                            <span style={`color: ${color}`}>{porcentaje}% ocupado</span>
+                            <span class="cubiertos-libres">{sucursal.cubiertos_disponibles} cubiertos libres</span>
+                        </div>
+                    </div>
+                );
+            })}
+        </div>
+    </div>
+    
+    <!-- Reservas Recientes -->
+    <div class="section-card">
+        <div class="section-header">
+            <h2>📋 Reservas Recientes</h2>
+            <a href="/admin/reservas" class="btn-ver-todas">Ver todas →</a>
+        </div>
+        
+        {reservasRecientes.length === 0 ? (
+            <div class="empty-state">
+                <span class="empty-icon">📭</span>
+                <p>No hay reservas recientes</p>
+            </div>
+        ) : (
+            <div class="table-wrapper">
+                <table class="tabla-reservas">
+                    <thead>
+                        <tr>
+                            <th>Cliente</th>
+                            <th>Teléfono</th>
+                            <th>Sucursal</th>
+                            <th>Fecha</th>
+                            <th>Hora</th>
+                            <th>Personas</th>
+                            <th>Estado</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {reservasRecientes.map((reserva: any) => (
+                            <tr>
+                                <td><strong>{reserva.nombre_cliente}</strong></td>
+                                <td>
+                                    <a href={`https://wa.me/${reserva.telefono_completo || '591' + reserva.telefono}`} 
+                                       target="_blank" class="whatsapp-link">
+                                        💬 {reserva.codigo_pais || '591'} {reserva.telefono}
+                                    </a>
+                                </td>
+                                <td>{reserva.sucursal_nombre}</td>
+                                <td>{new Date(reserva.fecha).toLocaleDateString('es-ES')}</td>
+                                <td>{reserva.hora}</td>
+                                <td>{reserva.numero_personas}</td>
+                                <td>
+                                    <span class={`badge badge-${reserva.estado}`}>
+                                        {reserva.estado === 'pendiente' ? '⏳ Pendiente' :
+                                         reserva.estado === 'confirmada' ? '✅ Confirmada' :
+                                         reserva.estado === 'rechazada' ? '❌ Rechazada' :
+                                         '⏰ Cancelada'}
+                                    </span>
+                                </td>
+                            </tr>
+                        ))}
+                    </tbody>
+                </table>
+            </div>
+        )}
+    </div>
+</AdminLayout>
+
+<style is:global>
+/* ============================================
+   ESTILOS DEL DASHBOARD
+   ============================================ */
+
+/* Stats Grid */
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 16px;
+    margin-bottom: 24px;
+}
+
+.stat-card {
+    background: white;
+    padding: 18px 20px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+    transition: all 0.3s ease;
+}
+
+.stat-card:hover {
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+    transform: translateY(-2px);
+}
+
+.stat-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+}
+
+.stat-info {
+    flex: 1;
+}
+
+.stat-number {
+    display: block;
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #1a1a1a;
+}
+
+.stat-label {
+    font-size: 0.8rem;
+    color: rgba(26, 26, 26, 0.4);
+}
+
+/* Section Cards */
+.section-card {
+    background: white;
+    border-radius: 12px;
+    padding: 20px 24px;
+    margin-bottom: 24px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+
+.section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+}
+
+.section-header h2 {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: #1a1a1a;
+}
+
+.btn-ver-todas {
+    font-size: 0.85rem;
+    color: #9e2a2b;
+    text-decoration: none;
+    font-weight: 500;
+    transition: all 0.3s ease;
+}
+
+.btn-ver-todas:hover {
+    color: #7a2021;
+    text-decoration: underline;
+}
+
+/* Cubiertos */
+.cubiertos-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 16px;
+}
+
+.cubiertos-card {
+    background: rgba(255, 250, 240, 0.5);
+    border-radius: 10px;
+    padding: 16px 20px;
+    border-left: 4px solid #10b981;
+    transition: all 0.3s ease;
+}
+
+.cubiertos-card:hover {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+    transform: translateY(-2px);
+}
+
+.cubiertos-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 10px;
+}
+
+.cubiertos-icon {
+    font-size: 1.2rem;
+}
+
+.cubiertos-header strong {
+    font-weight: 600;
+    color: #1a1a1a;
+}
+
+.cubiertos-numeros {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 10px;
+}
+
+.cubiertos-numeros div {
+    text-align: center;
+}
+
+.cubiertos-label {
+    display: block;
+    font-size: 0.6rem;
+    color: rgba(26, 26, 26, 0.3);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.cubiertos-valor {
+    display: block;
+    font-size: 1.2rem;
+    font-weight: 700;
+    color: #1a1a1a;
+}
+
+.cubiertos-valor.ocupado {
+    color: #3b82f6;
+}
+
+.cubiertos-valor.disponible {
+    color: #10b981;
+}
+
+.cubiertos-bar {
+    width: 100%;
+    height: 4px;
+    background: rgba(26, 26, 26, 0.06);
+    border-radius: 2px;
+    overflow: hidden;
+    margin-bottom: 8px;
+}
+
+.cubiertos-progreso {
+    height: 100%;
+    border-radius: 2px;
+    transition: width 0.8s ease;
+}
+
+.cubiertos-footer {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.75rem;
+}
+
+.cubiertos-libres {
+    color: rgba(26, 26, 26, 0.3);
+}
+
+/* Tabla */
+.table-wrapper {
+    overflow-x: auto;
+}
+
+.tabla-reservas {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.tabla-reservas thead {
+    background: #f8f5f0;
+}
+
+.tabla-reservas th {
+    padding: 10px 14px;
+    text-align: left;
+    font-size: 0.7rem;
+    font-weight: 600;
+    color: rgba(26, 26, 26, 0.4);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    border-bottom: 1px solid rgba(26, 26, 26, 0.06);
+}
+
+.tabla-reservas td {
+    padding: 10px 14px;
+    font-size: 0.85rem;
+    color: #1a1a1a;
+    border-bottom: 1px solid rgba(26, 26, 26, 0.04);
+    vertical-align: middle;
+}
+
+.tabla-reservas tr:hover td {
+    background: rgba(255, 250, 240, 0.3);
+}
+
+/* Badges */
+.badge {
+    display: inline-block;
+    padding: 3px 12px;
+    border-radius: 20px;
+    font-size: 0.7rem;
+    font-weight: 500;
+}
+
+.badge-pendiente { background: rgba(245, 158, 11, 0.1); color: #f59e0b; }
+.badge-confirmada { background: rgba(16, 185, 129, 0.1); color: #10b981; }
+.badge-rechazada { background: rgba(239, 68, 68, 0.1); color: #ef4444; }
+.badge-cancelada { background: rgba(107, 114, 128, 0.1); color: #6b7280; }
+
+/* WhatsApp Link */
+.whatsapp-link {
+    color: #25d366;
+    text-decoration: none;
+    font-weight: 500;
+    transition: all 0.3s ease;
+}
+
+.whatsapp-link:hover {
+    color: #1da851;
+    text-decoration: underline;
+}
+
+/* Empty State */
+.empty-state {
+    text-align: center;
+    padding: 32px 24px;
+}
+
+.empty-icon {
+    font-size: 2.5rem;
+    display: block;
+    margin-bottom: 8px;
+}
+
+.empty-state p {
+    font-size: 0.95rem;
+    font-weight: 500;
+    color: #1a1a1a;
+    margin: 0;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .stats-grid {
+        grid-template-columns: 1fr 1fr;
+    }
+    
+    .cubiertos-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .section-card {
+        padding: 16px;
+    }
+}
+
+@media (max-width: 480px) {
+    .stats-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .cubiertos-numeros {
+        flex-wrap: wrap;
+        gap: 8px;
+    }
+}
+</style>

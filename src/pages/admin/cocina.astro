@@ -1,0 +1,1495 @@
+---
+// src/pages/admin/cocina.astro
+// Panel de Cocina - Pedidos Agrupados por Mesa
+
+import AdminLayout from '../../layouts/AdminLayout.astro';
+import pool from '../../lib/db';
+
+// Obtener rol y datos del usuario
+const userRole = Astro.cookies.get('user_role')?.value || 'mesero';
+const userId = Astro.cookies.get('user_id')?.value;
+const userSucursal = Astro.cookies.get('user_sucursal')?.value || '1';
+
+// Obtener pedidos pendientes (AGRUPADOS)
+const pedidosPendientesData = await pool.query(`
+    SELECT 
+        pg.id,
+        pg.grupo_id,
+        pg.mesa_id,
+        pg.nombre_cliente,
+        pg.total_pedido,
+        pg.items,
+        pg.prioridad,
+        pg.notas,
+        pg.created_at,
+        pg.estado,
+        s.nombre AS sucursal_nombre,
+        u.nombre AS mesero_nombre
+    FROM pedidos_cocina_grupo pg
+    JOIN sucursales s ON pg.sucursal_id = s.id
+    LEFT JOIN usuarios u ON pg.mesero_id = u.id
+    WHERE pg.estado IN ('pendiente', 'preparando')
+    ORDER BY 
+        FIELD(pg.prioridad, 'alta', 'normal', 'baja'),
+        pg.created_at ASC
+`) as any[];
+const pedidosPendientes = pedidosPendientesData[0] || [];
+
+// Obtener pedidos listos para entregar (AGRUPADOS)
+const pedidosListosData = await pool.query(`
+    SELECT 
+        pg.id,
+        pg.grupo_id,
+        pg.mesa_id,
+        pg.nombre_cliente,
+        pg.total_pedido,
+        pg.items,
+        pg.notas,
+        pg.created_at,
+        pg.updated_at,
+        s.nombre AS sucursal_nombre,
+        u.nombre AS mesero_nombre
+    FROM pedidos_cocina_grupo pg
+    JOIN sucursales s ON pg.sucursal_id = s.id
+    LEFT JOIN usuarios u ON pg.mesero_id = u.id
+    WHERE pg.estado = 'listo'
+    ORDER BY pg.updated_at DESC
+`) as any[];
+const pedidosListos = pedidosListosData[0] || [];
+
+// Obtener historial de pedidos entregados (para Admin)
+const pedidosEntregadosData = await pool.query(`
+    SELECT 
+        pg.grupo_id,
+        pg.mesa_id,
+        pg.nombre_cliente,
+        pg.total_pedido,
+        pg.items,
+        pg.created_at,
+        pg.entregado_at,
+        s.nombre AS sucursal_nombre,
+        u.nombre AS mesero_nombre,
+        eu.nombre AS entregado_por_nombre
+    FROM pedidos_cocina_grupo pg
+    JOIN sucursales s ON pg.sucursal_id = s.id
+    LEFT JOIN usuarios u ON pg.mesero_id = u.id
+    LEFT JOIN usuarios eu ON pg.entregado_por = eu.id
+    WHERE pg.estado = 'entregado'
+    ORDER BY pg.entregado_at DESC
+    LIMIT 50
+`) as any[];
+const pedidosEntregados = pedidosEntregadosData[0] || [];
+
+// Obtener menú de la sucursal del mesero (para Nuevo Pedido)
+const menuSucursalData = await pool.query(`
+    SELECT 
+        p.id,
+        p.nombre,
+        p.descripcion,
+        p.precio,
+        c.nombre AS categoria,
+        p.imagen_url,
+        ms.disponible
+    FROM menu_sucursal ms
+    JOIN platos p ON ms.plato_id = p.id
+    JOIN categorias c ON p.categoria_id = c.id
+    WHERE ms.sucursal_id = ? 
+    AND ms.disponible = 1
+    ORDER BY c.nombre, p.nombre
+`, [parseInt(userSucursal)]) as any[];
+const menuSucursal = menuSucursalData[0] || [];
+
+// Estadísticas
+const totalPendientes = pedidosPendientes.length;
+const totalListos = pedidosListos.length;
+const totalEntregados = pedidosEntregados.length;
+
+// Función para parsear items
+const parseItems = (itemsJson: string) => {
+    try {
+        return typeof itemsJson === 'string' ? JSON.parse(itemsJson) : itemsJson;
+    } catch {
+        return [];
+    }
+};
+
+// Badge de prioridad
+const prioridadBadge = (prioridad: string) => {
+    const clases = {
+        'alta': 'badge-prioridad-alta',
+        'normal': 'badge-prioridad-normal',
+        'baja': 'badge-prioridad-baja'
+    };
+    return clases[prioridad as keyof typeof clases] || 'badge-prioridad-normal';
+};
+
+const prioridadTexto = (prioridad: string) => {
+    const textos = {
+        'alta': '🔴 Alta',
+        'normal': '🟡 Normal',
+        'baja': '🟢 Baja'
+    };
+    return textos[prioridad as keyof typeof textos] || prioridad;
+};
+
+// Estado badge
+const estadoBadge = (estado: string) => {
+    const clases = {
+        'pendiente': 'badge-pendiente',
+        'preparando': 'badge-preparando',
+        'listo': 'badge-listo',
+        'entregado': 'badge-entregado',
+        'cancelado': 'badge-cancelado'
+    };
+    return clases[estado as keyof typeof clases] || 'badge-pendiente';
+};
+
+const estadoTexto = (estado: string) => {
+    const textos = {
+        'pendiente': '⏳ Pendiente',
+        'preparando': '🔧 Preparando',
+        'listo': '✅ Listo',
+        'entregado': '📋 Entregado',
+        'cancelado': '❌ Cancelado'
+    };
+    return textos[estado as keyof typeof textos] || estado;
+};
+
+const formatearFecha = (fecha: string) => {
+    if (!fecha) return '-';
+    return new Date(fecha).toLocaleTimeString('es-ES', {
+        hour: '2-digit',
+        minute: '2-digit'
+    });
+};
+
+const formatearFechaCompleta = (fecha: string) => {
+    if (!fecha) return '-';
+    return new Date(fecha).toLocaleString('es-ES', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+    });
+};
+
+// Obtener nombre de la sucursal
+const sucursalNombreData = await pool.query(
+    'SELECT nombre FROM sucursales WHERE id = ?',
+    [parseInt(userSucursal) || 1]
+) as any[];
+const sucursalNombre = sucursalNombreData[0] || [];
+const nombreSucursal = sucursalNombre.length > 0 ? sucursalNombre[0].nombre : 'Fast Grill';
+---
+
+<AdminLayout title="Cocina" description="Gestión de pedidos agrupados por mesa">
+    <!-- Botón Nuevo Pedido (Solo para Meseros o Admin) -->
+    {(userRole === 'mesero' || userRole === 'admin') && (
+        <div class="nuevo-pedido-container">
+            <button class="btn-nuevo-pedido" onclick="abrirModalPedido()">
+                📋 Nuevo Pedido
+            </button>
+            <span class="sucursal-info">🍽️ {nombreSucursal}</span>
+        </div>
+    )}
+
+    <!-- Estadísticas -->
+    <div class="stats-grid">
+        <div class="stat-card">
+            <div class="stat-icon" style="background: rgba(245, 158, 11, 0.1); color: #f59e0b;">⏳</div>
+            <div class="stat-info">
+                <span class="stat-number">{totalPendientes}</span>
+                <span class="stat-label">Pedidos Pendientes</span>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon" style="background: rgba(16, 185, 129, 0.1); color: #10b981;">✅</div>
+            <div class="stat-info">
+                <span class="stat-number">{totalListos}</span>
+                <span class="stat-label">Listos para Entregar</span>
+            </div>
+        </div>
+        {userRole === 'admin' && (
+            <div class="stat-card">
+                <div class="stat-icon" style="background: rgba(59, 130, 246, 0.1); color: #3b82f6;">📋</div>
+                <div class="stat-info">
+                    <span class="stat-number">{totalEntregados}</span>
+                    <span class="stat-label">Entregados (50 últimos)</span>
+                </div>
+            </div>
+        )}
+    </div>
+
+    <!-- Tabs -->
+    <div class="cocina-tabs">
+        <button class="tab-active" onclick="cambiarTab('pendientes')">📋 Pendientes ({totalPendientes})</button>
+        <button onclick="cambiarTab('listos')">✅ Listos ({totalListos})</button>
+        {userRole === 'admin' && (
+            <button onclick="cambiarTab('entregados')">📋 Historial ({totalEntregados})</button>
+        )}
+    </div>
+
+    <!-- Panel de Pendientes -->
+    <div id="panel-pendientes" class="cocina-panel">
+        {pedidosPendientes.length === 0 ? (
+            <div class="empty-state">
+                <span class="empty-icon">🍽️</span>
+                <p>No hay pedidos pendientes</p>
+                <span class="empty-sub">La cocina está al día</span>
+            </div>
+        ) : (
+            <div class="pedidos-grid">
+                {pedidosPendientes.map((pedido: any) => {
+                    const items = parseItems(pedido.items);
+                    return (
+                        <div class="pedido-card" data-pedido-id={pedido.id}>
+                            <div class="pedido-header">
+                                <div class="pedido-info">
+                                    <span class="pedido-mesa">📋 Mesa {pedido.mesa_id || 'Sin mesa'}</span>
+                                    {pedido.nombre_cliente && (
+                                        <span class="pedido-cliente">👤 {pedido.nombre_cliente}</span>
+                                    )}
+                                    <span class="pedido-total">Total: Bs. {Number(pedido.total_pedido || 0).toFixed(2)}</span>
+                                </div>
+                                <div class="pedido-estado-badges">
+                                    <span class={`badge ${prioridadBadge(pedido.prioridad)}`}>
+                                        {prioridadTexto(pedido.prioridad)}
+                                    </span>
+                                    <span class={`badge ${estadoBadge(pedido.estado)}`}>
+                                        {estadoTexto(pedido.estado)}
+                                    </span>
+                                </div>
+                            </div>
+                            
+                            <div class="pedido-items">
+                                {items.map((item: any, index: number) => (
+                                    <div class="pedido-item">
+                                        <span class="item-cantidad">{item.cantidad}x</span>
+                                        <span class="item-nombre">{item.nombre}</span>
+                                        <span class="item-precio">Bs. {Number(item.subtotal || (item.precio * item.cantidad)).toFixed(2)}</span>
+                                    </div>
+                                ))}
+                            </div>
+                            
+                            <div class="pedido-detalles">
+                                <span>🏢 {pedido.sucursal_nombre}</span>
+                                <span>👤 {pedido.mesero_nombre || 'Sin mesero'}</span>
+                                <span>🕐 {formatearFecha(pedido.created_at)}</span>
+                            </div>
+                            
+                            {pedido.notas && (
+                                <div class="pedido-notas">
+                                    📝 {pedido.notas}
+                                </div>
+                            )}
+                            
+                            <div class="pedido-acciones">
+                                {(userRole === 'cocinero' || userRole === 'admin') && (
+                                    <>
+                                        <button class="btn-preparar" onclick={`cambiarEstadoGrupo(${pedido.id}, 'preparando')`}>
+                                            🔧 Preparar
+                                        </button>
+                                        <button class="btn-listov" onclick={`cambiarEstadoGrupo(${pedido.id}, 'listo')`}>
+                                            ✅ Listo
+                                        </button>
+                                    </>
+                                )}
+                                {userRole === 'mesero' && pedido.estado === 'pendiente' && (
+                                    <span class="pedido-estado">
+                                        <span class="badge badge-pendiente">⏳ Pendiente</span>
+                                    </span>
+                                )}
+                            </div>
+                        </div>
+                    );
+                })}
+            </div>
+        )}
+    </div>
+
+    <!-- Panel de Listos -->
+    <div id="panel-listos" class="cocina-panel" style="display: none;">
+        {pedidosListos.length === 0 ? (
+            <div class="empty-state">
+                <span class="empty-icon">📭</span>
+                <p>No hay pedidos listos</p>
+                <span class="empty-sub">Los pedidos aparecerán aquí cuando estén listos</span>
+            </div>
+        ) : (
+            <div class="pedidos-grid">
+                {pedidosListos.map((pedido: any) => {
+                    const items = parseItems(pedido.items);
+                    return (
+                        <div class="pedido-card pedido-listo" data-pedido-id={pedido.id}>
+                            <div class="pedido-header">
+                                <div class="pedido-info">
+                                    <span class="pedido-mesa">📋 Mesa {pedido.mesa_id || 'Sin mesa'}</span>
+                                    {pedido.nombre_cliente && (
+                                        <span class="pedido-cliente">👤 {pedido.nombre_cliente}</span>
+                                    )}
+                                    <span class="pedido-total">Total: Bs. {Number(pedido.total_pedido || 0).toFixed(2)}</span>
+                                </div>
+                                <span class="badge badge-listo">✅ Listo</span>
+                            </div>
+                            
+                            <div class="pedido-items">
+                                {items.map((item: any, index: number) => (
+                                    <div class="pedido-item">
+                                        <span class="item-cantidad">{item.cantidad}x</span>
+                                        <span class="item-nombre">{item.nombre}</span>
+                                        <span class="item-precio">Bs. {Number(item.subtotal || (item.precio * item.cantidad)).toFixed(2)}</span>
+                                    </div>
+                                ))}
+                            </div>
+                            
+                            <div class="pedido-detalles">
+                                <span>🏢 {pedido.sucursal_nombre}</span>
+                                <span>👤 {pedido.mesero_nombre || 'Sin mesero'}</span>
+                                <span>🕐 {formatearFecha(pedido.updated_at)}</span>
+                            </div>
+                            
+                            <div class="pedido-acciones">
+                                {(userRole === 'mesero' || userRole === 'admin') && (
+                                    <button class="btn-entregar" onclick={`entregarPedidoGrupo(${pedido.id})`}>
+                                        📋 Entregar al Cliente
+                                    </button>
+                                )}
+                                {userRole === 'cocinero' && (
+                                    <span class="pedido-estado">
+                                        <span class="badge badge-listo">✅ Listo para entregar</span>
+                                    </span>
+                                )}
+                            </div>
+                        </div>
+                    );
+                })}
+            </div>
+        )}
+    </div>
+
+    <!-- Panel de Entregados (Solo Admin) -->
+    {userRole === 'admin' && (
+        <div id="panel-entregados" class="cocina-panel" style="display: none;">
+            {pedidosEntregados.length === 0 ? (
+                <div class="empty-state">
+                    <span class="empty-icon">📭</span>
+                    <p>No hay pedidos entregados</p>
+                </div>
+            ) : (
+                <div class="pedidos-grid">
+                    {pedidosEntregados.map((pedido: any) => {
+                        const items = parseItems(pedido.items);
+                        return (
+                            <div class="pedido-card pedido-entregado">
+                                <div class="pedido-header">
+                                    <div class="pedido-info">
+                                        <span class="pedido-mesa">📋 Mesa {pedido.mesa_id || 'Sin mesa'}</span>
+                                        {pedido.nombre_cliente && (
+                                            <span class="pedido-cliente">👤 {pedido.nombre_cliente}</span>
+                                        )}
+                                        <span class="pedido-total">Total: Bs. {Number(pedido.total_pedido || 0).toFixed(2)}</span>
+                                    </div>
+                                    <span class="badge badge-entregado">📋 Entregado</span>
+                                </div>
+                                
+                                <div class="pedido-items">
+                                    {items.map((item: any, index: number) => (
+                                        <div class="pedido-item">
+                                            <span class="item-cantidad">{item.cantidad}x</span>
+                                            <span class="item-nombre">{item.nombre}</span>
+                                            <span class="item-precio">Bs. {Number(item.subtotal || (item.precio * item.cantidad)).toFixed(2)}</span>
+                                        </div>
+                                    ))}
+                                </div>
+                                
+                                <div class="pedido-detalles">
+                                    <span>🏢 {pedido.sucursal_nombre}</span>
+                                    <span>👤 Mesero: {pedido.mesero_nombre || 'Sin mesero'}</span>
+                                    <span>📋 Entregado por: {pedido.entregado_por_nombre || 'Sistema'}</span>
+                                    <span>🕐 {formatearFechaCompleta(pedido.entregado_at)}</span>
+                                </div>
+                            </div>
+                        );
+                    })}
+                </div>
+            )}
+        </div>
+    )}
+
+    <!-- MODAL PARA NUEVO PEDIDO (AGRUPADO) -->
+    <div class="modal-overlay" id="modalNuevoPedido" style="display: none;" onclick="cerrarModalPedido(event)">
+        <div class="modal-container modal-pedido" onclick="event.stopPropagation()">
+            <div class="modal-header">
+                <div class="modal-title">
+                    <span class="icon">📋</span>
+                    <div>
+                        <h2>Nuevo Pedido</h2>
+                        <p>{nombreSucursal} • Toma el pedido del cliente</p>
+                    </div>
+                </div>
+                <button class="modal-close" onclick="cerrarModalPedido()">✕</button>
+            </div>
+            
+            <div class="modal-body">
+                <!-- Mesa y Cliente -->
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>📋 Número de Mesa *</label>
+                        <input type="number" id="mesaPedido" placeholder="Ej: 5" min="1" required />
+                    </div>
+                    <div class="form-group">
+                        <label>👤 Nombre del Cliente</label>
+                        <input type="text" id="nombreCliente" placeholder="Ej: Carlos Gómez" />
+                        <span class="field-hint">Opcional, si tiene reserva a nombre de</span>
+                    </div>
+                </div>
+                
+                <!-- Plato -->
+                <div class="form-group">
+                    <label>🍽️ Seleccionar Plato *</label>
+                    <select id="platoPedido" required>
+                        <option value="">Selecciona un plato...</option>
+                        {menuSucursal.map((plato: any) => (
+                            <option value={plato.id}>
+                                {plato.nombre} - Bs. {Number(plato.precio).toFixed(2)}
+                            </option>
+                        ))}
+                    </select>
+                </div>
+                
+                <!-- Cantidad -->
+                <div class="form-group">
+                    <label>🔢 Cantidad *</label>
+                    <input type="number" id="cantidadPedido" value="1" min="1" max="10" required />
+                </div>
+                
+                <!-- Categorías Rápidas -->
+                <div class="categorias-rapidas">
+                    <span class="categoria-label">Filtrar por:</span>
+                    {menuSucursal.reduce((acc: any[], plato: any) => {
+                        if (!acc.includes(plato.categoria)) acc.push(plato.categoria);
+                        return acc;
+                    }, []).map((categoria: string) => (
+                        <button class="btn-categoria" onclick={`filtrarPorCategoria('${categoria}')`}>
+                            {categoria}
+                        </button>
+                    ))}
+                    <button class="btn-categoria active" onclick="filtrarPorCategoria('todos')">📋 Todos</button>
+                </div>
+                
+                <!-- Botón Agregar -->
+                <button type="button" class="btn-agregar-plato" onclick="agregarPlatoPedido()">
+                    ➕ Agregar Plato
+                </button>
+            </div>
+            
+            <!-- Resumen del Pedido -->
+            <div class="pedido-resumen">
+                <h3>📋 Resumen del Pedido</h3>
+                <div id="listaPlatosAgregados" class="lista-platos">
+                    <p class="empty-platos">No hay platos agregados</p>
+                </div>
+                <div class="pedido-total">
+                    <span>Total: <strong id="totalPedido">Bs. 0.00</strong></span>
+                </div>
+                
+                <div class="form-group notas-group">
+                    <label>📝 Notas del Pedido</label>
+                    <textarea id="notasPedido" rows="2" placeholder="Ej: Término de carne: 3/4, guarnición: papas fritas, sin cebolla..."></textarea>
+                    <span class="field-hint">Especifica detalles como término de carne, guarniciones, alergias, etc.</span>
+                </div>
+                
+                <button class="btn-enviar-pedido" onclick="enviarPedidoCocina()">
+                    🚀 Enviar Pedido a Cocina
+                </button>
+            </div>
+        </div>
+    </div>
+</AdminLayout>
+
+<style is:global>
+/* ============================================
+   ESTILOS DE COCINA (ACTUALIZADOS)
+   ============================================ */
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 20px;
+    margin-bottom: 24px;
+}
+
+.stat-card {
+    background: white;
+    border-radius: 12px;
+    padding: 20px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+}
+
+.stat-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+}
+
+.stat-info {
+    display: flex;
+    flex-direction: column;
+}
+
+.stat-number {
+    font-size: 1.8rem;
+    font-weight: 700;
+    color: #1a1a1a;
+    line-height: 1;
+}
+
+.stat-label {
+    font-size: 0.85rem;
+    color: #6b7280;
+    margin-top: 4px;
+}
+.nuevo-pedido-container {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 24px;
+    background: white;
+    padding: 16px 20px;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+
+.btn-nuevo-pedido {
+    padding: 12px 28px;
+    background: linear-gradient(135deg, #9e2a2b, #7a2021);
+    color: #fffaf0;
+    border: none;
+    border-radius: 10px;
+    font-size: 0.95rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-family: 'Inter', sans-serif;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.btn-nuevo-pedido:hover {
+    transform: scale(1.02);
+    box-shadow: 0 4px 16px rgba(158, 42, 43, 0.3);
+}
+
+.sucursal-info {
+    font-size: 0.85rem;
+    color: rgba(26, 26, 26, 0.4);
+}
+
+/* ============================================
+   TABS Y LISTA DE PEDIDOS - ESTILOS
+   ============================================ */
+.cocina-tabs {
+    display: flex;
+    gap: 8px;
+    margin: 16px 0 24px;
+}
+
+.cocina-tabs button {
+    padding: 10px 24px;
+    border: 1.5px solid rgba(26, 26, 26, 0.08);
+    border-radius: 10px;
+    background: white;
+    color: rgba(26, 26, 26, 0.5);
+    font-size: 0.9rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-family: 'Inter', sans-serif;
+}
+
+.cocina-tabs button:hover {
+    background: #f8f5f0;
+}
+
+.cocina-tabs button.tab-active {
+    background: #9e2a2b;
+    color: #fffaf0;
+    border-color: #9e2a2b;
+}
+
+.empty-state {
+    text-align: center;
+    padding: 40px;
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+}
+
+.empty-icon {
+    font-size: 3rem;
+    margin-bottom: 16px;
+    display: inline-block;
+}
+
+.empty-state p {
+    font-size: 1.2rem;
+    font-weight: 600;
+    color: #1a1a1a;
+    margin-bottom: 8px;
+}
+
+.empty-sub {
+    color: #6b7280;
+    font-size: 0.9rem;
+}
+
+.pedidos-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 16px;
+}
+
+.pedido-card {
+    background: white;
+    border-radius: 14px;
+    padding: 18px 20px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+    border-left: 4px solid #f59e0b;
+    transition: all 0.3s ease;
+}
+
+.pedido-card:hover {
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+    transform: translateY(-2px);
+}
+
+.pedido-card.pedido-listo {
+    border-left-color: #10b981;
+}
+
+.pedido-card.pedido-entregado {
+    border-left-color: #6b7280;
+    opacity: 0.85;
+}
+
+.pedido-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 10px;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.pedido-info {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.pedido-mesa {
+    font-weight: 700;
+    color: #1a1a1a;
+    font-size: 1rem;
+}
+
+.pedido-cliente {
+    font-size: 0.85rem;
+    color: #3b82f6;
+    font-weight: 500;
+}
+
+.pedido-total {
+    font-size: 0.85rem;
+    color: rgba(26, 26, 26, 0.6);
+    font-weight: 500;
+}
+
+.pedido-estado-badges {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+}
+
+.pedido-items {
+    background: rgba(255, 250, 240, 0.4);
+    border-radius: 8px;
+    padding: 8px 12px;
+    margin: 8px 0 10px;
+}
+
+.pedido-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 4px 0;
+    border-bottom: 1px solid rgba(26, 26, 26, 0.03);
+}
+
+.pedido-item:last-child {
+    border-bottom: none;
+}
+
+.item-cantidad {
+    font-weight: 600;
+    color: #9e2a2b;
+    min-width: 32px;
+}
+
+.item-nombre {
+    flex: 1;
+    font-size: 0.9rem;
+    color: #1a1a1a;
+}
+
+.item-precio {
+    font-weight: 500;
+    color: rgba(26, 26, 26, 0.5);
+    font-size: 0.85rem;
+}
+
+.pedido-detalles {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+    font-size: 0.75rem;
+    color: rgba(26, 26, 26, 0.4);
+    margin: 6px 0 10px;
+}
+
+.pedido-notas {
+    background: rgba(245, 158, 11, 0.06);
+    padding: 6px 12px;
+    border-radius: 6px;
+    font-size: 0.8rem;
+    color: rgba(26, 26, 26, 0.6);
+    margin-bottom: 10px;
+    border-left: 3px solid #f59e0b;
+}
+
+.pedido-acciones {
+    display: flex;
+    gap: 8px;
+    margin-top: 4px;
+    flex-wrap: wrap;
+}
+
+.btn-preparar,
+.btn-listov,
+.btn-entregar {
+    flex: 1;
+    padding: 8px 16px;
+    border: none;
+    border-radius: 8px;
+    font-size: 0.85rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-family: 'Inter', sans-serif;
+}
+
+.btn-preparar {
+    background: rgba(59, 130, 246, 0.1);
+    color: #3b82f6;
+}
+
+.btn-preparar:hover {
+    background: rgba(59, 130, 246, 0.2);
+}
+
+.btn-listov {
+    background: rgba(16, 185, 129, 0.1);
+    color: #10b981;
+}
+
+.btn-listov:hover {
+    background: rgba(16, 185, 129, 0.2);
+}
+
+.btn-entregar {
+    background: rgba(158, 42, 43, 0.1);
+    color: #9e2a2b;
+}
+
+.btn-entregar:hover {
+    background: rgba(158, 42, 43, 0.2);
+}
+
+/* Badges */
+.badge {
+    padding: 4px 8px;
+    border-radius: 6px;
+    font-size: 0.75rem;
+    font-weight: 500;
+}
+.badge-prioridad-alta {
+    background: rgba(239, 68, 68, 0.1);
+    color: #ef4444;
+}
+
+.badge-prioridad-normal {
+    background: rgba(245, 158, 11, 0.1);
+    color: #f59e0b;
+}
+
+.badge-prioridad-baja {
+    background: rgba(16, 185, 129, 0.1);
+    color: #10b981;
+}
+
+.badge-pendiente {
+    background: rgba(245, 158, 11, 0.1);
+    color: #f59e0b;
+}
+
+.badge-preparando {
+    background: rgba(59, 130, 246, 0.1);
+    color: #3b82f6;
+}
+
+.badge-listo {
+    background: rgba(16, 185, 129, 0.1);
+    color: #10b981;
+}
+
+.badge-entregado {
+    background: rgba(107, 114, 128, 0.1);
+    color: #6b7280;
+}
+
+.badge-cancelado {
+    background: rgba(239, 68, 68, 0.1);
+    color: #ef4444;
+}
+
+/* ============================================
+   MODAL DE PEDIDO
+   ============================================ */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+}
+
+.modal-container {
+    background: white;
+    border-radius: 16px;
+    width: 100%;
+    max-width: 500px;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+    overflow: hidden;
+}
+.modal-pedido {
+    max-width: 720px;
+    max-height: 95vh;
+    overflow-y: auto;
+}
+
+.modal-header {
+    padding: 24px 28px;
+    border-bottom: 1px solid rgba(26, 26, 26, 0.08);
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+}
+
+.modal-title {
+    display: flex;
+    gap: 16px;
+    align-items: center;
+}
+
+.modal-title .icon {
+    font-size: 2rem;
+}
+
+.modal-title h2 {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.5rem;
+    color: #1a1a1a;
+    margin: 0 0 4px;
+}
+
+.modal-title p {
+    color: #6b7280;
+    font-size: 0.9rem;
+    margin: 0;
+}
+
+.modal-close {
+    background: none;
+    border: none;
+    font-size: 1.2rem;
+    color: #9ca3af;
+    cursor: pointer;
+    transition: color 0.3s;
+}
+
+.modal-close:hover {
+    color: #ef4444;
+}
+
+.modal-pedido .modal-body {
+    padding: 20px 28px;
+}
+
+.form-row {
+    display: flex;
+    gap: 16px;
+    margin-bottom: 16px;
+}
+
+.form-row .form-group {
+    flex: 1;
+    margin-bottom: 0;
+}
+
+.form-group {
+    margin-bottom: 16px;
+}
+.form-group label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 500;
+    color: #374151;
+    font-size: 0.9rem;
+}
+.form-group input, .form-group select {
+    width: 100%;
+    padding: 10px 14px;
+    border: 1.5px solid rgba(26, 26, 26, 0.08);
+    border-radius: 10px;
+    font-family: 'Inter', sans-serif;
+    font-size: 0.95rem;
+}
+
+.field-hint {
+    display: block;
+    margin-top: 4px;
+    font-size: 0.8rem;
+    color: #6b7280;
+}
+
+/* Categorías Rápidas */
+.categorias-rapidas {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin: 12px 0 16px;
+    align-items: center;
+}
+
+.categoria-label {
+    font-size: 0.75rem;
+    color: rgba(26, 26, 26, 0.4);
+    font-weight: 500;
+    margin-right: 4px;
+}
+
+.btn-categoria {
+    padding: 4px 14px;
+    border: 1.5px solid rgba(26, 26, 26, 0.08);
+    border-radius: 20px;
+    background: transparent;
+    color: rgba(26, 26, 26, 0.5);
+    font-size: 0.75rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-family: 'Inter', sans-serif;
+}
+
+.btn-categoria:hover {
+    border-color: #9e2a2b;
+    color: #9e2a2b;
+}
+
+.btn-categoria.active {
+    background: #9e2a2b;
+    color: #fffaf0;
+    border-color: #9e2a2b;
+}
+
+.btn-agregar-plato {
+    width: 100%;
+    padding: 10px;
+    background: transparent;
+    color: #3b82f6;
+    border: 1.5px dashed #3b82f6;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-family: 'Inter', sans-serif;
+}
+
+.btn-agregar-plato:hover {
+    background: rgba(59, 130, 246, 0.1);
+}
+
+/* Resumen del Pedido */
+.pedido-resumen {
+    padding: 16px 28px 24px;
+    border-top: 1px solid rgba(26, 26, 26, 0.06);
+    background: rgba(255, 250, 240, 0.3);
+}
+
+.pedido-resumen h3 {
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: #1a1a1a;
+    margin: 0 0 12px;
+}
+
+.lista-platos {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-bottom: 12px;
+    max-height: 200px;
+    overflow-y: auto;
+}
+
+.lista-platos .empty-platos {
+    color: rgba(26, 26, 26, 0.3);
+    font-size: 0.85rem;
+    text-align: center;
+    padding: 12px 0;
+}
+
+.item-plato {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 12px;
+    background: white;
+    border-radius: 8px;
+    border: 1px solid rgba(26, 26, 26, 0.04);
+}
+
+.item-plato .plato-info {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.item-plato .plato-nombre {
+    font-weight: 500;
+    font-size: 0.9rem;
+}
+
+.item-plato .plato-cantidad {
+    color: rgba(26, 26, 26, 0.4);
+    font-size: 0.8rem;
+}
+
+.item-plato .plato-precio {
+    font-weight: 600;
+    color: #9e2a2b;
+    font-size: 0.9rem;
+}
+
+.item-plato .btn-eliminar-plato {
+    background: transparent;
+    border: none;
+    color: #ef4444;
+    cursor: pointer;
+    font-size: 1rem;
+    padding: 4px 8px;
+    transition: all 0.3s ease;
+}
+
+.item-plato .btn-eliminar-plato:hover {
+    transform: scale(1.2);
+}
+
+.pedido-total {
+    text-align: right;
+    font-size: 1.1rem;
+    padding-top: 8px;
+    border-top: 1px solid rgba(26, 26, 26, 0.06);
+    margin-bottom: 12px;
+}
+
+.pedido-total strong {
+    color: #9e2a2b;
+    font-size: 1.2rem;
+}
+
+.notas-group {
+    margin-top: 8px;
+}
+
+.notas-group textarea {
+    width: 100%;
+    padding: 10px 14px;
+    border: 1.5px solid rgba(26, 26, 26, 0.08);
+    border-radius: 10px;
+    font-size: 0.9rem;
+    font-family: 'Inter', sans-serif;
+    resize: vertical;
+    min-height: 60px;
+    transition: all 0.3s ease;
+}
+
+.notas-group textarea:focus {
+    outline: none;
+    border-color: #9e2a2b;
+    box-shadow: 0 0 0 3px rgba(158, 42, 43, 0.08);
+}
+
+.btn-enviar-pedido {
+    width: 100%;
+    padding: 12px;
+    background: linear-gradient(135deg, #10b981, #059669);
+    color: white;
+    border: none;
+    border-radius: 10px;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-family: 'Inter', sans-serif;
+    margin-top: 8px;
+}
+
+.btn-enviar-pedido:hover {
+    transform: scale(1.02);
+    box-shadow: 0 4px 16px rgba(16, 185, 129, 0.3);
+}
+
+.btn-enviar-pedido:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none !important;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .pedidos-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .nuevo-pedido-container {
+        flex-direction: column;
+        align-items: stretch;
+        text-align: center;
+    }
+    
+    .modal-pedido {
+        max-width: 100%;
+        margin: 10px;
+        max-height: 98vh;
+    }
+    
+    .modal-pedido .modal-body {
+        padding: 16px;
+    }
+    
+    .form-row {
+        flex-direction: column;
+        gap: 16px;
+    }
+    
+    .pedido-resumen {
+        padding: 12px 16px 16px;
+    }
+}
+</style>
+
+<script is:inline define:vars={{ userSucursal }}>
+// ============================================
+// VARIABLES GLOBALES PARA NUEVO PEDIDO
+// ============================================
+let pedidoActual = [];
+
+// ============================================
+// FUNCIONES DE LA COCINA
+// ============================================
+window.cambiarTab = function(tab) {
+    const panels = {
+        'pendientes': document.getElementById('panel-pendientes'),
+        'listos': document.getElementById('panel-listos'),
+        'entregados': document.getElementById('panel-entregados')
+    };
+    
+    const tabs = document.querySelectorAll('.cocina-tabs button');
+    
+    Object.keys(panels).forEach(key => {
+        if (panels[key]) {
+            panels[key].style.display = key === tab ? 'block' : 'none';
+        }
+    });
+    
+    tabs.forEach(btn => {
+        btn.classList.remove('tab-active');
+        if (btn.textContent.includes(tab === 'pendientes' ? 'Pendientes' :
+                                   tab === 'listos' ? 'Listos' : 'Historial')) {
+            btn.classList.add('tab-active');
+        }
+    });
+}
+
+// ============================================
+// CAMBIAR ESTADO DE GRUPO (Cocinero)
+// ============================================
+window.cambiarEstadoGrupo = async function(grupoId, nuevoEstado) {
+    if (!confirm(`¿Cambiar estado del pedido a "${nuevoEstado}"?`)) return;
+    
+    try {
+        const response = await fetch(`/api/cocina/grupo/${grupoId}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ estado: nuevoEstado })
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            alert('✅ Estado actualizado');
+            location.reload();
+        } else {
+            alert('❌ Error: ' + result.error);
+        }
+    } catch (error) {
+        alert('❌ Error de conexión');
+    }
+}
+
+// ============================================
+// ENTREGAR PEDIDO GRUPO (Mesero)
+// ============================================
+window.entregarPedidoGrupo = async function(grupoId) {
+    if (!confirm('¿Entregar este pedido al cliente?')) return;
+    
+    try {
+        const response = await fetch(`/api/cocina/grupo/${grupoId}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ estado: 'entregado' })
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            alert('✅ Pedido entregado al cliente');
+            location.reload();
+        } else {
+            alert('❌ Error: ' + result.error);
+        }
+    } catch (error) {
+        alert('❌ Error de conexión');
+    }
+}
+
+// ============================================
+// ABRIR MODAL DE NUEVO PEDIDO
+// ============================================
+window.abrirModalPedido = function() {
+    pedidoActual = [];
+    document.getElementById('modalNuevoPedido').style.display = 'flex';
+    document.body.style.overflow = 'hidden';
+    actualizarResumen();
+    
+    document.getElementById('mesaPedido').value = '';
+    document.getElementById('nombreCliente').value = '';
+    document.getElementById('platoPedido').value = '';
+    document.getElementById('cantidadPedido').value = '1';
+    document.getElementById('notasPedido').value = '';
+    
+    filtrarPorCategoria('todos');
+}
+
+window.cerrarModalPedido = function(event) {
+    if (event && event.target !== event.currentTarget) return;
+    const modal = document.getElementById('modalNuevoPedido');
+    modal.style.display = 'none';
+    document.body.style.overflow = '';
+}
+
+// ============================================
+// FILTRAR POR CATEGORÍA
+// ============================================
+window.filtrarPorCategoria = function(categoria) {
+    const select = document.getElementById('platoPedido');
+    const options = select.querySelectorAll('option');
+    
+    document.querySelectorAll('.btn-categoria').forEach(btn => {
+        btn.classList.remove('active');
+        if (btn.textContent.trim() === categoria || 
+            (categoria === 'todos' && btn.textContent.trim() === '📋 Todos')) {
+            btn.classList.add('active');
+        }
+    });
+    
+    options.forEach(option => {
+        if (option.value === '') return;
+        const texto = option.textContent;
+        if (categoria === 'todos' || texto.includes(categoria)) {
+            option.style.display = '';
+        } else {
+            option.style.display = 'none';
+        }
+    });
+}
+
+// ============================================
+// AGREGAR PLATO AL PEDIDO
+// ============================================
+window.agregarPlatoPedido = function() {
+    const platoSelect = document.getElementById('platoPedido');
+    const cantidad = parseInt(document.getElementById('cantidadPedido').value) || 1;
+    const platoId = parseInt(platoSelect.value);
+    
+    if (!platoId) {
+        alert('❌ Por favor selecciona un plato');
+        return;
+    }
+    
+    const platoNombre = platoSelect.options[platoSelect.selectedIndex].text;
+    const precioMatch = platoNombre.match(/Bs\.\s*([\d.]+)/);
+    const precio = precioMatch ? parseFloat(precioMatch[1]) : 0;
+    const nombreLimpio = platoNombre.replace(/\s*-\s*Bs\..*$/, '').trim();
+    
+    const existente = pedidoActual.find(p => p.id === platoId);
+    if (existente) {
+        existente.cantidad += cantidad;
+    } else {
+        pedidoActual.push({
+            id: platoId,
+            nombre: nombreLimpio,
+            cantidad: cantidad,
+            precio: precio
+        });
+    }
+    
+    actualizarResumen();
+    document.getElementById('platoPedido').value = '';
+    document.getElementById('cantidadPedido').value = '1';
+}
+
+window.eliminarPlatoPedido = function(index) {
+    pedidoActual.splice(index, 1);
+    actualizarResumen();
+}
+
+window.actualizarResumen = function() {
+    const lista = document.getElementById('listaPlatosAgregados');
+    const totalElement = document.getElementById('totalPedido');
+    
+    if (pedidoActual.length === 0) {
+        lista.innerHTML = '<p class="empty-platos">No hay platos agregados</p>';
+        totalElement.textContent = 'Bs. 0.00';
+        return;
+    }
+    
+    let total = 0;
+    let html = '';
+    
+    pedidoActual.forEach((item, index) => {
+        const subtotal = item.cantidad * item.precio;
+        total += subtotal;
+        html += `
+            <div class="item-plato">
+                <div class="plato-info">
+                    <span class="plato-cantidad">${item.cantidad}x</span>
+                    <span class="plato-nombre">${item.nombre}</span>
+                </div>
+                <div>
+                    <span class="plato-precio">Bs. ${subtotal.toFixed(2)}</span>
+                    <button class="btn-eliminar-plato" onclick="eliminarPlatoPedido(${index})">✕</button>
+                </div>
+            </div>
+        `;
+    });
+    
+    lista.innerHTML = html;
+    totalElement.textContent = `Bs. ${total.toFixed(2)}`;
+}
+
+// ============================================
+// ENVIAR PEDIDO A COCINA (AGRUPADO)
+// ============================================
+window.enviarPedidoCocina = async function() {
+    const mesa = document.getElementById('mesaPedido').value;
+    const nombreCliente = document.getElementById('nombreCliente').value.trim();
+    const notas = document.getElementById('notasPedido').value.trim();
+    
+    if (!mesa) {
+        alert('❌ Por favor ingresa el número de mesa');
+        return;
+    }
+    
+    if (pedidoActual.length === 0) {
+        alert('❌ Agrega al menos un plato al pedido');
+        return;
+    }
+    
+    if (!confirm(`¿Enviar pedido para la mesa ${mesa}${nombreCliente ? ' - ' + nombreCliente : ''} a cocina?`)) return;
+    
+    const btn = document.querySelector('.btn-enviar-pedido');
+    btn.textContent = '⏳ Enviando...';
+    btn.disabled = true;
+    
+    try {
+        const platos = pedidoActual.map(item => ({
+            plato_id: item.id,
+            cantidad: item.cantidad
+        }));
+        
+        const data = {
+            sucursal_id: parseInt(userSucursal) || 1,
+            mesa_id: parseInt(mesa),
+            nombre_cliente: nombreCliente || `Mesa ${mesa}`,
+            platos: platos,
+            prioridad: 'normal',
+            notas: notas || null
+        };
+        
+        const response = await fetch('/api/cocina/pedido/crear', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            alert(`✅ Pedido enviado a cocina (${result.items} platos, Total: Bs. ${Number(result.total).toFixed(2)})`);
+            cerrarModalPedido();
+            location.reload();
+        } else {
+            alert('❌ Error: ' + result.error);
+        }
+    } catch (error) {
+        alert('❌ Error al enviar pedido: ' + error.message);
+    } finally {
+        btn.textContent = '🚀 Enviar Pedido a Cocina';
+        btn.disabled = false;
+    }
+}
+
+// ============================================
+// CERRAR MODAL CON ESC
+// ============================================
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+        cerrarModalPedido();
+    }
+});
+</script>

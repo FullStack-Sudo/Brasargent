@@ -1,0 +1,177 @@
+---
+import AdminLayout from '../../../../layouts/AdminLayout.astro';
+import pool from '../../../../lib/db';
+
+const { id } = Astro.params;
+
+// Auth check
+const session = Astro.cookies.get("session");
+if (!session || session.value !== "authenticated") {
+    return Astro.redirect("/admin/login");
+}
+
+const usuariosData = await pool.query(
+    'SELECT * FROM usuarios WHERE id = ?',
+    [id]
+) as any[];
+
+const usuario = usuariosData[0]?.[0];
+
+if (!usuario) {
+    return Astro.redirect("/admin/configuracion");
+}
+
+const sucursalesData = await pool.query(
+    'SELECT id, nombre FROM sucursales WHERE activo = 1'
+) as any[];
+const sucursales = sucursalesData[0] || [];
+---
+
+<AdminLayout title="Editar Usuario" description={`Modificando a ${usuario.nombre} ${usuario.apellido || ''}`}>
+    <div class="section-card max-w-3xl mx-auto p-8" style="background: white; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.04);">
+        <div class="flex items-center gap-4 mb-8">
+            <span class="text-4xl">👤</span>
+            <div>
+                <h2 class="text-2xl font-serif text-gray-900 font-semibold">Editar Usuario</h2>
+                <p class="text-gray-500">Actualizar datos de {usuario.nombre} {usuario.apellido || ''}</p>
+            </div>
+        </div>
+
+        <form id="formEditarUsuario" class="space-y-6">
+            <input type="hidden" id="usuarioId" value={usuario.id} />
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div class="form-group flex flex-col gap-2">
+                    <label class="font-medium text-gray-700">Nombre *</label>
+                    <input 
+                        type="text" 
+                        id="nombreUsuario" 
+                        value={usuario.nombre}
+                        class="px-4 py-3 border-2 border-gray-100 rounded-xl focus:outline-none focus:border-[#9e2a2b] transition-colors"
+                        required
+                    />
+                </div>
+                <div class="form-group flex flex-col gap-2">
+                    <label class="font-medium text-gray-700">Apellido</label>
+                    <input 
+                        type="text" 
+                        id="apellidoUsuario" 
+                        value={usuario.apellido || ''}
+                        class="px-4 py-3 border-2 border-gray-100 rounded-xl focus:outline-none focus:border-[#9e2a2b] transition-colors"
+                    />
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div class="form-group flex flex-col gap-2">
+                    <label class="font-medium text-gray-700">Email *</label>
+                    <input 
+                        type="email" 
+                        id="emailUsuario" 
+                        value={usuario.email}
+                        class="px-4 py-3 border-2 border-gray-100 rounded-xl focus:outline-none focus:border-[#9e2a2b] transition-colors"
+                        required
+                    />
+                </div>
+                <div class="form-group flex flex-col gap-2">
+                    <label class="font-medium text-gray-700">Teléfono</label>
+                    <input 
+                        type="tel" 
+                        id="telefonoUsuario" 
+                        value={usuario.telefono || ''}
+                        class="px-4 py-3 border-2 border-gray-100 rounded-xl focus:outline-none focus:border-[#9e2a2b] transition-colors"
+                    />
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div class="form-group flex flex-col gap-2">
+                    <label class="font-medium text-gray-700">Rol *</label>
+                    <select id="rolUsuario" class="px-4 py-3 border-2 border-gray-100 rounded-xl focus:outline-none focus:border-[#9e2a2b] transition-colors bg-white" required>
+                        <option value="admin" selected={usuario.rol === 'admin'}>👑 Administrador</option>
+                        <option value="mesero" selected={usuario.rol === 'mesero'}>🍽️ Mesero</option>
+                        <option value="cocinero" selected={usuario.rol === 'cocinero'}>👨‍🍳 Cocinero</option>
+                    </select>
+                </div>
+                <div class="form-group flex flex-col gap-2">
+                    <label class="font-medium text-gray-700">Sucursal</label>
+                    <select id="sucursalUsuario" class="px-4 py-3 border-2 border-gray-100 rounded-xl focus:outline-none focus:border-[#9e2a2b] transition-colors bg-white">
+                        <option value="">Sin asignar</option>
+                        {sucursales.map((s: any) => (
+                            <option value={s.id} selected={usuario.sucursal_id === s.id}>{s.nombre}</option>
+                        ))}
+                    </select>
+                </div>
+            </div>
+
+            <hr class="my-6 border-gray-200" />
+
+            <div class="form-group flex flex-col gap-2">
+                <label class="font-medium text-gray-700">Nueva Contraseña (Opcional)</label>
+                <input 
+                    type="password" 
+                    id="passwordUsuario" 
+                    placeholder="Dejar en blanco para no cambiar"
+                    minlength="6"
+                    class="px-4 py-3 border-2 border-gray-100 rounded-xl focus:outline-none focus:border-[#9e2a2b] transition-colors"
+                />
+                <p class="text-sm text-gray-500">Solo llena este campo si deseas cambiar la contraseña del usuario.</p>
+            </div>
+
+            <div class="flex gap-4 pt-6">
+                <a href="/admin/configuracion" class="px-6 py-3 bg-gray-100 text-gray-700 rounded-xl font-medium hover:bg-gray-200 transition-colors flex-1 text-center">
+                    Cancelar
+                </a>
+                <button type="submit" id="btnGuardar" class="px-6 py-3 bg-[#9e2a2b] text-white rounded-xl font-medium hover:bg-[#7a2021] transition-colors flex-1 text-center">
+                    Guardar Cambios
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <script>
+        document.getElementById('formEditarUsuario')?.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const btn = document.getElementById('btnGuardar') as HTMLButtonElement;
+            const originalText = btn.textContent;
+            btn.textContent = '⏳ Guardando...';
+            btn.disabled = true;
+            
+            const usuarioId = (document.getElementById('usuarioId') as HTMLInputElement).value;
+            const password = (document.getElementById('passwordUsuario') as HTMLInputElement).value;
+            
+            const data = {
+                nombre: (document.getElementById('nombreUsuario') as HTMLInputElement).value.trim(),
+                apellido: (document.getElementById('apellidoUsuario') as HTMLInputElement).value.trim(),
+                email: (document.getElementById('emailUsuario') as HTMLInputElement).value.trim(),
+                telefono: (document.getElementById('telefonoUsuario') as HTMLInputElement).value.trim(),
+                rol: (document.getElementById('rolUsuario') as HTMLSelectElement).value,
+                sucursal_id: (document.getElementById('sucursalUsuario') as HTMLSelectElement).value || null,
+                password: password.length > 0 ? password : null
+            };
+            
+            try {
+                const response = await fetch(`/api/usuarios/${usuarioId}/editar`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    alert('✅ Usuario actualizado correctamente');
+                    window.location.href = '/admin/configuracion';
+                } else {
+                    alert('❌ Error: ' + result.error);
+                }
+            } catch (error) {
+                alert('❌ Error de conexión al actualizar');
+            } finally {
+                btn.textContent = originalText;
+                btn.disabled = false;
+            }
+        });
+    </script>
+</AdminLayout>

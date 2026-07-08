@@ -1,0 +1,283 @@
+---
+// src/components/admin/Sidebar.astro
+// Sidebar dinámico según rol del usuario
+
+// Obtener rol del usuario de la cookie
+const userRole = Astro.cookies.get('user_role')?.value || 'mesero';
+const userName = Astro.cookies.get('user_name')?.value || 'Usuario';
+const currentPath = Astro.url.pathname;
+
+// Definir enlaces según rol
+const links = [];
+
+// Admin: Acceso completo
+if (userRole === 'admin') {
+    links.push(
+        { href: '/admin/dashboard', icon: '📊', label: 'Dashboard' },
+        { href: '/admin/reservas', icon: '📅', label: 'Reservas' },
+        { href: '/admin/clientes', icon: '👥', label: 'Clientes' },
+        { href: '/admin/menu', icon: '🍽️', label: 'Menú' },
+        { href: '/admin/sucursales', icon: '🏢', label: 'Sucursales' },
+        { href: '/admin/configuracion', icon: '⚙️', label: 'Configuración' },
+        { href: '/admin/cocina', icon: '🔥', label: 'Cocina' }
+    );
+}
+
+// Mesero: Acceso limitado
+if (userRole === 'mesero') {
+    links.push(
+        { href: '/admin/reservas', icon: '📅', label: 'Reservas' },
+        { href: '/admin/clientes', icon: '👥', label: 'Clientes' },
+        { href: '/admin/cocina', icon: '🔥', label: 'Cocina' }
+    );
+}
+
+// Cocinero: Solo Cocina
+if (userRole === 'cocinero') {
+    links.push(
+        { href: '/admin/cocina', icon: '🔥', label: 'Cocina' }
+    );
+}
+---
+
+<aside class="admin-sidebar">
+    <!-- Logo -->
+    <div class="sidebar-logo">
+        <span class="logo-icon">🔥</span>
+        <div>
+            <h1>BRAS<span>ARGENT</span></h1>
+            <p>{userRole === 'admin' ? '👑 Admin' : userRole === 'mesero' ? '🍽️ Mesero' : '👨🍳 Cocinero'}</p>
+        </div>
+    </div>
+    
+    <!-- Usuario -->
+    <div class="sidebar-user">
+        <span class="user-avatar">{userName.charAt(0).toUpperCase()}</span>
+        <div class="user-info">
+            <span class="user-name">{userName}</span>
+            <span class="user-role">
+                {userRole === 'admin' ? '👑 Administrador' : 
+                 userRole === 'mesero' ? '🍽️ Mesero' : '👨🍳 Cocinero'}
+            </span>
+        </div>
+    </div>
+    
+    <!-- Navegación -->
+    <nav class="sidebar-nav">
+        {links.map((link) => (
+            <a 
+                href={link.href} 
+                class={`sidebar-link ${currentPath === link.href || currentPath.startsWith(link.href + '/') ? 'active' : ''}`}
+            >
+                <span class="link-icon">{link.icon}</span>
+                <span class="link-text">{link.label}</span>
+            </a>
+        ))}
+    </nav>
+    
+    <!-- Footer -->
+    <div class="sidebar-footer">
+        <form method="POST" action="/admin/logout">
+            <button type="submit" class="sidebar-link logout">
+                <span class="link-icon">🚪</span>
+                <span class="link-text">Cerrar Sesión</span>
+            </button>
+        </form>
+    </div>
+</aside>
+
+<style is:global>
+/* ============================================
+   SIDEBAR - ESTILOS
+   ============================================ */
+.admin-sidebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 240px;
+    height: 100vh;
+    background: #1a1a1a;
+    color: #fffaf0;
+    display: flex;
+    flex-direction: column;
+    z-index: 100;
+    border-right: 1px solid rgba(255, 250, 240, 0.04);
+}
+
+.sidebar-logo {
+    padding: 20px 20px 12px;
+    border-bottom: 1px solid rgba(255, 250, 240, 0.06);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.sidebar-logo .logo-icon {
+    font-size: 1.6rem;
+}
+
+.sidebar-logo h1 {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.2rem;
+    font-weight: 700;
+    color: #fffaf0;
+    margin: 0;
+    line-height: 1.2;
+}
+
+.sidebar-logo h1 span {
+    color: #9e2a2b;
+}
+
+.sidebar-logo p {
+    color: rgba(255, 250, 240, 0.3);
+    font-size: 0.6rem;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    margin: 0;
+}
+
+.sidebar-user {
+    padding: 12px 16px;
+    margin: 8px 12px;
+    background: rgba(255, 250, 240, 0.04);
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.user-avatar {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #9e2a2b, #d4a574);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 0.9rem;
+}
+
+.user-info {
+    flex: 1;
+}
+
+.user-name {
+    display: block;
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: #fffaf0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 130px;
+}
+
+.user-role {
+    font-size: 0.65rem;
+    color: rgba(255, 250, 240, 0.3);
+}
+
+.sidebar-nav {
+    flex: 1;
+    padding: 8px 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    overflow-y: auto;
+}
+
+.sidebar-link {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 16px;
+    border-radius: 10px;
+    color: rgba(255, 250, 240, 0.4);
+    text-decoration: none;
+    transition: all 0.3s ease;
+    font-size: 0.85rem;
+    font-weight: 500;
+    cursor: pointer;
+    border: none;
+    background: transparent;
+    width: 100%;
+    font-family: 'Inter', sans-serif;
+}
+
+.sidebar-link:hover {
+    background: rgba(255, 250, 240, 0.06);
+    color: #fffaf0;
+}
+
+.sidebar-link.active {
+    background: rgba(158, 42, 43, 0.12);
+    color: #fffaf0;
+}
+
+.sidebar-link.active .link-icon {
+    color: #9e2a2b;
+}
+
+.link-icon {
+    font-size: 1.1rem;
+    width: 24px;
+    text-align: center;
+}
+
+.link-text {
+    flex: 1;
+    text-align: left;
+}
+
+.sidebar-footer {
+    padding: 12px;
+    border-top: 1px solid rgba(255, 250, 240, 0.06);
+}
+
+.sidebar-link.logout {
+    color: rgba(255, 250, 240, 0.2);
+}
+
+.sidebar-link.logout:hover {
+    color: #ef4444;
+    background: rgba(239, 68, 68, 0.08);
+}
+
+/* ============================================
+   SIDEBAR - RESPONSIVE
+   ============================================ */
+@media (max-width: 768px) {
+    .admin-sidebar {
+        width: 60px;
+    }
+    
+    .sidebar-logo h1,
+    .sidebar-logo p,
+    .sidebar-user,
+    .link-text {
+        display: none;
+    }
+    
+    .sidebar-logo {
+        padding: 16px 12px;
+        justify-content: center;
+    }
+    
+    .sidebar-logo .logo-icon {
+        font-size: 1.5rem;
+    }
+    
+    .sidebar-link {
+        justify-content: center;
+        padding: 12px;
+    }
+    
+    .link-icon {
+        font-size: 1.3rem;
+        width: auto;
+    }
+}
+</style>

@@ -1,0 +1,20 @@
+---
+import AdminLayout from '../../../../layouts/AdminLayout.astro';
+
+const { id } = Astro.params;
+
+// Auth check
+const session = Astro.cookies.get("session");
+if (!session || session.value !== "authenticated") {
+    return Astro.redirect("/admin/login");
+}
+---
+
+<AdminLayout title="Editar Sucursal" description="Modifica los detalles de la sucursal">
+    <div class="section-card text-center py-12">
+        <span class="text-4xl block mb-4">🏢</span>
+        <h2 class="text-2xl font-serif text-gray-900 font-semibold mb-2">Editar Sucursal #{id}</h2>
+        <p class="text-gray-500">Módulo en construcción. Aquí podrás modificar el nombre, concepto, dirección y horarios de la sucursal.</p>
+        <a href="/admin/sucursales" class="btn-volver mt-6 inline-block px-6 py-2 bg-gray-100 text-gray-700 rounded-lg font-medium hover:bg-gray-200 transition-colors">Volver a Sucursales</a>
+    </div>
+</AdminLayout>

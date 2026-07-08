@@ -1,0 +1,514 @@
+---
+// src/components/admin/ModalReserva.astro
+// Props: sucursalId, sucursalNombre, onClose, onSave
+
+const { sucursalId = 1, sucursalNombre = "Churrasquería" } = Astro.props;
+---
+
+<div class="modal-overlay hidden" id="modalReserva" onclick="cerrarModal(event)">
+    <div class="modal-container" onclick="event.stopPropagation()">
+        <!-- HEADER -->
+        <div class="modal-header">
+            <div class="modal-title">
+                <span class="icon">📅</span>
+                <div>
+                    <h2>Nueva Reserva</h2>
+                    <p>{sucursalNombre}</p>
+                </div>
+            </div>
+            <button class="modal-close" id="closeModalBtn" onclick="cerrarModal()">
+                ✕
+            </button>
+        </div>
+        
+        <!-- BODY -->
+        <form id="formReserva" class="modal-body">
+            <input type="hidden" id="nr_sucursalId" value={sucursalId} />
+            
+            <!-- Datos del Cliente -->
+            <div class="form-section">
+                <h3>👤 Datos del Cliente</h3>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Nombre Completo *</label>
+                        <input type="text" id="nombreCliente" placeholder="Ej: Carlos Gómez" required />
+                    </div>
+                    <div class="form-group">
+                        <label>Teléfono *</label>
+                        <input type="tel" id="telefonoCliente" placeholder="Ej: 70000111" required />
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Detalles de la Reserva -->
+            <div class="form-section">
+                <h3>📋 Detalles de la Reserva</h3>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Fecha *</label>
+                        <input type="date" id="fechaReserva" required />
+                    </div>
+                    <div class="form-group">
+                        <label>Hora *</label>
+                        <input type="time" id="horaReserva" required />
+                    </div>
+                    <div class="form-group">
+                        <label>Personas *</label>
+                        <input type="number" id="personasReserva" min="1" max="20" value="2" required />
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Opciones -->
+            <div class="form-section">
+                <h3>⚙️ Opciones</h3>
+                <div class="form-group checkbox-group">
+                    <label class="checkbox-label">
+                        <input type="checkbox" id="enviarWhatsapp" checked />
+                        <span class="custom-checkbox"></span>
+                        <div class="checkbox-text">
+                            <strong>Enviar recordatorio por WhatsApp</strong>
+                            <small>El cliente recibirá un mensaje 10 minutos antes</small>
+                        </div>
+                    </label>
+                </div>
+            </div>
+        </form>
+        
+        <!-- FOOTER -->
+        <div class="modal-footer">
+            <button type="button" class="btn-cancel" onclick="cerrarModal()">Cancelar</button>
+            <button type="submit" class="btn-save" id="saveReservaBtn" form="formReserva">
+                <span class="btn-text">Crear Reserva</span>
+                <span class="btn-spinner hidden">⏳</span>
+            </button>
+        </div>
+    </div>
+</div>
+
+<script>
+// ============================================
+// FUNCIONES DE CIERRE DEL MODAL (CORREGIDAS)
+// ============================================
+
+window.abrirModalNuevaReserva = function() {
+    const modal = document.getElementById('modalReserva');
+    if (modal) {
+        modal.classList.remove('hidden');
+        document.body.classList.add('modal-open');
+    }
+}
+
+window.cerrarModal = function(event) {
+    // Si hay evento y se hizo clic en el overlay, cerrar
+    if (event && event.target !== event.currentTarget) {
+        return;
+    }
+    
+    // Ocultar el modal
+    const modal = document.getElementById('modalReserva');
+    if (modal) {
+        modal.classList.add('hidden');
+    }
+    
+    // Remover clase de body para permitir scroll
+    document.body.classList.remove('modal-open');
+}
+
+// Cerrar con tecla ESC
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+        const modal = document.getElementById('modalReserva');
+        if (modal && !modal.classList.contains('hidden')) {
+            window.cerrarModal();
+        }
+    }
+});
+
+// ============================================
+// INICIALIZAR FECHA POR DEFECTO
+// ============================================
+
+document.addEventListener('DOMContentLoaded', function() {
+    const fechaInput = document.getElementById('fechaReserva');
+    if (fechaInput) {
+        const hoy = new Date();
+        const fecha = hoy.toISOString().split('T')[0];
+        fechaInput.value = fecha;
+        fechaInput.min = fecha;
+    }
+    
+    const horaInput = document.getElementById('horaReserva');
+    if (horaInput) {
+        const ahora = new Date();
+        const horas = String(ahora.getHours()).padStart(2, '0');
+        const minutos = String(ahora.getMinutes()).padStart(2, '0');
+        horaInput.value = `${horas}:${minutos}`;
+    }
+});
+
+// ============================================
+// ENVÍO DEL FORMULARIO
+// ============================================
+
+const form = document.getElementById('formReserva');
+if (form) {
+    form.addEventListener('submit', async function(e) {
+        e.preventDefault();
+        
+        const btn = document.getElementById('saveReservaBtn');
+        btn.classList.add('loading');
+        btn.disabled = true;
+        
+        const sucursalId = document.getElementById('nr_sucursalId').value;
+        
+        const data = {
+            sucursal_id: parseInt(sucursalId),
+            nombre_cliente: document.getElementById('nombreCliente').value,
+            telefono: document.getElementById('telefonoCliente').value,
+            fecha: document.getElementById('fechaReserva').value,
+            hora: document.getElementById('horaReserva').value,
+            numero_personas: parseInt(document.getElementById('personasReserva').value),
+            enviar_whatsapp: document.getElementById('enviarWhatsapp').checked
+        };
+        
+        try {
+            const response = await fetch('/api/reservas', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(data)
+            });
+            
+            const result = await response.json();
+            
+            if (response.ok) {
+                // Cerrar modal y recargar
+                window.cerrarModal();
+                if (window.mostrarNotificacion) {
+                    window.mostrarNotificacion('Reserva creada exitosamente', 'info');
+                }
+                setTimeout(() => location.reload(), 1000);
+            } else {
+                alert(result.error || 'Error al crear la reserva');
+            }
+        } catch (error) {
+            alert('Error de conexión');
+        } finally {
+            btn.classList.remove('loading');
+            btn.disabled = false;
+        }
+    });
+}
+</script>
+
+<style>
+/* ============================================
+   MODAL - CORREGIDO
+   ============================================ */
+.modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(4px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+    padding: 20px;
+    animation: fadeIn 0.3s ease;
+    cursor: pointer;
+}
+
+.modal-overlay.hidden {
+    display: none;
+}
+
+.modal-container {
+    background: #fffaf0;
+    border-radius: 20px;
+    max-width: 700px;
+    width: 100%;
+    max-height: 90vh;
+    overflow-y: auto;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    animation: slideUp 0.3s ease;
+    cursor: default;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+@keyframes slideUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px) scale(0.98);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+/* HEADER */
+.modal-header {
+    padding: 24px 28px 16px;
+    border-bottom: 1px solid rgba(26, 26, 26, 0.06);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: sticky;
+    top: 0;
+    background: #fffaf0;
+    border-radius: 20px 20px 0 0;
+    z-index: 10;
+}
+
+.modal-title {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+}
+
+.modal-title .icon {
+    font-size: 2rem;
+}
+
+.modal-title h2 {
+    font-size: 1.4rem;
+    font-weight: 700;
+    color: #1a1a1a;
+    margin: 0;
+}
+
+.modal-title p {
+    color: rgba(26, 26, 26, 0.5);
+    font-size: 0.9rem;
+    margin: 2px 0 0;
+}
+
+.modal-close {
+    background: transparent;
+    border: none;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-size: 1.4rem;
+    color: #1a1a1a;
+    transition: all 0.3s ease;
+}
+
+.modal-close:hover {
+    background: rgba(26, 26, 26, 0.06);
+    transform: rotate(90deg);
+}
+
+/* BODY */
+.modal-body {
+    padding: 20px 28px;
+}
+
+.form-section {
+    margin-bottom: 24px;
+}
+
+.form-section h3 {
+    font-size: 1rem;
+    font-weight: 600;
+    color: #1a1a1a;
+    margin-bottom: 14px;
+}
+
+.form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+}
+
+.form-group {
+    margin-bottom: 14px;
+}
+
+.form-group label {
+    display: block;
+    font-weight: 500;
+    color: #1a1a1a;
+    font-size: 0.85rem;
+    margin-bottom: 4px;
+}
+
+.form-group input {
+    width: 100%;
+    padding: 10px 14px;
+    border: 1.5px solid rgba(26, 26, 26, 0.1);
+    border-radius: 10px;
+    font-size: 0.95rem;
+    font-family: 'Inter', sans-serif;
+    transition: all 0.3s ease;
+    background: white;
+    color: #1a1a1a;
+}
+
+.form-group input:focus {
+    outline: none;
+    border-color: #9e2a2b;
+    box-shadow: 0 0 0 4px rgba(158, 42, 43, 0.08);
+}
+
+/* CHECKBOX */
+.checkbox-group {
+    margin-top: 4px;
+}
+
+.checkbox-label {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    cursor: pointer;
+    padding: 10px 14px;
+    background: rgba(26, 26, 26, 0.02);
+    border-radius: 10px;
+    transition: all 0.3s ease;
+}
+
+.checkbox-label:hover {
+    background: rgba(26, 26, 26, 0.04);
+}
+
+.checkbox-label input[type="checkbox"] {
+    display: none;
+}
+
+.custom-checkbox {
+    width: 20px;
+    height: 20px;
+    min-width: 20px;
+    border: 2px solid rgba(26, 26, 26, 0.15);
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s ease;
+    margin-top: 1px;
+}
+
+.checkbox-label input:checked + .custom-checkbox {
+    background: #9e2a2b;
+    border-color: #9e2a2b;
+}
+
+.checkbox-label input:checked + .custom-checkbox::after {
+    content: '✓';
+    color: white;
+    font-size: 14px;
+    font-weight: bold;
+}
+
+.checkbox-text strong {
+    display: block;
+    color: #1a1a1a;
+    font-weight: 500;
+    font-size: 0.9rem;
+}
+
+.checkbox-text small {
+    color: rgba(26, 26, 26, 0.4);
+    font-size: 0.8rem;
+}
+
+/* FOOTER */
+.modal-footer {
+    padding: 16px 28px 24px;
+    border-top: 1px solid rgba(26, 26, 26, 0.06);
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+}
+
+.btn-cancel,
+.btn-save {
+    padding: 10px 28px;
+    border: none;
+    border-radius: 10px;
+    font-size: 0.95rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-family: 'Inter', sans-serif;
+}
+
+.btn-cancel {
+    background: transparent;
+    color: #1a1a1a;
+    border: 1.5px solid rgba(26, 26, 26, 0.1);
+}
+
+.btn-cancel:hover {
+    background: rgba(26, 26, 26, 0.04);
+}
+
+.btn-save {
+    background: #9e2a2b;
+    color: #fffaf0;
+    box-shadow: 0 4px 16px rgba(158, 42, 43, 0.2);
+}
+
+.btn-save:hover {
+    transform: scale(1.02);
+    box-shadow: 0 6px 24px rgba(158, 42, 43, 0.3);
+}
+
+.btn-save.loading {
+    opacity: 0.7;
+    cursor: not-allowed;
+}
+
+.btn-save.loading .btn-text {
+    display: none;
+}
+
+.btn-save.loading .btn-spinner {
+    display: inline;
+}
+
+/* RESPONSIVE */
+@media (max-width: 640px) {
+    .modal-container {
+        max-width: 100%;
+        margin: 10px;
+        border-radius: 16px;
+    }
+    
+    .modal-header {
+        padding: 16px 20px 12px;
+    }
+    
+    .modal-body {
+        padding: 16px 20px;
+    }
+    
+    .form-row {
+        grid-template-columns: 1fr;
+        gap: 0;
+    }
+    
+    .modal-footer {
+        padding: 12px 20px 16px;
+        flex-direction: column;
+    }
+    
+    .btn-cancel,
+    .btn-save {
+        width: 100%;
+        padding: 12px;
+        text-align: center;
+    }
+}
+</style>

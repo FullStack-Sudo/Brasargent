@@ -296,6 +296,18 @@ const sucursales = [
                       <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z" />
                     </svg>
                   </a>
+
+                  <!-- Botón Reservar - Dorado (Circular/Pill) -->
+                  <button 
+                      class="btn-reservar w-16 h-16 flex items-center justify-center bg-[#d4af37] text-white rounded-full hover:bg-[#b8941f] hover:shadow-2xl hover:shadow-[#d4af37]/60 transition-all duration-300 hover:scale-110 group" 
+                      onclick={`abrirModalReserva(${index + 1}, '${sucursal.name}')`}
+                      data-sucursal-id={index + 1}
+                      title="Reservar mesa"
+                  >
+                      <svg class="w-7 h-7 group-hover:scale-110 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                      </svg>
+                  </button>
                 </div>
 
                 {/* Spacer inferior para centrar botones */}
@@ -309,6 +321,8 @@ const sucursales = [
                     class="h-full w-auto object-contain opacity-100 hover:scale-105 transition-all duration-300 pointer-events-none"
                   />
                 </div>
+              </div>
+
               </div>
             </div>
           ))
@@ -441,6 +455,631 @@ const sucursales = [
     </div>
   </div>
 </section>
+
+<script>
+// ============================================
+// MODAL DE RESERVA - CORREGIDO
+// ============================================
+
+window.abrirModalReserva = function(sucursalId, sucursalNombre) {
+    console.log('Abriendo modal para:', sucursalNombre); // Debug
+    
+    // Verificar si ya existe un modal abierto
+    const existente = document.getElementById('modalReservaCliente');
+    if (existente) {
+        existente.remove();
+    }
+    
+    const modalHTML = `
+        <div class="modal-overlay" id="modalReservaCliente" onclick="window.cerrarModalReserva()">
+            <div class="modal-container" onclick="event.stopPropagation()">
+                <!-- Header -->
+                <div class="modal-header">
+                    <div class="modal-title">
+                        <span class="icon">📅</span>
+                        <div>
+                            <h2>Reservar en ${sucursalNombre}</h2>
+                            <p>Completa tus datos para solicitar una reserva</p>
+                        </div>
+                    </div>
+                    <button class="modal-close" onclick="window.cerrarModalReserva()">✕</button>
+                </div>
+                
+                <!-- Body -->
+                <form id="formReservaCliente" class="modal-body">
+                    <!-- Nombre -->
+                    <div class="form-group">
+                        <label>👤 Nombres Completos <span class="required">*</span></label>
+                        <input type="text" id="nombreCliente" placeholder="Carlos Gómez Pérez" required />
+                    </div>
+                    
+                    <!-- Teléfono con código de país -->
+                    <div class="form-group">
+                        <label>📱 Número Celular <span class="required">*</span></label>
+                        <div class="telefono-wrapper">
+                            <select id="codigoPais" class="codigo-pais">
+                                <option value="591">🇧🇴 +591 (Bolivia)</option>
+                                <option value="1">🇺🇸 +1 (EE.UU.)</option>
+                                <option value="34">🇪🇸 +34 (España)</option>
+                                <option value="52">🇲🇽 +52 (México)</option>
+                                <option value="54">🇦🇷 +54 (Argentina)</option>
+                                <option value="56">🇨🇱 +56 (Chile)</option>
+                                <option value="57">🇨🇴 +57 (Colombia)</option>
+                                <option value="58">🇻🇪 +58 (Venezuela)</option>
+                            </select>
+                            <input type="tel" id="telefonoCliente" placeholder="70000111" required />
+                        </div>
+                    </div>
+                    
+                    <!-- Fecha y Hora -->
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>📅 Fecha <span class="required">*</span></label>
+                            <input type="date" id="fechaReserva" required />
+                        </div>
+                        <div class="form-group">
+                            <label>🕐 Hora <span class="required">*</span></label>
+                            <input type="time" id="horaReserva" required />
+                        </div>
+                    </div>
+                    
+                    <!-- Personas -->
+                    <div class="form-group">
+                        <label>👥 Número de Personas <span class="required">*</span></label>
+                        <input type="number" id="personasReserva" min="1" max="20" value="2" required />
+                    </div>
+                    
+                    <!-- Comentarios -->
+                    <div class="form-group">
+                        <label>📝 Comentarios <span class="optional">(Opcional)</span></label>
+                        <textarea id="observacionesReserva" rows="2" placeholder="Ej: Prefiero mesa cerca de la ventana"></textarea>
+                    </div>
+                </form>
+                
+                <!-- Footer -->
+                <div class="modal-footer">
+                    <button type="button" class="btn-cancel" onclick="window.cerrarModalReserva()">Cancelar</button>
+                    <button type="submit" class="btn-save" id="btnEnviarReserva" form="formReservaCliente">
+                        <span class="btn-text">📅 Solicitar Reserva</span>
+                        <span class="btn-spinner hidden">⏳</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    // Insertar modal en el DOM
+    document.body.insertAdjacentHTML('beforeend', modalHTML);
+    document.body.classList.add('modal-open');
+    
+    // Configurar fecha mínima
+    const fechaInput = document.getElementById('fechaReserva');
+    const hoy = new Date();
+    fechaInput.min = hoy.toISOString().split('T')[0];
+    fechaInput.value = fechaInput.min;
+    
+    // Configurar hora actual
+    const horaInput = document.getElementById('horaReserva');
+    const ahora = new Date();
+    let horas = ahora.getHours();
+    let minutos = Math.ceil(ahora.getMinutes() / 30) * 30;
+    if (minutos === 60) { horas++; minutos = 0; }
+    horaInput.value = `${String(horas).padStart(2, '0')}:${String(minutos).padStart(2, '0')}`;
+    
+    // Manejar envío
+    document.getElementById('formReservaCliente').addEventListener('submit', async function(e) {
+        e.preventDefault();
+        await window.enviarReserva(sucursalId, sucursalNombre);
+    });
+}
+
+// ============================================
+// ENVIAR RESERVA
+// ============================================
+
+window.enviarReserva = async function(sucursalId, sucursalNombre) {
+    const btn = document.getElementById('btnEnviarReserva');
+    btn.classList.add('loading');
+    btn.disabled = true;
+    
+    const nombre = document.getElementById('nombreCliente').value.trim();
+    const telefono = document.getElementById('telefonoCliente').value.trim();
+    const codigoPais = document.getElementById('codigoPais').value;
+    const fecha = document.getElementById('fechaReserva').value;
+    const hora = document.getElementById('horaReserva').value;
+    const personas = parseInt(document.getElementById('personasReserva').value);
+    const observaciones = document.getElementById('observacionesReserva').value.trim();
+    
+    // Validaciones
+    if (!nombre || nombre.length < 3) {
+        alert('Por favor ingresa tu nombre completo');
+        btn.classList.remove('loading');
+        btn.disabled = false;
+        return;
+    }
+    
+    if (!telefono || telefono.length < 7) {
+        alert('Por favor ingresa un número de teléfono válido');
+        btn.classList.remove('loading');
+        btn.disabled = false;
+        return;
+    }
+    
+    if (!fecha) {
+        alert('Por favor selecciona una fecha');
+        btn.classList.remove('loading');
+        btn.disabled = false;
+        return;
+    }
+    
+    if (!hora) {
+        alert('Por favor selecciona una hora');
+        btn.classList.remove('loading');
+        btn.disabled = false;
+        return;
+    }
+    
+    if (!personas || personas < 1) {
+        alert('Por favor ingresa el número de personas');
+        btn.classList.remove('loading');
+        btn.disabled = false;
+        return;
+    }
+    
+    const data = {
+        sucursal_id: sucursalId,
+        nombre_cliente: nombre,
+        telefono: telefono,
+        codigo_pais: codigoPais,
+        telefono_completo: `${codigoPais}${telefono}`,
+        fecha: fecha,
+        hora: hora,
+        numero_personas: personas,
+        observaciones: observaciones || null
+    };
+    
+    try {
+        const response = await fetch('/api/reservas/cliente', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            window.cerrarModalReserva();
+            window.mostrarModalConfirmacion(sucursalNombre, nombre, fecha, hora);
+        } else {
+            alert(result.error || 'Error al solicitar la reserva');
+            btn.classList.remove('loading');
+            btn.disabled = false;
+        }
+    } catch (error) {
+        alert('Error de conexión. Intenta de nuevo.');
+        btn.classList.remove('loading');
+        btn.disabled = false;
+    }
+}
+
+// ============================================
+// CERRAR MODAL
+// ============================================
+
+window.cerrarModalReserva = function() {
+    const modal = document.getElementById('modalReservaCliente');
+    if (modal) {
+        modal.style.opacity = '0';
+        setTimeout(() => {
+            modal.remove();
+            document.body.classList.remove('modal-open');
+        }, 300);
+    }
+}
+
+// ============================================
+// MODAL DE CONFIRMACIÓN
+// ============================================
+
+window.mostrarModalConfirmacion = function(sucursalNombre, nombreCliente, fecha, hora) {
+    const modalHTML = `
+        <div class="modal-overlay modal-confirmacion" id="modalConfirmacion" onclick="window.cerrarModalConfirmacion()">
+            <div class="modal-container modal-confirmacion-container" onclick="event.stopPropagation()">
+                <div class="modal-confirmacion-content">
+                    <div class="confirmacion-icono">✅</div>
+                    <h2>¡Reserva Solicitada!</h2>
+                    <p>En breves momentos confirmaremos tu reserva en <strong>${sucursalNombre}</strong></p>
+                    <p style="font-size: 0.9rem; color: #25d366;">
+                        💬 Espera tu mensaje de confirmación por <strong>WhatsApp</strong>
+                    </p>
+                    <div class="confirmacion-detalles">
+                        <div class="confirmacion-item">
+                            <span class="confirmacion-label">Cliente:</span>
+                            <span class="confirmacion-valor">${nombreCliente}</span>
+                        </div>
+                        <div class="confirmacion-item">
+                            <span class="confirmacion-label">Fecha:</span>
+                            <span class="confirmacion-valor">${new Date(fecha).toLocaleDateString('es-ES')}</span>
+                        </div>
+                        <div class="confirmacion-item">
+                            <span class="confirmacion-label">Hora:</span>
+                            <span class="confirmacion-valor">${hora}</span>
+                        </div>
+                    </div>
+                    <button class="btn-confirmacion" onclick="window.cerrarModalConfirmacion()">
+                        ¡Entendido!
+                    </button>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    document.body.insertAdjacentHTML('beforeend', modalHTML);
+    document.body.classList.add('modal-open');
+    
+    // Auto-cerrar después de 8 segundos
+    setTimeout(() => {
+        window.cerrarModalConfirmacion();
+    }, 8000);
+}
+
+window.cerrarModalConfirmacion = function() {
+    const modal = document.getElementById('modalConfirmacion');
+    if (modal) {
+        modal.style.opacity = '0';
+        setTimeout(() => {
+            modal.remove();
+            document.body.classList.remove('modal-open');
+        }, 300);
+    }
+}
+
+// Cerrar con ESC
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+        window.cerrarModalReserva();
+        window.cerrarModalConfirmacion();
+    }
+});
+</script>
+
+<style>
+/* ============================================
+   ESTILOS DEL MODAL (PÚBLICO)
+   ============================================ */
+.modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(4px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+    padding: 20px;
+    animation: fadeIn 0.3s ease;
+}
+
+.modal-container {
+    background: #fffaf0;
+    border-radius: 20px;
+    max-width: 520px;
+    width: 100%;
+    max-height: 90vh;
+    overflow-y: auto;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    animation: slideUp 0.3s ease;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+@keyframes slideUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.modal-header {
+    padding: 20px 24px 16px;
+    border-bottom: 1px solid rgba(26, 26, 26, 0.06);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.modal-title {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.modal-title .icon {
+    font-size: 1.8rem;
+}
+
+.modal-title h2 {
+    font-size: 1.3rem;
+    font-weight: 700;
+    color: #1a1a1a;
+    margin: 0;
+}
+
+.modal-title p {
+    color: rgba(26, 26, 26, 0.4);
+    font-size: 0.85rem;
+    margin: 2px 0 0;
+}
+
+.modal-close {
+    background: transparent;
+    border: none;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-size: 1.2rem;
+    color: #1a1a1a;
+    transition: all 0.3s ease;
+}
+
+.modal-close:hover {
+    background: rgba(26, 26, 26, 0.06);
+}
+
+.modal-body {
+    padding: 20px 24px;
+}
+
+.form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+}
+
+.form-group {
+    margin-bottom: 16px;
+}
+
+.form-group label {
+    display: block;
+    font-weight: 500;
+    color: #1a1a1a;
+    font-size: 0.85rem;
+    margin-bottom: 4px;
+}
+
+.form-group .required {
+    color: #9e2a2b;
+}
+
+.form-group .optional {
+    color: rgba(26, 26, 26, 0.3);
+    font-weight: 400;
+}
+
+.form-group input,
+.form-group select,
+.form-group textarea {
+    width: 100%;
+    padding: 10px 14px;
+    border: 1.5px solid rgba(26, 26, 26, 0.1);
+    border-radius: 10px;
+    font-size: 0.95rem;
+    font-family: 'Inter', sans-serif;
+    transition: all 0.3s ease;
+    background: white;
+    color: #1a1a1a;
+}
+
+.form-group input:focus,
+.form-group textarea:focus {
+    outline: none;
+    border-color: #9e2a2b;
+    box-shadow: 0 0 0 4px rgba(158, 42, 43, 0.08);
+}
+
+.telefono-wrapper {
+    display: flex;
+    gap: 8px;
+}
+
+.telefono-wrapper .codigo-pais {
+    width: 120px;
+    min-width: 120px;
+    padding: 10px 12px;
+    border: 1.5px solid rgba(26, 26, 26, 0.1);
+    border-radius: 10px;
+    font-size: 0.9rem;
+    font-family: 'Inter', sans-serif;
+    background: white;
+    color: #1a1a1a;
+    cursor: pointer;
+}
+
+.telefono-wrapper input {
+    flex: 1;
+}
+
+.modal-footer {
+    padding: 16px 24px 20px;
+    border-top: 1px solid rgba(26, 26, 26, 0.06);
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+}
+
+.btn-cancel,
+.btn-save {
+    padding: 10px 28px;
+    border: none;
+    border-radius: 10px;
+    font-size: 0.95rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-family: 'Inter', sans-serif;
+}
+
+.btn-cancel {
+    background: transparent;
+    color: #1a1a1a;
+    border: 1.5px solid rgba(26, 26, 26, 0.1);
+}
+
+.btn-cancel:hover {
+    background: rgba(26, 26, 26, 0.04);
+}
+
+.btn-save {
+    background: #9e2a2b;
+    color: #fffaf0;
+    box-shadow: 0 4px 16px rgba(158, 42, 43, 0.2);
+}
+
+.btn-save:hover {
+    transform: scale(1.02);
+    box-shadow: 0 6px 24px rgba(158, 42, 43, 0.3);
+}
+
+.btn-save.loading {
+    opacity: 0.7;
+    cursor: not-allowed;
+}
+
+.btn-save.loading .btn-text {
+    display: none;
+}
+
+.btn-save.loading .btn-spinner {
+    display: inline;
+}
+
+.btn-spinner {
+    display: none;
+}
+
+/* Modal de Confirmación */
+.modal-confirmacion-container {
+    max-width: 420px;
+}
+
+.modal-confirmacion-content {
+    padding: 32px 28px;
+    text-align: center;
+}
+
+.confirmacion-icono {
+    font-size: 4rem;
+    margin-bottom: 12px;
+    animation: bounceIn 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes bounceIn {
+    0% { transform: scale(0); opacity: 0; }
+    50% { transform: scale(1.2); opacity: 1; }
+    70% { transform: scale(0.9); }
+    100% { transform: scale(1); }
+}
+
+.modal-confirmacion-content h2 {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.5rem;
+    color: #1a1a1a;
+    margin: 0 0 8px;
+}
+
+.modal-confirmacion-content p {
+    color: rgba(26, 26, 26, 0.6);
+    font-size: 0.95rem;
+    margin: 0 0 16px;
+}
+
+.confirmacion-detalles {
+    background: rgba(255, 250, 240, 0.5);
+    border-radius: 10px;
+    padding: 12px 16px;
+    margin: 12px 0 20px;
+    text-align: left;
+}
+
+.confirmacion-item {
+    display: flex;
+    justify-content: space-between;
+    padding: 4px 0;
+    font-size: 0.9rem;
+}
+
+.confirmacion-label {
+    color: rgba(26, 26, 26, 0.4);
+}
+
+.confirmacion-valor {
+    color: #1a1a1a;
+    font-weight: 500;
+}
+
+.btn-confirmacion {
+    background: #9e2a2b;
+    color: #fffaf0;
+    border: none;
+    padding: 12px 40px;
+    border-radius: 10px;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-family: 'Inter', sans-serif;
+    width: 100%;
+}
+
+.btn-confirmacion:hover {
+    transform: scale(1.02);
+    box-shadow: 0 8px 30px rgba(158, 42, 43, 0.3);
+}
+
+/* Responsive */
+@media (max-width: 480px) {
+    .modal-container {
+        margin: 10px;
+        border-radius: 16px;
+    }
+    
+    .form-row {
+        grid-template-columns: 1fr;
+        gap: 0;
+    }
+    
+    .telefono-wrapper {
+        flex-direction: column;
+    }
+    
+    .telefono-wrapper .codigo-pais {
+        width: 100%;
+        min-width: unset;
+    }
+    
+    .modal-footer {
+        flex-direction: column-reverse;
+    }
+    
+    .btn-cancel,
+    .btn-save {
+        width: 100%;
+        text-align: center;
+    }
+}
+</style>
 
 <script>
   document.addEventListener("DOMContentLoaded", () => {
@@ -818,6 +1457,15 @@ const sucursales = [
     });
   });
 </script>
+
+<style>
+  @keyframes gradient {   
+    .modal-container-reserva {
+        max-width: 100%;
+        margin: 10px;
+    }
+}
+</style>
 
 <style>
   @keyframes gradient {

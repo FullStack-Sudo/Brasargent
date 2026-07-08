@@ -1,0 +1,277 @@
+---
+// src/layouts/AdminLayout.astro
+// Layout unificado para todas las páginas del admin
+
+import Sidebar from '../components/admin/Sidebar.astro';
+
+export interface Props {
+    title: string;
+    description?: string;
+}
+
+const { title, description } = Astro.props;
+---
+
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>{title} - BRASARGENT Admin</title>
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+    
+    <!-- Estilos globales del admin -->
+    <style is:global>
+        /* ============================================
+           RESET Y BASE
+           ============================================ */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        :root {
+            --carbon: #1a1a1a;
+            --terracota: #9e2a2b;
+            --terracota-light: #b83a3b;
+            --terracota-dark: #7a2021;
+            --madera: #d4a574;
+            --crema: #fffaf0;
+            --crema-dark: #f5ede0;
+            --dorado: #d4af37;
+            --dorado-light: #e8c84a;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --info: #3b82f6;
+            --sidebar-width: 240px;
+            --header-height: 64px;
+        }
+        
+        html {
+            scroll-behavior: smooth;
+        }
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            background: #f8f5f0;
+            color: #1a1a1a;
+            min-height: 100vh;
+            display: flex;
+        }
+        
+        .font-serif {
+            font-family: 'Playfair Display', serif;
+        }
+        
+        /* ============================================
+           LAYOUT PRINCIPAL
+           ============================================ */
+        .admin-layout {
+            display: flex;
+            min-height: 100vh;
+            width: 100%;
+        }
+        
+        .admin-main {
+            flex: 1;
+            margin-left: var(--sidebar-width);
+            min-height: 100vh;
+            background: #f8f5f0;
+        }
+        
+        .admin-content {
+            padding: 24px 32px 40px;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        
+        /* ============================================
+           HEADER DEL ADMIN
+           ============================================ */
+        .admin-header {
+            background: white;
+            padding: 16px 32px;
+            border-bottom: 1px solid rgba(26, 26, 26, 0.06);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: sticky;
+            top: 0;
+            z-index: 50;
+            box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
+        }
+        
+        .admin-header-left {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+        
+        .admin-header-left h1 {
+            font-size: 1.3rem;
+            font-weight: 700;
+            color: #1a1a1a;
+        }
+        
+        .admin-header-left .subtitle {
+            font-size: 0.85rem;
+            color: rgba(26, 26, 26, 0.4);
+            font-weight: 400;
+        }
+        
+        .admin-header-right {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+        
+        .admin-header-right .admin-user {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 6px 14px 6px 10px;
+            background: #f8f5f0;
+            border-radius: 30px;
+        }
+        
+        .admin-header-right .admin-avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #9e2a2b, #d4a574);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 0.8rem;
+        }
+        
+        .admin-header-right .admin-name {
+            font-weight: 500;
+            font-size: 0.85rem;
+            color: #1a1a1a;
+        }
+        
+        .admin-header-right .admin-role {
+            font-size: 0.7rem;
+            color: rgba(26, 26, 26, 0.3);
+        }
+        
+        /* ============================================
+           RESPONSIVE
+           ============================================ */
+        @media (max-width: 768px) {
+            .admin-main {
+                margin-left: 60px;
+            }
+            
+            .admin-content {
+                padding: 16px;
+            }
+            
+            .admin-header {
+                padding: 12px 16px;
+            }
+            
+            .admin-header-left .subtitle {
+                display: none;
+            }
+            
+            .admin-header-right .admin-name {
+                display: none;
+            }
+            
+            .admin-header-right .admin-role {
+                display: none;
+            }
+        }
+        
+        @media (max-width: 480px) {
+            .admin-main {
+                margin-left: 0;
+            }
+            
+            .admin-content {
+                padding: 12px;
+            }
+            
+            .admin-header {
+                padding: 10px 12px;
+                flex-wrap: wrap;
+                gap: 8px;
+            }
+            
+            .admin-header-left h1 {
+                font-size: 1rem;
+            }
+        }
+        
+        /* ============================================
+           ANIMACIONES
+           ============================================ */
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(12px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        .fade-in-up {
+            animation: fadeInUp 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        
+        /* ============================================
+           UTILIDADES
+           ============================================ */
+        .text-terracota { color: var(--terracota); }
+        .text-success { color: var(--success); }
+        .text-warning { color: var(--warning); }
+        .text-danger { color: var(--danger); }
+        .text-info { color: var(--info); }
+        .bg-crema { background: var(--crema); }
+        .bg-carbon { background: var(--carbon); }
+    </style>
+</head>
+<body>
+    <div class="admin-layout">
+        <!-- Sidebar -->
+        <Sidebar />
+        
+        <!-- Contenido principal -->
+        <main class="admin-main">
+            <!-- Header superior -->
+            <header class="admin-header">
+                <div class="admin-header-left">
+                    <h1>{title}</h1>
+                    {description && <span class="subtitle">{description}</span>}
+                </div>
+                <div class="admin-header-right">
+                    <div class="admin-user">
+                        <div class="admin-avatar">A</div>
+                        <div>
+                            <div class="admin-name">Administrador</div>
+                            <div class="admin-role">Admin</div>
+                        </div>
+                    </div>
+                </div>
+            </header>
+            
+            <!-- Contenido de la página -->
+            <div class="admin-content fade-in-up">
+                <slot />
+            </div>
+        </main>
+    </div>
+</body>
+</html>

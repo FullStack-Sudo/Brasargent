@@ -1,18 +1,16 @@
 ---
-// src/pages/admin/menu/index.astro
-// Gestión de menú por sucursal
+// src/pages/admin/sucursales/index.astro
+// Gestión de sucursales y cubiertos
 
 import AdminLayout from '../../../layouts/AdminLayout.astro';
 import pool from '../../../lib/db';
 
-// Obtener todas las sucursales con sus platos
-const sucursales = await pool.query(`
+// Obtener todas las sucursales
+const sucursalesData = await pool.query(`
     SELECT 
         s.id,
         s.nombre,
         s.concepto,
-        s.rating,
-        s.resenas,
         s.direccion,
         s.horario,
         s.telefono,
@@ -20,9 +18,8 @@ const sucursales = await pool.query(`
         s.capacidad_total,
         s.cubiertos_disponibles,
         s.cubiertos_ocupados,
-        COUNT(DISTINCT ms.plato_id) AS total_platos,
-        SUM(CASE WHEN ms.disponible = 1 THEN 1 ELSE 0 END) AS disponibles,
-        SUM(CASE WHEN ms.disponible = 0 THEN 1 ELSE 0 END) AS agotados
+        s.activo,
+        COUNT(DISTINCT ms.plato_id) AS total_platos
     FROM sucursales s
     LEFT JOIN menu_sucursal ms ON s.id = ms.sucursal_id
     WHERE s.activo = 1
@@ -30,51 +27,20 @@ const sucursales = await pool.query(`
     ORDER BY s.nombre
 `) as any[];
 
-const dataSucursales = sucursales[0] || [];
-
-// Calcular totales
-const totalSucursales = dataSucursales.length;
-const totalPlatos = dataSucursales.reduce((acc: any, s: any) => acc + (s.total_platos || 0), 0);
-const totalDisponibles = dataSucursales.reduce((acc: any, s: any) => acc + (s.disponibles || 0), 0);
-
-const formatearRating = (rating: any) => {
-    return rating ? Number(rating).toFixed(1) : '0';
-};
+const sucursales = sucursalesData[0] || [];
 ---
 
-<AdminLayout title="Menú" description="Administra los platos y disponibilidad por sucursal">
-    <!-- Estadísticas -->
-    <div class="stats-grid">
-        <div class="stat-card">
-            <div class="stat-icon" style="background: rgba(59, 130, 246, 0.1); color: #3b82f6;">🏢</div>
-            <div class="stat-info">
-                <span class="stat-number">{totalSucursales}</span>
-                <span class="stat-label">Sucursales Activas</span>
-            </div>
-        </div>
-        <div class="stat-card">
-            <div class="stat-icon" style="background: rgba(16, 185, 129, 0.1); color: #10b981;">🍽️</div>
-            <div class="stat-info">
-                <span class="stat-number">{totalPlatos}</span>
-                <span class="stat-label">Total Platos</span>
-            </div>
-        </div>
-        <div class="stat-card">
-            <div class="stat-icon" style="background: rgba(245, 158, 11, 0.1); color: #f59e0b;">✅</div>
-            <div class="stat-info">
-                <span class="stat-number">{totalDisponibles}</span>
-                <span class="stat-label">Disponibles</span>
-            </div>
-        </div>
-    </div>
-
-    <!-- Tarjetas de Sucursales -->
+<AdminLayout title="Sucursales" description="Controla la capacidad y cubiertos de cada local">
     <div class="sucursales-grid">
-        {dataSucursales.map((sucursal: any) => {
+        {sucursales.map((sucursal: any) => {
             const color = sucursal.nombre === 'Churrasquería' ? '#9e2a2b' :
                          sucursal.nombre === 'Fast Grill' ? '#d4af37' : '#d4a574';
             const icono = sucursal.nombre === 'Churrasquería' ? '🔥' :
                          sucursal.nombre === 'Fast Grill' ? '⚡' : '🥩';
+            
+            const porcentaje = sucursal.cubiertos_ocupados > 0 
+                ? Math.round((sucursal.cubiertos_ocupados / sucursal.capacidad_total) * 100) 
+                : 0;
             
             return (
                 <div class="sucursal-card" style={`border-top: 4px solid ${color}`}>
@@ -86,33 +52,42 @@ const formatearRating = (rating: any) => {
                                 <span class="sucursal-concepto">{sucursal.concepto || 'Restaurante'}</span>
                             </div>
                         </div>
-                        <div class="sucursal-rating">
-                            ★ {formatearRating(sucursal.rating)}
-                            <span>({sucursal.resenas || 0})</span>
-                        </div>
+                        <span class="sucursal-estado">
+                            {sucursal.activo ? '✅ Activo' : '❌ Inactivo'}
+                        </span>
                     </div>
                     
                     <div class="sucursal-detalles">
                         <p>📍 {sucursal.direccion}</p>
                         <p>🕐 {sucursal.horario}</p>
                         <p>📞 <a href={`https://wa.me/${sucursal.telefono}`} target="_blank">{sucursal.telefono}</a></p>
-                        <p>💺 Capacidad: {sucursal.capacidad || 0} personas</p>
                     </div>
                     
-                    <div class="sucursal-platos">
-                        <div class="plato-stats">
-                            <span>🍽️ {sucursal.total_platos || 0} Platos</span>
-                            <span class="disponible">✅ {sucursal.disponibles || 0} Disp.</span>
-                            <span class="agotado">❌ {sucursal.agotados || 0} Agot.</span>
+                    <!-- Control de Cubiertos -->
+                    <div class="cubiertos-control">
+                        <div class="cubiertos-header">
+                            <span>🪑 Cubiertos</span>
+                            <div class="cubiertos-numeros">
+                                <span class="cubiertos-total">Total: {sucursal.capacidad_total || 120}</span>
+                                <span class="cubiertos-ocupados">Ocupados: {sucursal.cubiertos_ocupados || 0}</span>
+                                <span class="cubiertos-disponibles">Disponibles: {sucursal.cubiertos_disponibles || 120}</span>
+                            </div>
+                        </div>
+                        <div class="cubiertos-bar">
+                            <div class="cubiertos-progreso" style={`width: ${porcentaje}%; background: ${porcentaje > 80 ? '#ef4444' : porcentaje > 60 ? '#f59e0b' : '#10b981'}`}></div>
+                        </div>
+                        <div class="cubiertos-porcentaje">
+                            <span>{porcentaje}% ocupado</span>
+                            <span class="cubiertos-libres">{sucursal.cubiertos_disponibles} cubiertos libres</span>
                         </div>
                     </div>
                     
                     <div class="sucursal-actions">
-                        <a href={`/admin/menu/sucursal/${sucursal.id}`} class="btn-ver-menu">
-                            👁️ Ver Menú
+                        <a href={`/admin/sucursales/editar/${sucursal.id}`} class="btn-editar-capacidad">
+                            ✏️ Editar Capacidad
                         </a>
-                        <a href={`/admin/sucursales/editar/${sucursal.id}`} class="btn-editar">
-                            ✏️ Editar
+                        <a href={`/admin/sucursales/cubiertos/${sucursal.id}`} class="btn-ajustar">
+                            ⚙️ Ajustar Cubiertos
                         </a>
                     </div>
                 </div>
@@ -123,7 +98,7 @@ const formatearRating = (rating: any) => {
 
 <style is:global>
 /* ============================================
-   ESTILOS DE MENÚ
+   ESTILOS DE SUCURSALES
    ============================================ */
 .sucursales-grid {
     display: grid;
@@ -138,7 +113,6 @@ const formatearRating = (rating: any) => {
     padding: 24px;
     box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
     transition: all 0.3s ease;
-    border-top: 4px solid #9e2a2b;
 }
 
 .sucursal-card:hover {
@@ -178,15 +152,9 @@ const formatearRating = (rating: any) => {
     letter-spacing: 0.5px;
 }
 
-.sucursal-rating {
-    font-size: 0.9rem;
-    font-weight: 600;
-    color: #d4af37;
-}
-
-.sucursal-rating span {
-    font-weight: 400;
-    color: rgba(26, 26, 26, 0.3);
+.sucursal-estado {
+    font-size: 0.85rem;
+    font-weight: 500;
 }
 
 .sucursal-detalles {
@@ -207,23 +175,61 @@ const formatearRating = (rating: any) => {
     text-decoration: none;
 }
 
-.sucursal-platos {
-    margin-bottom: 16px;
+.cubiertos-control {
+    background: rgba(255, 250, 240, 0.5);
+    border-radius: 10px;
+    padding: 14px 16px;
+    margin: 12px 0 16px;
 }
 
-.plato-stats {
+.cubiertos-header {
     display: flex;
-    gap: 16px;
-    font-size: 0.85rem;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+}
+
+.cubiertos-header span {
+    font-weight: 600;
+    font-size: 0.9rem;
+    color: #1a1a1a;
+}
+
+.cubiertos-numeros {
+    display: flex;
+    gap: 12px;
+    font-size: 0.75rem;
     font-weight: 500;
 }
 
-.plato-stats .disponible {
-    color: #10b981;
+.cubiertos-total { color: #3b82f6; }
+.cubiertos-ocupados { color: #ef4444; }
+.cubiertos-disponibles { color: #10b981; }
+
+.cubiertos-bar {
+    width: 100%;
+    height: 6px;
+    background: rgba(26, 26, 26, 0.06);
+    border-radius: 3px;
+    overflow: hidden;
+    margin-bottom: 6px;
 }
 
-.plato-stats .agotado {
-    color: #ef4444;
+.cubiertos-progreso {
+    height: 100%;
+    border-radius: 3px;
+    transition: width 0.8s ease;
+}
+
+.cubiertos-porcentaje {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.75rem;
+    color: rgba(26, 26, 26, 0.4);
+}
+
+.cubiertos-libres {
+    font-weight: 500;
 }
 
 .sucursal-actions {
@@ -231,8 +237,8 @@ const formatearRating = (rating: any) => {
     gap: 10px;
 }
 
-.btn-ver-menu,
-.btn-editar {
+.btn-editar-capacidad,
+.btn-ajustar {
     flex: 1;
     padding: 10px 16px;
     border: none;
@@ -246,23 +252,23 @@ const formatearRating = (rating: any) => {
     font-family: 'Inter', sans-serif;
 }
 
-.btn-ver-menu {
+.btn-editar-capacidad {
+    background: rgba(59, 130, 246, 0.08);
+    color: #3b82f6;
+}
+
+.btn-editar-capacidad:hover {
+    background: rgba(59, 130, 246, 0.15);
+    transform: scale(1.02);
+}
+
+.btn-ajustar {
     background: rgba(158, 42, 43, 0.08);
     color: #9e2a2b;
 }
 
-.btn-ver-menu:hover {
+.btn-ajustar:hover {
     background: rgba(158, 42, 43, 0.15);
-    transform: scale(1.02);
-}
-
-.btn-editar {
-    background: rgba(26, 26, 26, 0.04);
-    color: #1a1a1a;
-}
-
-.btn-editar:hover {
-    background: rgba(26, 26, 26, 0.08);
     transform: scale(1.02);
 }
 

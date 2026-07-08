@@ -1,0 +1,1006 @@
+---
+// src/components/ModalReserva.astro
+// Props: sucursalId, sucursalNombre
+const { sucursalId, sucursalNombre } = Astro.props;
+---
+
+<div class="modal-overlay hidden" id={`modalReserva-${sucursalId}`} onclick={`cerrarModalReserva(event, ${sucursalId})`}>
+    <div class="modal-container" onclick="event.stopPropagation()">
+        <!-- HEADER -->
+        <div class="modal-header">
+            <div class="modal-title">
+                <span class="icon">📅</span>
+                <div>
+                    <h2>Reservar en {sucursalNombre}</h2>
+                    <p>Completa tus datos en 30 segundos</p>
+                </div>
+            </div>
+            <button class="modal-close" onclick={`cerrarModalReserva(null, ${sucursalId})`} aria-label="Cerrar">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M18 6L6 18M6 6l12 12" />
+                </svg>
+            </button>
+        </div>
+
+        <!-- BODY -->
+        <form id={`formReserva-${sucursalId}`} class="modal-body" novalidate onsubmit={`enviarFormularioReserva(event, ${sucursalId}, '${sucursalNombre}')`}>
+            <!-- Nombres Completos -->
+            <div class="form-group">
+                <label>
+                    👤 Nombres Completos
+                    <span class="required">*</span>
+                </label>
+                <input 
+                    type="text" 
+                    id={`nombreCliente-${sucursalId}`} 
+                    placeholder="Carlos Gómez Pérez"
+                    required
+                    autocomplete="name"
+                />
+                <span class="field-hint">Ej: Carlos Gómez Pérez</span>
+                <span class="error-message" id={`errorNombre-${sucursalId}`}>Por favor ingresa tu nombre completo</span>
+            </div>
+
+            <!-- Número Celular -->
+            <div class="form-group">
+                <label>
+                    📱 Número Celular
+                    <span class="required">*</span>
+                </label>
+                <div class="telefono-wrapper">
+                    <select id={`codigoPais-${sucursalId}`} class="codigo-pais">
+                        <option value="591">🇧🇴 +591 (Bolivia)</option>
+                        <option value="1">🇺🇸 +1 (EE.UU.)</option>
+                        <option value="34">🇪🇸 +34 (España)</option>
+                        <option value="52">🇲🇽 +52 (México)</option>
+                        <option value="54">🇦🇷 +54 (Argentina)</option>
+                        <option value="56">🇨🇱 +56 (Chile)</option>
+                        <option value="57">🇨🇴 +57 (Colombia)</option>
+                        <option value="58">🇻🇪 +58 (Venezuela)</option>
+                        <option value="51">🇵🇪 +51 (Perú)</option>
+                        <option value="593">🇪🇨 +593 (Ecuador)</option>
+                        <option value="598">🇺🇾 +598 (Uruguay)</option>
+                        <option value="595">🇵🇾 +595 (Paraguay)</option>
+                        <option value="55">🇧🇷 +55 (Brasil)</option>
+                        <option value="44">🇬🇧 +44 (Reino Unido)</option>
+                        <option value="33">🇫🇷 +33 (Francia)</option>
+                        <option value="49">🇩🇪 +49 (Alemania)</option>
+                        <option value="39">🇮🇹 +39 (Italia)</option>
+                        <option value="61">🇦🇺 +61 (Australia)</option>
+                        <option value="81">🇯🇵 +81 (Japón)</option>
+                        <option value="86">🇨🇳 +86 (China)</option>
+                    </select>
+                    <input 
+                        type="tel" 
+                        id={`telefonoCliente-${sucursalId}`} 
+                        placeholder="70000111"
+                        required
+                        autocomplete="tel"
+                    />
+                </div>
+                <span class="field-hint">Ej: 70000111 (Bolivia) o 5551234567 (Internacional)</span>
+                <span class="error-message" id={`errorTelefono-${sucursalId}`}>Por favor ingresa un número válido</span>
+            </div>
+
+            <!-- Correo Electrónico (Opcional) -->
+            <div class="form-group">
+                <label>
+                    ✉️ Correo Electrónico
+                    <span class="optional">(Opcional)</span>
+                </label>
+                <input 
+                    type="email" 
+                    id={`emailCliente-${sucursalId}`} 
+                    placeholder="carlos@email.com"
+                    autocomplete="email"
+                />
+                <span class="field-hint">Recibirás la confirmación aquí</span>
+            </div>
+
+            <!-- Niños y Total Personas -->
+            <div class="form-row">
+                <div class="form-group">
+                    <label>
+                        👶 Niños
+                        <span class="optional">(Opcional)</span>
+                    </label>
+                    <input 
+                        type="number" 
+                        id={`ninos-${sucursalId}`} 
+                        placeholder="0"
+                        min="0"
+                        max="10"
+                        value="0"
+                    />
+                    <span class="field-hint">Ej: 2</span>
+                </div>
+                <div class="form-group">
+                    <label>
+                        👥 Total Personas
+                        <span class="required">*</span>
+                    </label>
+                    <input 
+                        type="number" 
+                        id={`totalPersonas-${sucursalId}`} 
+                        placeholder="4"
+                        min="1"
+                        max="20"
+                        required
+                        value="2"
+                    />
+                    <span class="field-hint">Ej: 4</span>
+                    <span class="error-message" id={`errorPersonas-${sucursalId}`}>Ingresa al menos 1 persona</span>
+                </div>
+            </div>
+
+            <!-- Hora de Llegada -->
+            <div class="form-group">
+                <label>
+                    🕐 Hora de Llegada
+                    <span class="required">*</span>
+                </label>
+                <input 
+                    type="time" 
+                    id={`horaReserva-${sucursalId}`} 
+                    required
+                />
+                <span class="field-hint">Selecciona la hora a la que llegarás</span>
+                <span class="error-message" id={`errorHora-${sucursalId}`}>Por favor selecciona una hora</span>
+            </div>
+
+            <!-- Comentarios (Opcional) -->
+            <div class="form-group">
+                <label>
+                    📝 Comentarios
+                    <span class="optional">(Opcional)</span>
+                </label>
+                <textarea 
+                    id={`comentarios-${sucursalId}`} 
+                    rows="2" 
+                    placeholder="Prefiero mesa cerca de la ventana"
+                    maxlength="200"
+                    oninput={`actualizarContador(this, ${sucursalId})`}
+                ></textarea>
+                <span class="field-hint">Ej: Prefiero mesa cerca de la ventana</span>
+                <span class="char-counter" id={`counter-${sucursalId}`}>0/200</span>
+            </div>
+
+            <!-- WhatsApp Checkbox -->
+            <div class="form-group checkbox-group">
+                <label class="checkbox-label">
+                    <input type="checkbox" id={`whatsappConfirmacion-${sucursalId}`} checked />
+                    <span class="custom-checkbox"></span>
+                    <div class="checkbox-text">
+                        <strong>📱 Recibir confirmación por WhatsApp</strong>
+                        <small>Te notificaremos cuando tu reserva sea aprobada</small>
+                    </div>
+                </label>
+            </div>
+        </form>
+
+        <!-- FOOTER -->
+        <div class="modal-footer">
+            <button type="button" class="btn-cancel" onclick={`cerrarModalReserva(null, ${sucursalId})`}>
+                Cancelar
+            </button>
+            <button type="submit" class="btn-save" id={`btnEnviarReserva-${sucursalId}`} form={`formReserva-${sucursalId}`}>
+                <span class="btn-text">📅 Solicitar Mesa</span>
+                <span class="btn-spinner hidden">⏳</span>
+            </button>
+        </div>
+    </div>
+</div>
+
+<script>
+// ============================================
+// FUNCIONES GLOBALES PARA EL MODAL DE RESERVAS
+// ============================================
+
+window.abrirModalPublico = function(sucursalId) {
+    const modal = document.getElementById(`modalReserva-${sucursalId}`);
+    if (modal) {
+        modal.classList.remove('hidden');
+        document.body.style.overflow = 'hidden';
+        
+        // Configurar hora actual (redondeada a 30 min)
+        const horaInput = document.getElementById(`horaReserva-${sucursalId}`);
+        const ahora = new Date();
+        let horas = ahora.getHours();
+        let minutos = Math.ceil(ahora.getMinutes() / 30) * 30;
+        if (minutos === 60) {
+            horas++;
+            minutos = 0;
+        }
+        const horaStr = `${String(horas).padStart(2, '0')}:${String(minutos).padStart(2, '0')}`;
+        horaInput.value = horaStr;
+    }
+}
+
+window.cerrarModalReserva = function(event, sucursalId) {
+    if (event && event.target !== event.currentTarget) return;
+    
+    const modal = document.getElementById(`modalReserva-${sucursalId}`);
+    if (modal) {
+        modal.classList.add('hidden');
+    }
+    document.body.style.overflow = '';
+}
+
+window.actualizarContador = function(textarea, sucursalId) {
+    const counter = document.getElementById(`counter-${sucursalId}`);
+    const restantes = 200 - textarea.value.length;
+    counter.textContent = `${restantes}/200`;
+    counter.style.color = restantes < 20 ? '#ef4444' : 'rgba(26,26,26,0.3)';
+}
+
+window.validarCampoReserva = function(input) {
+    const error = input.parentElement.querySelector('.error-message');
+    if (!error) return true;
+    
+    if (!input.value.trim()) {
+        input.classList.add('error');
+        error.style.display = 'block';
+        return false;
+    }
+    
+    if (input.type === 'tel' && !/^[0-9]{7,10}$/.test(input.value.trim())) {
+        input.classList.add('error');
+        error.textContent = 'Ingresa un número válido (7-10 dígitos)';
+        error.style.display = 'block';
+        return false;
+    }
+    
+    input.classList.remove('error');
+    error.style.display = 'none';
+    return true;
+}
+
+window.enviarFormularioReserva = async function(e, sucursalId, sucursalNombre) {
+    e.preventDefault();
+    const form = e.target;
+    
+    // Validar todos los campos
+    const required = form.querySelectorAll('input[required]');
+    let isValid = true;
+    
+    required.forEach(input => {
+        if (!validarCampoReserva(input)) {
+            isValid = false;
+        }
+    });
+    
+    // Validar total personas (mínimo 1)
+    const totalPersonasInput = document.getElementById(`totalPersonas-${sucursalId}`);
+    const totalPersonas = parseInt(totalPersonasInput.value);
+    if (totalPersonas < 1) {
+        const error = document.getElementById(`errorPersonas-${sucursalId}`);
+        error.style.display = 'block';
+        totalPersonasInput.classList.add('error');
+        isValid = false;
+    }
+    
+    if (!isValid) return;
+    
+    // Fecha actual formateada (YYYY-MM-DD)
+    const hoy = new Date().toISOString().split('T')[0];
+    
+    // Preparar datos
+    const data = {
+        sucursal_id: sucursalId,
+        nombre_cliente: document.getElementById(`nombreCliente-${sucursalId}`).value.trim(),
+        telefono: document.getElementById(`telefonoCliente-${sucursalId}`).value.trim(),
+        codigo_pais: document.getElementById(`codigoPais-${sucursalId}`).value,
+        email: document.getElementById(`emailCliente-${sucursalId}`).value.trim() || null,
+        ninos: parseInt(document.getElementById(`ninos-${sucursalId}`).value) || 0,
+        numero_personas: parseInt(document.getElementById(`totalPersonas-${sucursalId}`).value),
+        fecha: hoy,
+        hora: document.getElementById(`horaReserva-${sucursalId}`).value,
+        observaciones: document.getElementById(`comentarios-${sucursalId}`).value.trim() || null,
+        whatsapp_notificacion: document.getElementById(`whatsappConfirmacion-${sucursalId}`).checked
+    };
+    
+    // Enviar
+    const btn = document.getElementById(`btnEnviarReserva-${sucursalId}`);
+    btn.classList.add('loading');
+    btn.disabled = true;
+    
+    try {
+        const response = await fetch('/api/reservas/cliente', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            cerrarModalReserva(null, sucursalId);
+            
+            // 🎉 MOSTRAR MODAL DE CONFIRMACIÓN
+            mostrarModalConfirmacion(sucursalNombre, data.nombre_cliente, data.fecha, data.hora);
+        } else {
+            mostrarErrorModal(result.error || 'Error al solicitar la reserva');
+        }
+    } catch (error) {
+        mostrarErrorModal('Error de conexión. Intenta de nuevo.');
+    } finally {
+        btn.classList.remove('loading');
+        btn.disabled = false;
+    }
+}
+
+// ============================================
+// TOASTS DE NOTIFICACIÓN
+// ============================================
+function mostrarExitoModal(titulo, mensaje) {
+    const toast = document.createElement('div');
+    toast.className = 'toast toast-exito';
+    toast.innerHTML = `
+        <span class="toast-icon">✅</span>
+        <div>
+            <strong>${titulo}</strong>
+            <p>${mensaje}</p>
+        </div>
+        <button onclick="this.parentElement.remove()">✕</button>
+    `;
+    document.body.appendChild(toast);
+    setTimeout(() => toast.remove(), 5000);
+}
+
+function mostrarErrorModal(mensaje) {
+    const toast = document.createElement('div');
+    toast.className = 'toast toast-error';
+    toast.innerHTML = `
+        <span class="toast-icon">❌</span>
+        <div>
+            <strong>Error</strong>
+            <p>${mensaje}</p>
+        </div>
+        <button onclick="this.parentElement.remove()">✕</button>
+    `;
+    document.body.appendChild(toast);
+    setTimeout(() => toast.remove(), 5000);
+}
+
+// Configurar validación en tiempo real al cargar
+document.addEventListener('DOMContentLoaded', () => {
+    document.querySelectorAll('.modal-overlay').forEach(modal => {
+        const inputs = modal.querySelectorAll('input[required]');
+        inputs.forEach(input => {
+            input.addEventListener('blur', function() {
+                window.validarCampoReserva(this);
+            });
+            input.addEventListener('input', function() {
+                if (this.value.trim()) {
+                    this.classList.remove('error');
+                    const error = this.parentElement.querySelector('.error-message');
+                    if (error) error.style.display = 'none';
+                }
+            });
+        });
+    });
+});
+
+// ============================================
+// 🎉 MODAL DE CONFIRMACIÓN
+// ============================================
+
+window.mostrarModalConfirmacion = function(sucursalNombre, nombreCliente, fecha, hora) {
+    const modalHTML = `
+        <div class="modal-overlay modal-confirmacion" id="modalConfirmacion" onclick="cerrarModalConfirmacion()">
+            <div class="modal-container modal-confirmacion-container" onclick="event.stopPropagation()">
+                <div class="modal-confirmacion-content">
+                    <div class="confirmacion-icono">✅</div>
+                    <h2>¡Reserva Solicitada!</h2>
+                    <p>En breves momentos confirmaremos tu reserva en <strong>${sucursalNombre}</strong></p>
+                    <div class="confirmacion-detalles">
+                        <div class="confirmacion-item">
+                            <span class="confirmacion-label">Cliente:</span>
+                            <span class="confirmacion-valor">${nombreCliente}</span>
+                        </div>
+                        <div class="confirmacion-item">
+                            <span class="confirmacion-label">Fecha:</span>
+                            <span class="confirmacion-valor">${new Date(fecha + 'T00:00:00').toLocaleDateString('es-ES')}</span>
+                        </div>
+                        <div class="confirmacion-item">
+                            <span class="confirmacion-label">Hora:</span>
+                            <span class="confirmacion-valor">${hora}</span>
+                        </div>
+                    </div>
+                    <div class="confirmacion-whatsapp">
+                        <span class="whatsapp-icon">💬</span>
+                        <p>Espera tu mensaje de confirmación por <strong>WhatsApp</strong></p>
+                        <span class="whatsapp-sub">Revisa tu bandeja de mensajes en los próximos minutos</span>
+                    </div>
+                    <button class="btn-confirmacion" onclick="cerrarModalConfirmacion()">
+                        ¡Entendido!
+                    </button>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    document.body.insertAdjacentHTML('beforeend', modalHTML);
+    document.body.classList.add('modal-open');
+    
+    // Auto-cerrar después de 10 segundos
+    setTimeout(() => {
+        cerrarModalConfirmacion();
+    }, 10000);
+}
+
+window.cerrarModalConfirmacion = function() {
+    const modal = document.getElementById('modalConfirmacion');
+    if (modal) {
+        modal.style.opacity = '0';
+        setTimeout(() => {
+            modal.remove();
+            document.body.classList.remove('modal-open');
+        }, 300);
+    }
+}
+
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+        document.querySelectorAll('.modal-overlay:not(.hidden)').forEach(modal => {
+            modal.classList.add('hidden');
+        });
+        window.cerrarModalConfirmacion();
+        const tieneModalesVisibles = Array.from(document.querySelectorAll('.modal-overlay')).some(m => !m.classList.contains('hidden')) || document.getElementById('modalConfirmacion');
+        if (!tieneModalesVisibles) {
+            document.body.style.overflow = '';
+        }
+    }
+});
+</script>
+
+<style>
+/* ============================================
+   MODAL - MODERNO Y SENCILLO
+   ============================================ */
+.modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(8px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+    padding: 16px;
+    animation: fadeIn 0.3s ease;
+    transition: opacity 0.3s ease;
+}
+
+.modal-overlay.hidden {
+    display: none;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+.modal-container {
+    background: #fffaf0;
+    border-radius: 24px;
+    max-width: 520px;
+    width: 100%;
+    max-height: 95vh;
+    overflow-y: auto;
+    box-shadow: 0 25px 80px rgba(0, 0, 0, 0.4);
+    animation: slideUp 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes slideUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px) scale(0.96);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+/* ============================================
+   HEADER
+   ============================================ */
+.modal-header {
+    padding: 24px 28px 16px;
+    border-bottom: 1px solid rgba(26, 26, 26, 0.06);
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    position: sticky;
+    top: 0;
+    background: #fffaf0;
+    border-radius: 24px 24px 0 0;
+    z-index: 10;
+}
+
+.modal-title {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+}
+
+.modal-title .icon {
+    font-size: 2rem;
+    background: rgba(158, 42, 43, 0.08);
+    padding: 8px 10px;
+    border-radius: 12px;
+}
+
+.modal-title h2 {
+    font-size: 1.3rem;
+    font-weight: 700;
+    color: #1a1a1a;
+    margin: 0;
+    font-family: 'Playfair Display', serif;
+}
+
+.modal-title p {
+    color: rgba(26, 26, 26, 0.4);
+    font-size: 0.85rem;
+    margin: 2px 0 0;
+}
+
+.modal-close {
+    background: transparent;
+    border: none;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    color: #1a1a1a;
+    transition: all 0.3s ease;
+    padding: 0;
+}
+
+.modal-close:hover {
+    background: rgba(26, 26, 26, 0.06);
+    transform: rotate(90deg);
+}
+
+.modal-close svg {
+    width: 22px;
+    height: 22px;
+}
+
+/* ============================================
+   BODY - FORMULARIO
+   ============================================ */
+.modal-body {
+    padding: 20px 28px 8px;
+}
+
+.form-group {
+    margin-bottom: 16px;
+}
+
+.form-group label {
+    display: block;
+    font-weight: 500;
+    color: #1a1a1a;
+    font-size: 0.9rem;
+    margin-bottom: 5px;
+}
+
+.form-group label .required {
+    color: #9e2a2b;
+    margin-left: 2px;
+}
+
+.form-group label .optional {
+    color: rgba(26, 26, 26, 0.3);
+    font-weight: 400;
+    font-size: 0.8rem;
+    margin-left: 4px;
+}
+
+.form-group input,
+.form-group textarea,
+.form-group select {
+    width: 100%;
+    padding: 12px 16px;
+    border: 1.5px solid rgba(26, 26, 26, 0.1);
+    border-radius: 12px;
+    font-size: 0.95rem;
+    font-family: 'Inter', sans-serif;
+    transition: all 0.3s ease;
+    background: white;
+    color: #1a1a1a;
+}
+
+.form-group input:focus,
+.form-group textarea:focus {
+    outline: none;
+    border-color: #9e2a2b;
+    box-shadow: 0 0 0 4px rgba(158, 42, 43, 0.08);
+}
+
+.form-group input::placeholder,
+.form-group textarea::placeholder {
+    color: rgba(26, 26, 26, 0.25);
+}
+
+.form-group input.error,
+.form-group textarea.error {
+    border-color: #ef4444;
+    box-shadow: 0 0 0 4px rgba(239, 68, 68, 0.08);
+}
+
+.form-group .field-hint {
+    display: block;
+    color: rgba(26, 26, 26, 0.3);
+    font-size: 0.75rem;
+    margin-top: 4px;
+}
+
+.form-group .error-message {
+    display: none;
+    color: #ef4444;
+    font-size: 0.8rem;
+    margin-top: 4px;
+}
+
+.form-group .error-message.show {
+    display: block;
+}
+
+/* ============================================
+   FORM ROW (Niños + Total Personas)
+   ============================================ */
+.form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+}
+
+.form-row .form-group {
+    margin-bottom: 16px;
+}
+
+/* ============================================
+   TEXTAREA - COMENTARIOS
+   ============================================ */
+.form-group textarea {
+    resize: vertical;
+    min-height: 60px;
+    max-height: 120px;
+}
+
+.form-group .char-counter {
+    display: block;
+    text-align: right;
+    color: rgba(26, 26, 26, 0.3);
+    font-size: 0.75rem;
+    margin-top: 4px;
+}
+
+/* ============================================
+   CHECKBOX - WHATSAPP
+   ============================================ */
+.checkbox-group {
+    margin-top: 4px;
+}
+
+.checkbox-label {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    cursor: pointer;
+    padding: 12px 16px;
+    background: rgba(26, 26, 26, 0.02);
+    border-radius: 12px;
+    transition: all 0.3s ease;
+}
+
+.checkbox-label:hover {
+    background: rgba(26, 26, 26, 0.04);
+}
+
+.checkbox-label input[type="checkbox"] {
+    display: none;
+    width: auto;
+    padding: 0;
+}
+
+.custom-checkbox {
+    width: 22px;
+    height: 22px;
+    min-width: 22px;
+    border: 2px solid rgba(26, 26, 26, 0.15);
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s ease;
+    margin-top: 1px;
+}
+
+.checkbox-label input:checked + .custom-checkbox {
+    background: #9e2a2b;
+    border-color: #9e2a2b;
+}
+
+.checkbox-label input:checked + .custom-checkbox::after {
+    content: '✓';
+    color: white;
+    font-size: 15px;
+    font-weight: bold;
+}
+
+.checkbox-text strong {
+    display: block;
+    color: #1a1a1a;
+    font-weight: 500;
+    font-size: 0.9rem;
+}
+
+.checkbox-text small {
+    color: rgba(26, 26, 26, 0.4);
+    font-size: 0.8rem;
+}
+
+/* ============================================
+   FOOTER - BOTONES
+   ============================================ */
+.modal-footer {
+    padding: 16px 28px 24px;
+    border-top: 1px solid rgba(26, 26, 26, 0.06);
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+    position: sticky;
+    bottom: 0;
+    background: #fffaf0;
+    border-radius: 0 0 24px 24px;
+}
+
+.btn-cancel,
+.btn-save {
+    padding: 12px 32px;
+    border: none;
+    border-radius: 12px;
+    font-size: 0.95rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-family: 'Inter', sans-serif;
+}
+
+.btn-cancel {
+    background: transparent;
+    color: #1a1a1a;
+    border: 1.5px solid rgba(26, 26, 26, 0.1);
+}
+
+.btn-cancel:hover {
+    background: rgba(26, 26, 26, 0.04);
+}
+
+.btn-save {
+    background: linear-gradient(135deg, #9e2a2b 0%, #7a2021 100%);
+    color: #fffaf0;
+    box-shadow: 0 4px 16px rgba(158, 42, 43, 0.25);
+    min-width: 160px;
+}
+
+.btn-save:hover {
+    transform: scale(1.02);
+    box-shadow: 0 6px 24px rgba(158, 42, 43, 0.35);
+}
+
+.btn-save:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none !important;
+}
+
+.btn-save.loading .btn-text {
+    display: none;
+}
+
+.btn-save.loading .btn-spinner {
+    display: inline-block;
+}
+
+.btn-spinner {
+    display: none;
+    animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+/* ============================================
+   TOASTS
+   ============================================ */
+.toast {
+    position: fixed;
+    top: 24px;
+    right: 24px;
+    z-index: 10000;
+    background: #1a1a1a;
+    color: #fffaf0;
+    padding: 16px 20px;
+    border-radius: 14px;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    min-width: 280px;
+    max-width: 420px;
+    animation: slideIn 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes slideIn {
+    from {
+        opacity: 0;
+        transform: translateX(100px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+.toast-exito {
+    border-left: 4px solid #10b981;
+}
+
+.toast-error {
+    border-left: 4px solid #ef4444;
+}
+
+.toast-icon {
+    font-size: 1.6rem;
+}
+
+.toast strong {
+    display: block;
+    font-weight: 600;
+    font-size: 0.95rem;
+}
+
+.toast p {
+    margin: 2px 0 0;
+    font-size: 0.85rem;
+    color: rgba(255, 250, 240, 0.6);
+}
+
+.toast button {
+    background: transparent;
+    border: none;
+    color: rgba(255, 250, 240, 0.3);
+    font-size: 1.2rem;
+    cursor: pointer;
+    padding: 4px;
+    transition: color 0.3s ease;
+}
+
+.toast button:hover {
+    color: #fffaf0;
+}
+
+/* ============================================
+   TELEFONO WRAPPER - SELECTOR DE PAÍS
+   ============================================ */
+.telefono-wrapper {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.telefono-wrapper .codigo-pais {
+    width: 140px;
+    min-width: 140px;
+    padding: 12px 12px;
+    border: 1.5px solid rgba(26, 26, 26, 0.1);
+    border-radius: 12px;
+    font-size: 0.9rem;
+    font-family: 'Inter', sans-serif;
+    background: white;
+    color: #1a1a1a;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.telefono-wrapper .codigo-pais:focus {
+    outline: none;
+    border-color: #9e2a2b;
+    box-shadow: 0 0 0 4px rgba(158, 42, 43, 0.08);
+}
+
+.telefono-wrapper input {
+    flex: 1;
+    padding: 12px 16px;
+    border: 1.5px solid rgba(26, 26, 26, 0.1);
+    border-radius: 12px;
+    font-size: 0.95rem;
+    font-family: 'Inter', sans-serif;
+    transition: all 0.3s ease;
+    background: white;
+    color: #1a1a1a;
+}
+
+.telefono-wrapper input:focus {
+    outline: none;
+    border-color: #9e2a2b;
+    box-shadow: 0 0 0 4px rgba(158, 42, 43, 0.08);
+}
+
+/* ============================================
+   RESPONSIVE
+   ============================================ */
+@media (max-width: 640px) {
+    .modal-container {
+        max-width: 100%;
+        margin: 8px;
+        border-radius: 20px;
+        max-height: 98vh;
+    }
+    
+    .telefono-wrapper {
+        flex-direction: column;
+        gap: 6px;
+    }
+    
+    .telefono-wrapper .codigo-pais {
+        width: 100%;
+        min-width: unset;
+    }
+    
+    .modal-header {
+        padding: 16px 20px 12px;
+    }
+    
+    .modal-body {
+        padding: 16px 20px 8px;
+    }
+    
+    .modal-footer {
+        padding: 12px 20px 16px;
+        flex-direction: column-reverse;
+    }
+    
+    .btn-cancel,
+    .btn-save {
+        padding: 12px;
+    }
+    
+    .form-row {
+        grid-template-columns: 1fr 1fr;
+        gap: 12px;
+    }
+    
+    .modal-title .icon {
+        font-size: 1.5rem;
+        padding: 6px 8px;
+    }
+    
+    .modal-title h2 {
+        font-size: 1.1rem;
+    }
+    
+    .toast {
+        top: 12px;
+        right: 12px;
+        left: 12px;
+        min-width: auto;
+    }
+}
+
+@media (max-width: 400px) {
+    .form-row {
+        grid-template-columns: 1fr;
+        gap: 0;
+    }
+}
+</style>

@@ -1,0 +1,757 @@
+---
+// src/components/admin/CronometroReserva.astro
+// Props: reservaId, fecha, hora, nombreCliente, telefono, sucursalNombre
+const { reservaId, fecha, hora, nombreCliente, telefono, sucursalNombre } = Astro.props;
+---
+
+<div class="cronometro-card" id={`cronometro-${reservaId}`} data-reserva-id={reservaId} data-fecha={fecha} data-hora={hora}>
+    <!-- Cabecera -->
+    <div class="cronometro-header">
+        <div class="cronometro-cliente">
+            <span class="cliente-avatar">
+                {nombreCliente.split(' ').map((n: string) => n[0]).join('').toUpperCase().substring(0, 2)}
+            </span>
+            <div>
+                <span class="cliente-nombre">{nombreCliente}</span>
+                <span class="cliente-telefono">📞 {telefono}</span>
+            </div>
+        </div>
+        <button class="cronometro-close" onclick={`cerrarCronometro(${reservaId})`}>✕</button>
+    </div>
+    
+    <!-- Tiempo -->
+    <div class="cronometro-tiempo" id={`cronometro-display-${reservaId}`}>
+        <span class="tiempo-restante" id={`tiempo-${reservaId}`}>00:00</span>
+        <span class="tiempo-label">TIEMPO RESTANTE</span>
+    </div>
+    
+    <!-- Barra de progreso -->
+    <div class="cronometro-bar">
+        <div class="cronometro-progreso" id={`progreso-${reservaId}`} style="width: 100%"></div>
+    </div>
+    
+    <!-- Estado -->
+    <div class="cronometro-estado" id={`estado-${reservaId}`}>
+        <span class="estado-badge">⏳ Pendiente</span>
+    </div>
+    
+    <!-- Acciones -->
+    <div class="cronometro-acciones">
+        <button 
+            class="btn-whatsapp" 
+            data-reserva={reservaId}
+            onclick={`enviarWhatsAppCliente(${reservaId})`}
+        >
+            💬 WhatsApp
+        </button>
+        <button 
+            class="btn-cancelar" 
+            onclick={`cancelarReservaCronometro(${reservaId})`}
+        >
+            ✕ Cancelar
+        </button>
+    </div>
+</div>
+
+<script>
+// ============================================
+// CRONÓMETRO EN TIEMPO REAL (SEGUNDO A SEGUNDO)
+// ============================================
+
+window.cronometrosActivos = window.cronometrosActivos || {};
+
+window.iniciarCronometro = function(reservaId, fecha, hora) {
+    // Manejar casos donde fecha incluya tiempo
+    const fechaLimpia = typeof fecha === 'string' && fecha.includes('T') ? fecha.split('T')[0] : fecha;
+    const fechaReserva = new Date(`${fechaLimpia}T${hora}`);
+    let ahora = new Date();
+    let segundosRestantes = Math.floor((fechaReserva.getTime() - ahora.getTime()) / 1000);
+    
+    const elemento = document.getElementById(`tiempo-${reservaId}`);
+    const progreso = document.getElementById(`progreso-${reservaId}`);
+    const estado = document.getElementById(`estado-${reservaId}`);
+    
+    if(!elemento || !progreso || !estado) return;
+
+    // Si ya pasó la hora, mostrar expirado
+    if (segundosRestantes < 0) {
+        elemento.textContent = '00:00:00';
+        progreso.style.width = '0%';
+        estado.innerHTML = `<span class="estado-badge expirado">⏰ Expirado</span>`;
+        return;
+    }
+    
+    // Guardar referencia al intervalo
+    if (window.cronometrosActivos[reservaId]) {
+        clearInterval(window.cronometrosActivos[reservaId]);
+    }
+    
+    // Actualizar cada segundo
+    window.cronometrosActivos[reservaId] = setInterval(() => {
+        segundosRestantes--;
+        ahora = new Date();
+        
+        // Calcular minutos y segundos
+        const minutos = Math.floor(segundosRestantes / 60);
+        const segundos = segundosRestantes % 60;
+        const horas = Math.floor(minutos / 60);
+        const minutosDisplay = minutos % 60;
+        
+        // Mostrar formato HH:MM:SS
+        if (horas > 0) {
+            elemento.textContent = `${String(horas).padStart(2, '0')}:${String(minutosDisplay).padStart(2, '0')}:${String(segundos).padStart(2, '0')}`;
+        } else {
+            elemento.textContent = `${String(minutosDisplay).padStart(2, '0')}:${String(segundos).padStart(2, '0')}`;
+        }
+        
+        // Calcular porcentaje (basado en 60 minutos máximo)
+        const porcentaje = Math.max(0, (segundosRestantes / 3600) * 100);
+        progreso.style.width = `${Math.min(100, porcentaje)}%`;
+        
+        // Cambiar color según tiempo
+        if (segundosRestantes <= 600) { // 10 minutos = 600 segundos
+            progreso.style.background = '#ef4444';
+            elemento.style.color = '#ef4444';
+            estado.innerHTML = `<span class="estado-badge urgente">🔴 Urgente - 10 min</span>`;
+            
+            // 🔔 ALERTA: 10 minutos antes
+            if (segundosRestantes === 600) {
+                mostrarAlertaAdmin(reservaId);
+            }
+        } else if (segundosRestantes <= 1800) { // 30 minutos
+            progreso.style.background = '#f59e0b';
+            elemento.style.color = '#f59e0b';
+            estado.innerHTML = `<span class="estado-badge proximo">🟡 Próximo - ${Math.floor(segundosRestantes / 60)} min</span>`;
+        } else {
+            progreso.style.background = '#10b981';
+            elemento.style.color = '#1a1a1a';
+            estado.innerHTML = `<span class="estado-badge pendiente">⏳ Pendiente - ${Math.floor(segundosRestantes / 60)} min</span>`;
+        }
+        
+        // Si llega a 0, detener
+        if (segundosRestantes <= 0) {
+            clearInterval(window.cronometrosActivos[reservaId]);
+            elemento.textContent = '00:00:00';
+            progreso.style.width = '0%';
+            estado.innerHTML = `<span class="estado-badge expirado">⏰ Expirado</span>`;
+            
+            // Cancelar automáticamente
+            cancelarReservaAutomatica(reservaId);
+        }
+    }, 1000);
+}
+
+// ============================================
+// 🔔 ALERTA AL ADMIN - 10 MINUTOS ANTES
+// ============================================
+
+window.mostrarAlertaAdmin = function(reservaId) {
+    // Obtener datos de la reserva
+    fetch(`/api/reservas/${reservaId}`)
+        .then(res => res.json())
+        .then(data => {
+            const r = data.data;
+            
+            // Crear alerta en el dashboard
+            const alerta = document.createElement('div');
+            alerta.className = 'alerta-admin';
+            alerta.id = `alerta-${reservaId}`;
+            alerta.innerHTML = `
+                <div class="alerta-icon">🔔</div>
+                <div class="alerta-contenido">
+                    <strong>⚠️ ¡Recordatorio Importante!</strong>
+                    <p>El cliente <strong>${r.nombre_cliente}</strong> tiene una reserva en <strong>10 minutos</strong></p>
+                    <div class="alerta-detalles">
+                        <span>📍 ${r.sucursal}</span>
+                        <span>🕐 ${r.hora}</span>
+                        <span>👥 ${r.numero_personas} personas</span>
+                    </div>
+                    <div class="alerta-acciones">
+                        <button onclick="enviarWhatsAppCliente(${reservaId})" class="btn-alerta-whatsapp">
+                            💬 Enviar WhatsApp
+                        </button>
+                        <button onclick="cerrarAlerta(${reservaId})" class="btn-alerta-cerrar">
+                            ✕ Cerrar
+                        </button>
+                    </div>
+                </div>
+            `;
+            
+            // Insertar al inicio del dashboard
+            const dashboard = document.querySelector('main');
+            if (dashboard) {
+                dashboard.insertBefore(alerta, dashboard.firstChild);
+            }
+            
+            // Sonido de notificación (opcional)
+            try {
+                const audio = new Audio('/sounds/notification.mp3');
+                audio.play().catch(() => {});
+            } catch (e) {}
+            
+            // Notificación del navegador
+            if ('Notification' in window && Notification.permission === 'granted') {
+                new Notification('🔔 BRASARGENT - Recordatorio de Reserva', {
+                    body: `${r.nombre_cliente} tiene una reserva en 10 minutos`,
+                    icon: '/favicon.ico'
+                });
+            } else if ('Notification' in window && Notification.permission !== 'denied') {
+                Notification.requestPermission();
+            }
+        });
+}
+
+// ============================================
+// CERRAR ALERTA
+// ============================================
+
+window.cerrarAlerta = function(reservaId) {
+    const alerta = document.getElementById(`alerta-${reservaId}`);
+    if (alerta) {
+        alerta.style.opacity = '0';
+        setTimeout(() => alerta.remove(), 300);
+    }
+}
+
+// ============================================
+// CANCELAR RESERVA AUTOMÁTICAMENTE
+// ============================================
+
+window.cancelarReservaAutomatica = function(reservaId) {
+    fetch(`/api/reservas/${reservaId}/cancelar`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+            estado: 'cancelada',
+            motivo: 'No se presentó a tiempo'
+        })
+    })
+    .then(() => {
+        const cronometro = document.getElementById(`cronometro-${reservaId}`);
+        if (cronometro) {
+            cronometro.style.opacity = '0.5';
+            cronometro.style.borderLeft = '4px solid #ef4444';
+        }
+        if (typeof window.mostrarNotificacion === 'function') {
+            window.mostrarNotificacion(
+                '⏰ Cancelación Automática',
+                'La reserva fue cancelada porque el tiempo expiró',
+                'error'
+            );
+        }
+    });
+}
+
+// ============================================
+// CERRAR CRONÓMETRO
+// ============================================
+
+window.cerrarCronometro = function(reservaId) {
+    if (window.cronometrosActivos[reservaId]) {
+        clearInterval(window.cronometrosActivos[reservaId]);
+        delete window.cronometrosActivos[reservaId];
+    }
+    const cronometro = document.getElementById(`cronometro-${reservaId}`);
+    if (cronometro) {
+        cronometro.style.opacity = '0';
+        setTimeout(() => cronometro.remove(), 300);
+    }
+}
+
+// ============================================
+// CANCELAR RESERVA DESDE CRONÓMETRO
+// ============================================
+
+window.cancelarReservaCronometro = function(reservaId) {
+    if (!confirm('¿Cancelar esta reserva?')) return;
+    
+    if (window.cronometrosActivos[reservaId]) {
+        clearInterval(window.cronometrosActivos[reservaId]);
+        delete window.cronometrosActivos[reservaId];
+    }
+    
+    fetch(`/api/reservas/${reservaId}/cancelar`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+            estado: 'cancelada',
+            motivo: 'Cancelado por el administrador'
+        })
+    })
+    .then(() => {
+        const cronometro = document.getElementById(`cronometro-${reservaId}`);
+        if (cronometro) {
+            cronometro.style.opacity = '0.3';
+            cronometro.style.borderLeft = '4px solid #ef4444';
+            cronometro.innerHTML = `
+                <div style="text-align:center;padding:20px;color:#ef4444;">
+                    ❌ Reserva cancelada<br>
+                    <small>Cancelada por el administrador</small>
+                </div>
+            `;
+        }
+        if (typeof window.mostrarNotificacion === 'function') {
+            window.mostrarNotificacion(
+                '❌ Reserva cancelada',
+                'La reserva fue cancelada por el administrador',
+                'error'
+            );
+        }
+    });
+}
+
+// ============================================
+// ENVIAR WHATSAPP AL CLIENTE
+// ============================================
+
+window.enviarWhatsAppCliente = function(reservaId) {
+    // Obtener datos de la reserva
+    fetch(`/api/reservas/${reservaId}`)
+        .then(res => res.json())
+        .then(data => {
+            const r = data.data;
+            if(!r) {
+                if (typeof window.mostrarNotificacion === 'function') {
+                    window.mostrarNotificacion('❌ Error', 'No se encontró la reserva', 'error');
+                }
+                return;
+            }
+            
+            // Construir número completo
+            const codigoPais = r.codigo_pais || '591';
+            const telefonoLimpio = r.telefono ? r.telefono.replace(/[^0-9]/g, '') : '';
+            const numeroCompleto = `${codigoPais}${telefonoLimpio}`;
+            const fechaLimpia = typeof r.fecha === 'string' && r.fecha.includes('T') ? r.fecha.split('T')[0] : r.fecha;
+            
+            // Mensaje preconfigurado
+            const mensaje = `🍖 BRASARGENT - Recordatorio de Reserva
+
+Hola ${r.nombre_cliente}!
+
+Tu reserva está programada para:
+📅 ${fechaLimpia}
+🕐 ${r.hora}
+👥 ${r.numero_personas} personas
+📍 ${r.sucursal}
+
+⚠️ Te esperamos en 10 minutos.
+Si te vas a demorar, responde este mensaje.
+
+¡Te esperamos! 🔥`;
+
+            // URL de WhatsApp
+            const url = `https://wa.me/${numeroCompleto}?text=${encodeURIComponent(mensaje)}`;
+            
+            // Abrir WhatsApp en nueva ventana
+            window.open(url, '_blank');
+            
+            // Registrar que se envió la notificación
+            registrarNotificacion(reservaId, 'whatsapp');
+        })
+        .catch(error => {
+            console.error('Error al enviar WhatsApp:', error);
+            if (typeof window.mostrarNotificacion === 'function') {
+                window.mostrarNotificacion(
+                    '❌ Error',
+                    'No se pudo enviar el mensaje por WhatsApp',
+                    'error'
+                );
+            }
+        });
+}
+
+// ============================================
+// REGISTRAR NOTIFICACIÓN ENVIADA
+// ============================================
+
+window.registrarNotificacion = function(reservaId, tipo) {
+    fetch(`/api/reservas/${reservaId}/notificacion`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+            tipo: tipo,
+            enviado: true,
+            timestamp: new Date().toISOString()
+        })
+    })
+    .then(() => {
+        // Actualizar UI
+        const btn = document.querySelector(`.btn-whatsapp[data-reserva="${reservaId}"]`);
+        if (btn) {
+            btn.innerHTML = '✅ Enviado';
+            btn.style.background = 'rgba(16, 185, 129, 0.15)';
+            btn.style.color = '#10b981';
+            btn.disabled = true;
+        }
+    })
+    .catch(error => console.error('Error al registrar notificación:', error));
+}
+
+
+// ============================================
+// INICIAR CRONÓMETROS AL CARGAR
+// ============================================
+// Para evitar duplicación de eventos
+if(!window.cronometrosIniciados) {
+    window.cronometrosIniciados = true;
+    document.addEventListener('DOMContentLoaded', function() {
+        const cronometros = document.querySelectorAll('.cronometro-card');
+        cronometros.forEach(card => {
+            const reservaId = card.dataset.reservaId;
+            const fecha = card.dataset.fecha;
+            const hora = card.dataset.hora;
+            if (reservaId && fecha && hora) {
+                window.iniciarCronometro(reservaId, fecha, hora);
+            }
+        });
+    });
+} else {
+    // Si ya cargó, iniciar directamente los que estén en el DOM (para navegaciones sin recarga)
+    const cronometros = document.querySelectorAll('.cronometro-card');
+    cronometros.forEach(card => {
+        const reservaId = card.dataset.reservaId;
+        const fecha = card.dataset.fecha;
+        const hora = card.dataset.hora;
+        if (reservaId && fecha && hora) {
+            window.iniciarCronometro(reservaId, fecha, hora);
+        }
+    });
+}
+</script>
+
+<style>
+/* ============================================
+   CRONÓMETRO - MEJORADO
+   ============================================ */
+.cronometro-card {
+    background: white;
+    border-radius: 16px;
+    padding: 20px 24px;
+    border: 1px solid rgba(26, 26, 26, 0.06);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+    transition: all 0.3s ease;
+}
+
+.cronometro-card:hover {
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+}
+
+.cronometro-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+}
+
+.cronometro-cliente {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.cliente-avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #9e2a2b, #d4a574);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 0.9rem;
+}
+
+.cliente-nombre {
+    font-weight: 600;
+    color: #1a1a1a;
+    font-size: 0.95rem;
+    display: block;
+}
+
+.cliente-telefono {
+    font-size: 0.8rem;
+    color: rgba(26, 26, 26, 0.4);
+}
+
+.cronometro-close {
+    background: transparent;
+    border: none;
+    font-size: 1.2rem;
+    color: rgba(26, 26, 26, 0.3);
+    cursor: pointer;
+    padding: 4px 8px;
+    transition: all 0.3s ease;
+}
+
+.cronometro-close:hover {
+    color: #1a1a1a;
+    transform: rotate(90deg);
+}
+
+.cronometro-tiempo {
+    text-align: center;
+    padding: 16px 0 8px;
+}
+
+.tiempo-restante {
+    font-size: 3rem;
+    font-weight: 700;
+    font-family: 'Inter', monospace;
+    color: #1a1a1a;
+    transition: color 0.3s ease;
+}
+
+.tiempo-label {
+    display: block;
+    font-size: 0.7rem;
+    color: rgba(26, 26, 26, 0.3);
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    margin-top: 2px;
+}
+
+.cronometro-bar {
+    width: 100%;
+    height: 6px;
+    background: rgba(26, 26, 26, 0.06);
+    border-radius: 3px;
+    overflow: hidden;
+    margin: 12px 0 10px;
+}
+
+.cronometro-progreso {
+    height: 100%;
+    border-radius: 3px;
+    transition: width 1s linear;
+}
+
+.cronometro-estado {
+    text-align: center;
+    margin: 8px 0 14px;
+}
+
+.estado-badge {
+    display: inline-block;
+    padding: 4px 14px;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    font-weight: 500;
+}
+
+.estado-badge.pendiente {
+    background: rgba(59, 130, 246, 0.1);
+    color: #3b82f6;
+}
+
+.estado-badge.proximo {
+    background: rgba(245, 158, 11, 0.1);
+    color: #f59e0b;
+}
+
+.estado-badge.urgente {
+    background: rgba(239, 68, 68, 0.1);
+    color: #ef4444;
+    animation: pulseUrgente 1s ease-in-out infinite;
+}
+
+.estado-badge.expirado {
+    background: rgba(107, 114, 128, 0.1);
+    color: #6b7280;
+}
+
+@keyframes pulseUrgente {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.05); }
+}
+
+.cronometro-acciones {
+    display: flex;
+    gap: 10px;
+}
+
+.btn-whatsapp,
+.btn-cancelar {
+    flex: 1;
+    padding: 10px 16px;
+    border: none;
+    border-radius: 10px;
+    font-size: 0.85rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-family: 'Inter', sans-serif;
+}
+
+.btn-whatsapp {
+    background: rgba(37, 211, 102, 0.1);
+    color: #25d366;
+}
+
+.btn-whatsapp:hover {
+    background: rgba(37, 211, 102, 0.2);
+    transform: scale(1.02);
+}
+
+.btn-whatsapp:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none !important;
+}
+
+.btn-cancelar {
+    background: rgba(239, 68, 68, 0.1);
+    color: #ef4444;
+}
+
+.btn-cancelar:hover {
+    background: rgba(239, 68, 68, 0.2);
+    transform: scale(1.02);
+}
+
+/* ============================================
+   ALERTA DEL ADMIN
+   ============================================ */
+:global(.alerta-admin) {
+    background: #1a1a1a;
+    color: #fffaf0;
+    border-radius: 16px;
+    padding: 20px 24px;
+    margin-bottom: 20px;
+    display: flex;
+    align-items: flex-start;
+    gap: 16px;
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.2);
+    border-left: 4px solid #f59e0b;
+    animation: slideDown 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        transform: translateY(-20px) scale(0.98);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+:global(.alerta-icon) {
+    font-size: 2rem;
+    flex-shrink: 0;
+    animation: bellRing 0.5s ease 0.5s;
+}
+
+@keyframes bellRing {
+    0%, 100% { transform: rotate(0); }
+    25% { transform: rotate(15deg); }
+    50% { transform: rotate(-15deg); }
+    75% { transform: rotate(10deg); }
+}
+
+:global(.alerta-contenido) {
+    flex: 1;
+}
+
+:global(.alerta-contenido strong) {
+    display: block;
+    font-size: 1.1rem;
+    color: #f59e0b;
+}
+
+:global(.alerta-contenido p) {
+    margin: 4px 0 8px;
+    font-size: 0.95rem;
+    color: rgba(255, 250, 240, 0.8);
+}
+
+:global(.alerta-detalles) {
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+    margin: 8px 0 12px;
+    padding: 8px 12px;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 8px;
+    font-size: 0.85rem;
+    color: rgba(255, 250, 240, 0.6);
+}
+
+:global(.alerta-acciones) {
+    display: flex;
+    gap: 10px;
+}
+
+:global(.btn-alerta-whatsapp) {
+    background: rgba(37, 211, 102, 0.15);
+    color: #25d366;
+    border: none;
+    padding: 8px 20px;
+    border-radius: 8px;
+    font-size: 0.85rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+:global(.btn-alerta-whatsapp:hover) {
+    background: rgba(37, 211, 102, 0.25);
+    transform: scale(1.02);
+}
+
+:global(.btn-alerta-cerrar) {
+    background: transparent;
+    color: rgba(255, 250, 240, 0.3);
+    border: none;
+    padding: 8px 16px;
+    border-radius: 8px;
+    font-size: 0.85rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+:global(.btn-alerta-cerrar:hover) {
+    color: #fffaf0;
+    background: rgba(255, 255, 255, 0.05);
+}
+
+/* ============================================
+   RESPONSIVE
+   ============================================ */
+@media (max-width: 640px) {
+    .cronometro-card {
+        padding: 14px 16px;
+    }
+    
+    .tiempo-restante {
+        font-size: 2.2rem;
+    }
+    
+    :global(.alerta-admin) {
+        flex-direction: column;
+        padding: 16px;
+    }
+    
+    :global(.alerta-detalles) {
+        flex-direction: column;
+        gap: 4px;
+    }
+    
+    :global(.alerta-acciones) {
+        flex-direction: column;
+    }
+    
+    :global(.btn-alerta-whatsapp),
+    :global(.btn-alerta-cerrar) {
+        width: 100%;
+        text-align: center;
+    }
+}
+</style>

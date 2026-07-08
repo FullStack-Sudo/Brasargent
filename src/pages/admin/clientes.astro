@@ -1,0 +1,624 @@
+---
+// src/pages/admin/clientes.astro
+// Página de gestión de clientes
+import AdminLayout from '../../layouts/AdminLayout.astro';
+import pool from '../../lib/db';
+
+// Obtener parámetros de búsqueda
+const url = new URL(Astro.request.url);
+const busqueda = url.searchParams.get('busqueda') || '';
+const filtro = url.searchParams.get('filtro') || '';
+
+// Construir query de clientes
+let sql = `
+    SELECT 
+        c.id,
+        c.nombre,
+        c.telefono,
+        c.codigo_pais,
+        c.telefono_completo,
+        c.email,
+        c.fecha_registro,
+        c.ultima_reserva,
+        c.total_reservas,
+        c.notas,
+        c.activo,
+        COUNT(r.id) AS reservas_totales,
+        MAX(r.fecha) AS ultima_reserva_detalle
+    FROM clientes c
+    LEFT JOIN reservas r ON c.telefono = r.telefono AND c.codigo_pais = r.codigo_pais
+    WHERE 1=1
+`;
+
+const params: any[] = [];
+
+if (busqueda) {
+    sql += ` AND (c.nombre LIKE ? OR c.telefono LIKE ? OR c.telefono_completo LIKE ?)`;
+    const searchPattern = `%${busqueda}%`;
+    params.push(searchPattern, searchPattern, searchPattern);
+}
+
+sql += ` GROUP BY c.id ORDER BY c.fecha_registro DESC`;
+
+const [clientesRows] = await pool.query(sql, params) as any[];
+const clientes = clientesRows;
+
+// Estadísticas
+const estadisticas = {
+    total: clientes.length,
+    activos: clientes.filter((c: any) => c.activo === 1).length,
+    con_reservas: clientes.filter((c: any) => c.total_reservas > 0).length
+};
+
+// Formatear fecha
+const formatearFecha = (fecha: string) => {
+    if (!fecha) return '-';
+    return new Date(fecha).toLocaleDateString('es-ES', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric'
+    });
+};
+---
+
+<AdminLayout title="Clientes" description="Gestión de todos los clientes registrados">
+    <!-- Estadísticas -->
+    <div class="stats-grid">
+        <div class="stat-card">
+            <div class="stat-icon" style="background: rgba(59, 130, 246, 0.1); color: #3b82f6;">👥</div>
+            <div class="stat-info">
+                <span class="stat-number">{estadisticas.total}</span>
+                <span class="stat-label">Total Clientes</span>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon" style="background: rgba(16, 185, 129, 0.1); color: #10b981;">✅</div>
+            <div class="stat-info">
+                <span class="stat-number">{estadisticas.activos}</span>
+                <span class="stat-label">Activos</span>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon" style="background: rgba(158, 42, 43, 0.1); color: #9e2a2b;">📋</div>
+            <div class="stat-info">
+                <span class="stat-number">{estadisticas.con_reservas}</span>
+                <span class="stat-label">Con Reservas</span>
+            </div>
+        </div>
+    </div>
+        
+        <!-- Buscador -->
+        <div class="buscador-container">
+        <form method="GET" class="buscador-form">
+            <div class="buscador-input">
+                <span class="buscador-icon">🔍</span>
+                <input 
+                    type="text" 
+                    name="busqueda" 
+                    placeholder="Buscar por nombre o teléfono..." 
+                    value={busqueda}
+                />
+            </div>
+            <button type="submit" class="btn-buscar">Buscar</button>
+            {busqueda && (
+                <a href="/admin/clientes" class="btn-limpiar">✕ Limpiar</a>
+            )}
+        </form>
+    </div>
+    
+    <!-- Tabla -->
+    <div class="section-card">
+            {clientes.length === 0 ? (
+                <div class="empty-state">
+                    <span class="empty-icon">📭</span>
+                    <p>No hay clientes registrados</p>
+                    <span class="empty-sub">Los clientes aparecerán aquí cuando hagan reservas</span>
+                </div>
+            ) : (
+                <div class="table-wrapper">
+                    <table class="tabla-clientes">
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>Nombre</th>
+                                <th>Teléfono</th>
+                                <th>Reservas</th>
+                                <th>Última Reserva</th>
+                                <th>Registro</th>
+                                <th>Estado</th>
+                                <th>Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {clientes.map((cliente: any, index: number) => (
+                                <tr>
+                                    <td>{index + 1}</td>
+                                    <td>
+                                        <strong>{cliente.nombre}</strong>
+                                    </td>
+                                    <td>
+                                        <a href={`https://wa.me/${cliente.telefono_completo || '591' + cliente.telefono}`} 
+                                           target="_blank" 
+                                           class="whatsapp-link">
+                                            💬 {cliente.codigo_pais || '591'} {cliente.telefono}
+                                        </a>
+                                    </td>
+                                    <td>
+                                        <span class="badge-reservas">{cliente.total_reservas || 0}</span>
+                                    </td>
+                                    <td>
+                                        {cliente.ultima_reserva ? formatearFecha(cliente.ultima_reserva) : '-'}
+                                    </td>
+                                    <td>{formatearFecha(cliente.fecha_registro)}</td>
+                                    <td>
+                                        <span class={`badge ${cliente.activo ? 'badge-activo' : 'badge-inactivo'}`}>
+                                            {cliente.activo ? '✅ Activo' : '❌ Inactivo'}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <div class="acciones-btns">
+                                            <button class="btn-whatsapp" 
+                                                    onclick={`enviarWhatsAppCliente('${cliente.telefono_completo || '591' + cliente.telefono}', '${cliente.nombre}')`}>
+                                                💬
+                                            </button>
+                                            <button class="btn-detalle" 
+                                                    onclick={`verReservasCliente(${cliente.id})`} title="Ver detalles">
+                                                📋
+                                            </button>
+                                            <button class="btn-eliminar" 
+                                                    onclick={`borrarCliente(${cliente.id}, '${cliente.nombre}')`} title="Eliminar cliente">
+                                                🗑️
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                </div>
+            )}
+        </div>
+</AdminLayout>
+
+<script>
+// ============================================
+// FUNCIONES DE CLIENTES
+// ============================================
+
+window.enviarWhatsAppCliente = function(telefono, nombre) {
+    const mensaje = `🍖 BRASARGENT - ¡Hola ${nombre}!\n\nGracias por ser parte de BRASARGENT. \nQueremos ofrecerte promociones especiales.\n\n¿Te gustaría recibir nuestras ofertas exclusivas? 🔥`;
+    
+    window.open(`https://wa.me/${telefono}?text=${encodeURIComponent(mensaje)}`, '_blank');
+}
+
+window.verReservasCliente = async function(id) {
+    try {
+        const response = await fetch(`/api/clientes/${id}/reservas`);
+        const data = await response.json();
+        
+        if (!data.success) {
+            alert(data.error || 'Error al obtener las reservas.');
+            return;
+        }
+
+        const reservas = data.reservas;
+        
+        // Remover modal existente si lo hay
+        const existente = document.getElementById('modalReservasDetalle');
+        if (existente) existente.remove();
+
+        const formatFecha = (f) => {
+            const date = new Date(f);
+            return date.toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' });
+        };
+        
+        const badgeColor = (estado) => {
+            const colors = {
+                'pendiente': 'background: #fef3c7; color: #d97706;',
+                'confirmada': 'background: #d1fae5; color: #059669;',
+                'completada': 'background: #dbeafe; color: #2563eb;',
+                'rechazada': 'background: #fee2e2; color: #dc2626;',
+                'cancelada': 'background: #f3f4f6; color: #4b5563;'
+            };
+            return colors[estado] || colors['pendiente'];
+        };
+
+        const listaReservas = reservas.length === 0 
+            ? `<div class="empty-state"><span class="empty-icon">📭</span><p>Este cliente no tiene reservas registradas.</p></div>`
+            : `<div class="reservas-list">
+                ${reservas.map(r => `
+                    <div class="reserva-item">
+                        <div class="reserva-header">
+                            <strong>${r.sucursal_nombre || 'Sucursal desconocida'}</strong>
+                            <span class="badge" style="${badgeColor(r.estado)}">${r.estado.toUpperCase()}</span>
+                        </div>
+                        <div class="reserva-body">
+                            <span>📅 ${formatFecha(r.fecha)}</span>
+                            <span>🕐 ${r.hora}</span>
+                            <span>👥 ${r.numero_personas} per.</span>
+                        </div>
+                    </div>
+                `).join('')}
+               </div>`;
+
+        const modalHTML = `
+            <div class="modal-overlay" id="modalReservasDetalle" onclick="window.cerrarModalDetalles()">
+                <div class="modal-container" onclick="event.stopPropagation()">
+                    <div class="modal-header">
+                        <h2>📋 Historial de Reservas</h2>
+                        <button class="modal-close" onclick="window.cerrarModalDetalles()">✕</button>
+                    </div>
+                    <div class="modal-body">
+                        ${listaReservas}
+                    </div>
+                    <div class="modal-footer">
+                        <button class="btn-cancel" onclick="window.cerrarModalDetalles()">Cerrar</button>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        document.body.insertAdjacentHTML('beforeend', modalHTML);
+        document.body.classList.add('modal-open');
+        
+    } catch (error) {
+        console.error('Error fetching reservations:', error);
+        alert('Error de conexión al obtener detalles.');
+    }
+}
+
+window.cerrarModalDetalles = function() {
+    const modal = document.getElementById('modalReservasDetalle');
+    if (modal) {
+        modal.style.opacity = '0';
+        setTimeout(() => {
+            modal.remove();
+            document.body.classList.remove('modal-open');
+        }, 300);
+    }
+}
+
+window.borrarCliente = async function(id, nombre) {
+    if (confirm(`¿Estás seguro de que deseas eliminar al cliente ${nombre}?\n\nEsta acción no se puede deshacer.`)) {
+        try {
+            const response = await fetch(`/api/clientes/${id}`, {
+                method: 'DELETE'
+            });
+            const result = await response.json();
+            
+            if (result.success) {
+                window.location.reload();
+            } else {
+                alert(result.error || 'Hubo un error al eliminar el cliente.');
+            }
+        } catch (error) {
+            console.error('Error:', error);
+            alert('Error de conexión al intentar eliminar.');
+        }
+    }
+}
+
+// ============================================
+// AUTO-BÚSQUEDA CON DEBOUNCE
+// ============================================
+let timeoutId;
+
+document.addEventListener('DOMContentLoaded', function() {
+    const input = document.querySelector('input[name="busqueda"]');
+    if (input) {
+        input.addEventListener('input', function() {
+            clearTimeout(timeoutId);
+            timeoutId = setTimeout(() => {
+                this.form.submit();
+            }, 500);
+        });
+    }
+});
+</script>
+
+<style is:global>
+/* ============================================
+   MODAL DE DETALLES - ESTILOS (GLOBALES PARA JS)
+   ============================================ */
+.modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(4px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+    padding: 20px;
+    animation: fadeIn 0.3s ease;
+}
+
+.modal-container {
+    background: #fffaf0;
+    border-radius: 20px;
+    max-width: 520px;
+    width: 100%;
+    max-height: 90vh;
+    overflow-y: auto;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    animation: slideUp 0.3s ease;
+}
+
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+
+.modal-header {
+    padding: 20px 24px 16px;
+    border-bottom: 1px solid rgba(26, 26, 26, 0.06);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+.modal-header h2 { font-family: 'Playfair Display', serif; font-size: 1.3rem; margin: 0; color: #1a1a1a; }
+.modal-close { background: none; border: none; font-size: 1.2rem; cursor: pointer; color: #1a1a1a; }
+.modal-body { padding: 20px 24px; }
+.modal-footer { padding: 16px 24px; border-top: 1px solid rgba(26, 26, 26, 0.06); text-align: right; }
+.btn-cancel { padding: 10px 28px; border: 1.5px solid rgba(26, 26, 26, 0.1); border-radius: 10px; background: transparent; cursor: pointer; font-family: 'Inter', sans-serif; font-size: 0.95rem; }
+.btn-cancel:hover { background: rgba(26, 26, 26, 0.04); }
+
+.reservas-list { display: flex; flex-direction: column; gap: 12px; }
+.reserva-item { background: white; border: 1px solid rgba(0,0,0,0.05); border-radius: 12px; padding: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.02); }
+.reserva-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+.reserva-header strong { color: #1a1a1a; font-size: 1.05rem; }
+.reserva-body { display: flex; gap: 16px; font-size: 0.9rem; color: rgba(26,26,26,0.6); flex-wrap: wrap; }
+
+/* ============================================
+   ESTILOS DE CLIENTES
+   ============================================ */
+.clientes-page { padding: 24px; max-width: 1400px; margin: 0 auto; }
+
+.buscador-container {
+    background: white;
+    padding: 16px 20px;
+    border-radius: 12px;
+    margin-bottom: 24px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+
+.buscador-form {
+    display: flex;
+    gap: 16px;
+    align-items: center;
+}
+
+.buscador-input {
+    flex: 1;
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.buscador-icon {
+    position: absolute;
+    left: 14px;
+    color: rgba(26, 26, 26, 0.4);
+}
+
+.buscador-input input {
+    width: 100%;
+    padding: 10px 14px 10px 40px;
+    border: 1.5px solid rgba(26, 26, 26, 0.08);
+    border-radius: 8px;
+    font-size: 0.95rem;
+    background: white;
+    transition: all 0.3s ease;
+    font-family: 'Inter', sans-serif;
+}
+
+.buscador-input input:focus {
+    outline: none;
+    border-color: #9e2a2b;
+    box-shadow: 0 0 0 3px rgba(158, 42, 43, 0.08);
+}
+
+.btn-buscar {
+    padding: 10px 24px;
+    background: #9e2a2b;
+    color: #fffaf0;
+    border: none;
+    border-radius: 8px;
+    font-size: 0.9rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-family: 'Inter', sans-serif;
+}
+
+.btn-buscar:hover { background: #7a2021; }
+
+.btn-limpiar {
+    padding: 10px 16px;
+    background: transparent;
+    color: #1a1a1a;
+    border: 1.5px solid rgba(26, 26, 26, 0.08);
+    border-radius: 8px;
+    font-size: 0.9rem;
+    text-decoration: none;
+    transition: all 0.3s ease;
+}
+
+.btn-limpiar:hover { background: rgba(26, 26, 26, 0.04); }
+
+.section-card {
+    background: white;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+
+.table-wrapper {
+    overflow-x: auto;
+}
+
+.tabla-clientes {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.tabla-clientes thead {
+    background: #f8f5f0;
+}
+
+.tabla-clientes th {
+    padding: 12px 16px;
+    text-align: left;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: rgba(26, 26, 26, 0.5);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    border-bottom: 1px solid rgba(26, 26, 26, 0.06);
+}
+
+.tabla-clientes td {
+    padding: 12px 16px;
+    font-size: 0.9rem;
+    color: #1a1a1a;
+    border-bottom: 1px solid rgba(26, 26, 26, 0.04);
+    vertical-align: middle;
+}
+
+.tabla-clientes tr:hover td {
+    background: rgba(255, 250, 240, 0.3);
+}
+
+.badge-reservas {
+    display: inline-block;
+    padding: 2px 12px;
+    border-radius: 20px;
+    background: rgba(59, 130, 246, 0.1);
+    color: #3b82f6;
+    font-weight: 600;
+}
+
+.badge-activo {
+    background: rgba(16, 185, 129, 0.1);
+    color: #10b981;
+}
+
+.badge-inactivo {
+    background: rgba(239, 68, 68, 0.1);
+    color: #ef4444;
+}
+
+.whatsapp-link {
+    color: #25d366;
+    text-decoration: none;
+    font-weight: 500;
+    transition: all 0.3s ease;
+}
+
+.whatsapp-link:hover {
+    color: #1da851;
+    text-decoration: underline;
+}
+
+.acciones-btns {
+    display: flex;
+    gap: 6px;
+}
+
+.acciones-btns button {
+    width: 32px;
+    height: 32px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.btn-whatsapp {
+    background: rgba(37, 211, 102, 0.1);
+    color: #25d366;
+}
+
+.btn-whatsapp:hover {
+    background: rgba(37, 211, 102, 0.2);
+    transform: scale(1.1);
+}
+
+.btn-detalle {
+    background: rgba(59, 130, 246, 0.1);
+    color: #3b82f6;
+}
+
+.btn-detalle:hover {
+    background: rgba(59, 130, 246, 0.2);
+    transform: scale(1.1);
+}
+
+.btn-eliminar {
+    background: rgba(239, 68, 68, 0.1);
+    color: #ef4444;
+}
+
+.btn-eliminar:hover {
+    background: rgba(239, 68, 68, 0.2);
+    transform: scale(1.1);
+}
+
+.empty-state {
+    text-align: center;
+    padding: 48px 24px;
+}
+
+.empty-icon {
+    font-size: 3rem;
+    display: block;
+    margin-bottom: 12px;
+}
+
+.empty-state p {
+    font-size: 1.1rem;
+    font-weight: 500;
+    color: #1a1a1a;
+    margin: 0;
+}
+
+.empty-sub {
+    color: rgba(26, 26, 26, 0.3);
+    font-size: 0.9rem;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .estadisticas-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .buscador-form {
+        flex-direction: column;
+    }
+    
+    .buscador-input {
+        width: 100%;
+    }
+    
+    .btn-buscar,
+    .btn-limpiar {
+        width: 100%;
+        text-align: center;
+    }
+    
+    .page-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 12px;
+    }
+    
+    .tabla-clientes td,
+    .tabla-clientes th {
+        padding: 8px 12px;
+        font-size: 0.8rem;
+    }
+}
+</style>

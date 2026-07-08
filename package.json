@@ -13,11 +13,13 @@
     "@tailwindcss/vite": "^4.1.18",
     "aos": "^2.3.4",
     "astro": "^5.16.11",
+    "bcryptjs": "^3.0.3",
     "mysql2": "^3.22.6",
     "tailwindcss": "^4.1.18",
     "zod": "^4.4.3"
   },
   "devDependencies": {
+    "@types/bcryptjs": "^3.0.0",
     "tsx": "^4.23.0"
   }
 }

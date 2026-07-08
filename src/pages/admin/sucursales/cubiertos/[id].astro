@@ -1,0 +1,95 @@
+---
+import AdminLayout from '../../../../layouts/AdminLayout.astro';
+import pool from '../../../../lib/db';
+
+const { id } = Astro.params;
+
+// Auth check
+const session = Astro.cookies.get("session");
+if (!session || session.value !== "authenticated") {
+    return Astro.redirect("/admin/login");
+}
+
+const sucursalesData = await pool.query(
+    'SELECT * FROM sucursales WHERE id = ?',
+    [id]
+) as any[];
+
+const sucursal = sucursalesData[0]?.[0];
+
+if (!sucursal) {
+    return Astro.redirect("/admin/sucursales");
+}
+---
+
+<AdminLayout title="Ajustar Cubiertos" description={`Modificar capacidad para ${sucursal.nombre}`}>
+    <div class="section-card max-w-2xl mx-auto p-8" style="background: white; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.04);">
+        <div class="flex items-center gap-4 mb-8">
+            <span class="text-4xl">🪑</span>
+            <div>
+                <h2 class="text-2xl font-serif text-gray-900 font-semibold">Ajustar Capacidad</h2>
+                <p class="text-gray-500">{sucursal.nombre} - Capacidad Actual: {sucursal.capacidad_total} cubiertos</p>
+            </div>
+        </div>
+
+        <form id="formAjustarCapacidad" class="space-y-6">
+            <input type="hidden" id="sucursalId" value={sucursal.id} />
+            
+            <div class="form-group flex flex-col gap-2">
+                <label class="font-medium text-gray-700">Nueva Capacidad Total de Cubiertos</label>
+                <input 
+                    type="number" 
+                    id="nuevaCapacidad" 
+                    min={sucursal.cubiertos_ocupados || 1} 
+                    value={sucursal.capacidad_total}
+                    class="px-4 py-3 border-2 border-gray-100 rounded-xl focus:outline-none focus:border-[#9e2a2b] transition-colors"
+                    required
+                />
+                <p class="text-sm text-gray-500">
+                    Actualmente hay {sucursal.cubiertos_ocupados || 0} cubiertos ocupados. 
+                    La nueva capacidad no puede ser menor a este número.
+                </p>
+            </div>
+
+            <div class="flex gap-4 pt-4">
+                <a href="/admin/sucursales" class="px-6 py-3 bg-gray-100 text-gray-700 rounded-xl font-medium hover:bg-gray-200 transition-colors flex-1 text-center">
+                    Cancelar
+                </a>
+                <button type="submit" class="px-6 py-3 bg-[#9e2a2b] text-white rounded-xl font-medium hover:bg-[#7a2021] transition-colors flex-1 text-center">
+                    Guardar Cambios
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <script>
+        document.getElementById('formAjustarCapacidad')?.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const sucursalId = (document.getElementById('sucursalId') as HTMLInputElement).value;
+            const nuevaCapacidad = (document.getElementById('nuevaCapacidad') as HTMLInputElement).value;
+            
+            try {
+                const response = await fetch('/api/sucursales/cubiertos', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        sucursal_id: sucursalId,
+                        capacidad_total: parseInt(nuevaCapacidad)
+                    })
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    alert('✅ Capacidad actualizada correctamente');
+                    window.location.href = '/admin/sucursales';
+                } else {
+                    alert('❌ Error: ' + result.error);
+                }
+            } catch (error) {
+                alert('❌ Error de conexión al actualizar');
+            }
+        });
+    </script>
+</AdminLayout>
