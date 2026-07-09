@@ -8,14 +8,32 @@
 >
   <div class="max-w-7xl mx-auto px-2 sm:px-6 lg:px-8">
     <!-- Logo centrado -->
-    <div class="flex justify-center mb-8">
+    <div class="flex justify-center mb-6">
       <img
         src="/img/logo/logo-SF.png"
         alt="Brasargent Rodizio Logo"
-        class="h-42 w-auto object-contain"
+        class="h-42 w-auto object-contain drop-shadow-2xl hover:scale-105 transition-transform duration-300"
       />
     </div>
 
+    <!-- Ubicación y Download App -->
+    <div class="flex flex-col items-center justify-center mb-12 space-y-6 text-center">
+      <div class="inline-flex items-center justify-center gap-2 text-black font-bold text-xl md:text-2xl tracking-wide">
+        <svg class="w-7 h-7 text-[#9e2a2b]" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path>
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path>
+        </svg>
+        <span>Ubicados en Santa Cruz - Bolivia</span>
+      </div>
+      <br>
+      <a href="/descargas/brasargent.apk" download class="btn-download-app inline-flex items-center justify-center gap-3 px-8 py-4 bg-[#8a2426] text-white rounded-full transition-all duration-300">
+        <svg class="w-7 h-7 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
+        </svg>
+        <span class="font-bold text-lg leading-none">Descargar la App Gratis</span>
+      </a>
+    </div>
+<br>
     <!-- Redes sociales centradas -->
     <div class="flex justify-center items-center gap-8 mb-10">
       <a
@@ -259,6 +277,35 @@
 
   .font-lato {
     font-family: "Lato", sans-serif;
+  }
+
+  /* Animación latido y resplandor para el botón de descarga */
+  @keyframes heartbeat-glow {
+    0% {
+      transform: scale(1);
+      box-shadow: 0 0 0 0 rgba(138, 36, 38, 0.7);
+    }
+    50% {
+      transform: scale(1.05);
+      box-shadow: 0 0 20px 10px rgba(138, 36, 38, 0.4);
+    }
+    100% {
+      transform: scale(1);
+      box-shadow: 0 0 0 0 rgba(138, 36, 38, 0);
+    }
+  }
+
+  .btn-download-app {
+    animation: heartbeat-glow 2s infinite ease-in-out;
+    border: 2px solid transparent;
+  }
+
+  .btn-download-app:hover {
+    animation: none;
+    transform: scale(1.05);
+    background-color: #6c1c1d;
+    box-shadow: 0 10px 30px rgba(138, 36, 38, 0.6);
+    border-color: #d4af37;
   }
 
   /* Tech Glass Card */

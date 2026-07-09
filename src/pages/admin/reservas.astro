@@ -347,7 +347,7 @@ window.enviarWhatsAppAdmin = function(telefono, nombre, sucursal, fecha, hora) {
         year: 'numeric'
     });
     
-    const mensaje = `BRASARGENT - Confirmación de Reserva\n\nHola ${nombre}!\n\nTu reserva en ${sucursal} está:\n📅 ${fechaFormateada}\n🕐 ${hora}\n\n¿Confirmas tu asistencia?\n¡Te esperamos! 🔥`;
+    const mensaje = `BRASARGENT - Confirmación de Reserva\n\nHola ${nombre}!\n\nTu reserva en ${sucursal} está:\n- Fecha: ${fechaFormateada}\n- Hora: ${hora}\n\n¿Confirmas tu asistencia?\n¡Te esperamos!`;
     
     window.open(`https://wa.me/${telefono}?text=${encodeURIComponent(mensaje)}`, '_blank');
 }
