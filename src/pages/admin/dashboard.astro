@@ -48,6 +48,19 @@ const [cubiertos] = await pool.query(`
 ---
 
 <AdminLayout title="Dashboard" description="Resumen de actividad y gestión de tu restaurante">
+    <!-- 🔴 BOTÓN REINICIAR RESERVAS -->
+    <div class="dashboard-header">
+        <div class="header-info">
+            <h1>📊 Dashboard</h1>
+            <p>Resumen de actividad y gestión de tu restaurante</p>
+        </div>
+        <div class="header-actions">
+            <button class="btn-reiniciar" onclick="reiniciarReservas()">
+                🔄 Reiniciar Reservas
+            </button>
+        </div>
+    </div>
+
     <!-- Tarjetas de estadísticas -->
     <div class="stats-grid">
         <div class="stat-card">
@@ -196,6 +209,56 @@ const [cubiertos] = await pool.query(`
 </AdminLayout>
 
 <style is:global>
+/* ============================================
+   BOTÓN REINICIAR RESERVAS
+   ============================================ */
+.dashboard-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 24px;
+}
+
+.header-info h1 {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.8rem;
+    color: #1a1a1a;
+    margin: 0;
+}
+
+.header-info p {
+    color: rgba(26, 26, 26, 0.5);
+    margin: 4px 0 0;
+}
+
+.btn-reiniciar {
+    padding: 10px 24px;
+    background: #ef4444;
+    color: white;
+    border: none;
+    border-radius: 10px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-family: 'Inter', sans-serif;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.btn-reiniciar:hover {
+    background: #dc2626;
+    transform: scale(1.02);
+    box-shadow: 0 4px 16px rgba(239, 68, 68, 0.3);
+}
+
+.btn-reiniciar:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none !important;
+}
+
 /* ============================================
    ESTILOS DEL DASHBOARD
    ============================================ */
@@ -464,6 +527,16 @@ const [cubiertos] = await pool.query(`
 
 /* Responsive */
 @media (max-width: 768px) {
+    .dashboard-header {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 12px;
+    }
+    
+    .btn-reiniciar {
+        justify-content: center;
+    }
+
     .stats-grid {
         grid-template-columns: 1fr 1fr;
     }
@@ -488,3 +561,46 @@ const [cubiertos] = await pool.query(`
     }
 }
 </style>
+
+<script is:inline>
+// ============================================
+// REINICIAR RESERVAS
+// ============================================
+
+function reiniciarReservas() {
+    if (!confirm('⚠️ ¿Estás seguro de reiniciar todas las reservas?\\n\\nSe eliminarán todas las reservas del día actual y se liberarán todos los cubiertos.')) {
+        return;
+    }
+    
+    if (!confirm('🔴 Esta acción NO se puede deshacer. ¿Continuar?')) {
+        return;
+    }
+    
+    const btn = document.querySelector('.btn-reiniciar');
+    btn.textContent = '⏳ Procesando...';
+    btn.disabled = true;
+    
+    fetch('/api/reservas/reiniciar', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        }
+    })
+    .then(response => response.json())
+    .then(result => {
+        if (result.success) {
+            alert(`✅ Reservas reiniciadas exitosamente\\n\\n📋 ${result.reservas_eliminadas} reservas eliminadas\\n🪑 ${result.cubiertos_liberados} cubiertos liberados`);
+            location.reload();
+        } else {
+            alert('❌ Error: ' + result.error);
+            btn.textContent = '🔄 Reiniciar Reservas';
+            btn.disabled = false;
+        }
+    })
+    .catch(() => {
+        alert('❌ Error de conexión. Intenta de nuevo.');
+        btn.textContent = '🔄 Reiniciar Reservas';
+        btn.disabled = false;
+    });
+}
+</script>

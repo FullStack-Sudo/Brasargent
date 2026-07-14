@@ -186,7 +186,7 @@ const formatearFecha = (fecha: string) => {
 // ============================================
 
 window.enviarWhatsAppCliente = function(telefono, nombre) {
-    const mensaje = `🍖 BRASARGENT - ¡Hola ${nombre}!\n\nGracias por ser parte de BRASARGENT. \nQueremos ofrecerte promociones especiales.\n\n¿Te gustaría recibir nuestras ofertas exclusivas? 🔥`;
+    const mensaje = `BRASARGENT - ¡Hola ${nombre}!\n\nGracias por ser parte de BRASARGENT. \nQueremos ofrecerte promociones especiales.\n\n¿Te gustaría recibir nuestras ofertas exclusivas?`;
     
     window.open(`https://wa.me/${telefono}?text=${encodeURIComponent(mensaje)}`, '_blank');
 }

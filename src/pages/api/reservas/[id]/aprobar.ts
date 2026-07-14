@@ -128,10 +128,10 @@ async function enviarWhatsApp(telefono: string, estado: string, reserva: any, pe
     const fecha = dateObj.toISOString().split('T')[0];
 
     const mensajes = {
-        confirmada: `✅ ¡Reserva CONFIRMADA en BRASARGENT!\n\nHola ${reserva.nombre_cliente}!\n\nTu reserva ha sido aprobada:\n📍 ${reserva.sucursal_nombre}\n📅 ${fecha}\n🕐 ${reserva.hora}\n👥 ${personas} personas (${personas} cubiertos)\n\n¡Te esperamos! 🔥`,
-        rechazada: `❌ Lo sentimos, tu reserva no pudo ser confirmada.\n\nHola ${reserva.nombre_cliente}!\n\nNo tenemos disponibilidad para:\n📅 ${fecha}\n🕐 ${reserva.hora}\n\nTe invitamos a intentar con otra fecha u hora.\n¡Disculpa las molestias!`
+        confirmada: `¡Reserva CONFIRMADA en BRASARGENT!\n\nHola ${reserva.nombre_cliente}!\n\nTu reserva ha sido aprobada:\n ${reserva.sucursal_nombre}\n ${fecha}\n ${reserva.hora}\n ${personas} personas (${personas} cubiertos)\n\n¡Te esperamos! `,
+        rechazada: `Lo sentimos, tu reserva no pudo ser confirmada.\n\nHola ${reserva.nombre_cliente}!\n\nNo tenemos disponibilidad para:\n ${fecha}\n ${reserva.hora}\n\nTe invitamos a intentar con otra fecha u hora.\n¡Disculpa las molestias!`
     };
     
-    console.log(`📱 Enviando WhatsApp a ${telefono}:`, mensajes[estado as keyof typeof mensajes]);
+    console.log(`Enviando WhatsApp a ${telefono}:`, mensajes[estado as keyof typeof mensajes]);
     return true;
 }

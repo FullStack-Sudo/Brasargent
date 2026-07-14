@@ -19,7 +19,9 @@
     "zod": "^4.4.3"
   },
   "devDependencies": {
+    "@astrojs/check": "^0.9.9",
     "@types/bcryptjs": "^3.0.0",
-    "tsx": "^4.23.0"
+    "tsx": "^4.23.0",
+    "typescript": "^5.9.3"
   }
 }

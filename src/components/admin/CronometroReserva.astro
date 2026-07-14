@@ -328,20 +328,20 @@ window.enviarWhatsAppCliente = function(reservaId) {
             const fechaLimpia = typeof r.fecha === 'string' && r.fecha.includes('T') ? r.fecha.split('T')[0] : r.fecha;
             
             // Mensaje preconfigurado
-            const mensaje = `🍖 BRASARGENT - Recordatorio de Reserva
+            const mensaje = `BRASARGENT - Recordatorio de Reserva
 
 Hola ${r.nombre_cliente}!
 
 Tu reserva está programada para:
-📅 ${fechaLimpia}
-🕐 ${r.hora}
-👥 ${r.numero_personas} personas
-📍 ${r.sucursal}
+Fecha: ${fechaLimpia}
+Hora: ${r.hora}
+Personas: ${r.numero_personas}
+Sucursal: ${r.sucursal}
 
-⚠️ Te esperamos en 10 minutos.
+Te esperamos en 10 minutos.
 Si te vas a demorar, responde este mensaje.
 
-¡Te esperamos! 🔥`;
+¡Te esperamos!`;
 
             // URL de WhatsApp
             const url = `https://wa.me/${numeroCompleto}?text=${encodeURIComponent(mensaje)}`;

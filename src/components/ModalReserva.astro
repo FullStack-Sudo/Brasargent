@@ -9,7 +9,7 @@ const { sucursalId, sucursalNombre } = Astro.props;
         <!-- HEADER -->
         <div class="modal-header">
             <div class="modal-title">
-                <span class="icon">📅</span>
+                
                 <div>
                     <h2>Reservar en {sucursalNombre}</h2>
                     <p>Completa tus datos en 30 segundos</p>
@@ -27,7 +27,7 @@ const { sucursalId, sucursalNombre } = Astro.props;
             <!-- Nombres Completos -->
             <div class="form-group">
                 <label>
-                    👤 Nombres Completos
+                    Nombres Completos
                     <span class="required">*</span>
                 </label>
                 <input 
@@ -44,7 +44,7 @@ const { sucursalId, sucursalNombre } = Astro.props;
             <!-- Número Celular -->
             <div class="form-group">
                 <label>
-                    📱 Número Celular
+                    Número Celular
                     <span class="required">*</span>
                 </label>
                 <div class="telefono-wrapper">
@@ -85,7 +85,7 @@ const { sucursalId, sucursalNombre } = Astro.props;
             <!-- Correo Electrónico (Opcional) -->
             <div class="form-group">
                 <label>
-                    ✉️ Correo Electrónico
+                    Correo Electrónico
                     <span class="optional">(Opcional)</span>
                 </label>
                 <input 
@@ -101,7 +101,7 @@ const { sucursalId, sucursalNombre } = Astro.props;
             <div class="form-row">
                 <div class="form-group">
                     <label>
-                        👶 Niños
+                        Niños
                         <span class="optional">(Opcional)</span>
                     </label>
                     <input 
@@ -116,7 +116,7 @@ const { sucursalId, sucursalNombre } = Astro.props;
                 </div>
                 <div class="form-group">
                     <label>
-                        👥 Total Personas
+                        Total Personas
                         <span class="required">*</span>
                     </label>
                     <input 
@@ -133,25 +133,39 @@ const { sucursalId, sucursalNombre } = Astro.props;
                 </div>
             </div>
 
-            <!-- Hora de Llegada -->
-            <div class="form-group">
-                <label>
-                    🕐 Hora de Llegada
-                    <span class="required">*</span>
-                </label>
-                <input 
-                    type="time" 
-                    id={`horaReserva-${sucursalId}`} 
-                    required
-                />
-                <span class="field-hint">Selecciona la hora a la que llegarás</span>
-                <span class="error-message" id={`errorHora-${sucursalId}`}>Por favor selecciona una hora</span>
+            <!-- Selector de Turno y Hora -->
+            <div class="form-row">
+                <div class="form-group">
+                    <label>
+                        Turno
+                        <span class="required">*</span>
+                    </label>
+                    <select id={`turnoReserva-${sucursalId}`} required>
+                        <option value="">Selecciona un turno</option>
+                        <option value="manana">Mañana</option>
+                        <option value="tarde">Tarde</option>
+                        <option value="noche">Noche</option>
+                    </select>
+                    <span class="error-message" id={`errorTurno-${sucursalId}`}>Por favor selecciona un turno</span>
+                </div>
+                <div class="form-group">
+                    <label>
+                        Hora de Llegada
+                        <span class="required">*</span>
+                    </label>
+                    <input 
+                        type="time" 
+                        id={`horaReserva-${sucursalId}`} 
+                        required
+                    />
+                    <span class="error-message" id={`errorHora-${sucursalId}`}>Por favor selecciona una hora</span>
+                </div>
             </div>
 
             <!-- Comentarios (Opcional) -->
             <div class="form-group">
                 <label>
-                    📝 Comentarios
+                    Comentarios
                     <span class="optional">(Opcional)</span>
                 </label>
                 <textarea 
@@ -171,7 +185,7 @@ const { sucursalId, sucursalNombre } = Astro.props;
                     <input type="checkbox" id={`whatsappConfirmacion-${sucursalId}`} checked />
                     <span class="custom-checkbox"></span>
                     <div class="checkbox-text">
-                        <strong>📱 Recibir confirmación por WhatsApp</strong>
+                        <strong>Recibir confirmación por WhatsApp</strong>
                         <small>Te notificaremos cuando tu reserva sea aprobada</small>
                     </div>
                 </label>
@@ -184,7 +198,7 @@ const { sucursalId, sucursalNombre } = Astro.props;
                 Cancelar
             </button>
             <button type="submit" class="btn-save" id={`btnEnviarReserva-${sucursalId}`} form={`formReserva-${sucursalId}`}>
-                <span class="btn-text">📅 Solicitar Mesa</span>
+                <span class="btn-text">Solicitar Mesa</span>
                 <span class="btn-spinner hidden">⏳</span>
             </button>
         </div>
@@ -201,20 +215,9 @@ window.abrirModalPublico = function(sucursalId) {
     if (modal) {
         modal.classList.remove('hidden');
         document.body.style.overflow = 'hidden';
-        
-        // Configurar hora actual (redondeada a 30 min)
-        const horaInput = document.getElementById(`horaReserva-${sucursalId}`);
-        const ahora = new Date();
-        let horas = ahora.getHours();
-        let minutos = Math.ceil(ahora.getMinutes() / 30) * 30;
-        if (minutos === 60) {
-            horas++;
-            minutos = 0;
-        }
-        const horaStr = `${String(horas).padStart(2, '0')}:${String(minutos).padStart(2, '0')}`;
-        horaInput.value = horaStr;
     }
 }
+
 
 window.cerrarModalReserva = function(event, sucursalId) {
     if (event && event.target !== event.currentTarget) return;
@@ -281,10 +284,29 @@ window.enviarFormularioReserva = async function(e, sucursalId, sucursalNombre) {
     
     if (!isValid) return;
     
-    // Fecha actual formateada (YYYY-MM-DD)
+    // 🔴 VALIDAR TURNO Y HORA SELECCIONADOS
+    const turnoInput = document.getElementById(`turnoReserva-${sucursalId}`);
+    const horaInput  = document.getElementById(`horaReserva-${sucursalId}`);
+    const turnoSeleccionado = turnoInput?.value;
+    const horaSeleccionada  = horaInput?.value;
+
+    if (!turnoSeleccionado) {
+        const errorTurno = document.getElementById(`errorTurno-${sucursalId}`);
+        if (errorTurno) errorTurno.style.display = 'block';
+        isValid = false;
+    }
+
+    if (!horaSeleccionada) {
+        const errorHoraEl = document.getElementById(`errorHora-${sucursalId}`);
+        if (errorHoraEl) errorHoraEl.style.display = 'block';
+        isValid = false;
+    }
+
+    if (!isValid) return;
+
+    const horaStr = horaSeleccionada;
     const hoy = new Date().toISOString().split('T')[0];
     
-    // Preparar datos
     const data = {
         sucursal_id: sucursalId,
         nombre_cliente: document.getElementById(`nombreCliente-${sucursalId}`).value.trim(),
@@ -294,7 +316,8 @@ window.enviarFormularioReserva = async function(e, sucursalId, sucursalNombre) {
         ninos: parseInt(document.getElementById(`ninos-${sucursalId}`).value) || 0,
         numero_personas: parseInt(document.getElementById(`totalPersonas-${sucursalId}`).value),
         fecha: hoy,
-        hora: document.getElementById(`horaReserva-${sucursalId}`).value,
+        hora: horaStr,
+        turno: turnoSeleccionado,
         observaciones: document.getElementById(`comentarios-${sucursalId}`).value.trim() || null,
         whatsapp_notificacion: document.getElementById(`whatsappConfirmacion-${sucursalId}`).checked
     };
@@ -453,6 +476,261 @@ document.addEventListener('keydown', function(e) {
     }
 });
 </script>
+
+<style is:global>
+/* ============================================
+   TURNOS — LOADING / ERROR
+   ============================================ */
+.hidden { display: none !important; }
+
+.turnos-loading {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 16px 12px;
+    color: rgba(26, 26, 26, 0.45);
+    font-size: 0.85rem;
+}
+
+.loading-spinner {
+    width: 18px;
+    height: 18px;
+    border: 2px solid rgba(158, 42, 43, 0.15);
+    border-top-color: #9e2a2b;
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+    flex-shrink: 0;
+}
+
+.turnos-error {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 14px 16px;
+    background: rgba(239, 68, 68, 0.05);
+    border: 1px solid rgba(239, 68, 68, 0.12);
+    border-radius: 12px;
+    color: #b91c1c;
+    font-size: 0.85rem;
+    font-weight: 500;
+}
+
+.turnos-error-icon { font-size: 1.1rem; }
+
+/* ============================================
+   TURNOS — TARJETAS
+   ============================================ */
+.turnos-container { display: flex; flex-direction: column; gap: 12px; }
+
+.field-label {
+    display: block;
+    font-weight: 500;
+    color: #1a1a1a;
+    font-size: 0.9rem;
+    margin-bottom: 8px;
+}
+
+.field-label .required { color: #9e2a2b; margin-left: 2px; }
+
+.turnos-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.turno-card {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 14px 16px;
+    background: white;
+    border: 1.5px solid rgba(26, 26, 26, 0.08);
+    border-radius: 14px;
+    cursor: pointer;
+    transition: all 0.25s ease;
+    text-align: left;
+    width: 100%;
+    font-family: 'Inter', sans-serif;
+}
+
+.turno-card:hover:not(:disabled):not(.turno-card--disabled) {
+    border-color: #9e2a2b;
+    background: rgba(158, 42, 43, 0.02);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(158, 42, 43, 0.1);
+}
+
+.turno-card--selected {
+    border-color: #9e2a2b !important;
+    background: rgba(158, 42, 43, 0.05) !important;
+    box-shadow: 0 0 0 3px rgba(158, 42, 43, 0.1);
+}
+
+.turno-card--disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+    background: rgba(26, 26, 26, 0.02);
+}
+
+.turno-icono {
+    font-size: 1.6rem;
+    flex-shrink: 0;
+    width: 36px;
+    text-align: center;
+}
+
+.turno-info {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    flex: 1;
+    min-width: 0;
+}
+
+.turno-nombre {
+    font-weight: 600;
+    font-size: 0.95rem;
+    color: #1a1a1a;
+}
+
+.turno-horario {
+    font-size: 0.78rem;
+    color: rgba(26, 26, 26, 0.4);
+    font-weight: 400;
+}
+
+/* Badge de disponibilidad */
+.turno-badge {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 4px;
+    flex-shrink: 0;
+}
+
+.turno-pct-bar {
+    width: 60px;
+    height: 4px;
+    background: rgba(26, 26, 26, 0.08);
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.turno-pct-fill {
+    height: 100%;
+    border-radius: 4px;
+    transition: width 0.4s ease;
+}
+
+.turno-disponible .turno-pct-fill { background: #10b981; }
+.turno-casi-lleno .turno-pct-fill { background: #f59e0b; }
+.turno-lleno      .turno-pct-fill { background: #ef4444; }
+
+.turno-badge-label {
+    font-size: 0.68rem;
+    font-weight: 600;
+    letter-spacing: 0.3px;
+    text-transform: uppercase;
+}
+
+.turno-disponible .turno-badge-label { color: #10b981; }
+.turno-casi-lleno .turno-badge-label { color: #f59e0b; }
+.turno-lleno      .turno-badge-label { color: #ef4444; }
+
+/* ============================================
+   HORAS WRAPPER (aparece al seleccionar turno)
+   ============================================ */
+.horas-wrapper {
+    border-top: 1px solid rgba(26, 26, 26, 0.06);
+    padding-top: 14px;
+    margin-top: 4px;
+}
+
+@keyframes slideDown {
+    from { opacity: 0; transform: translateY(-8px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+.horas-animate-in { animation: slideDown 0.3s ease; }
+
+/* ============================================
+   HORAS GRID
+   ============================================ */
+.horas-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+    gap: 8px;
+    margin-top: 8px;
+    max-height: 200px;
+    overflow-y: auto;
+    padding: 4px;
+}
+
+.hora-option {
+    padding: 8px 12px;
+    border: 1.5px solid rgba(26, 26, 26, 0.08);
+    border-radius: 8px;
+    text-align: center;
+    font-size: 0.85rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.25s ease;
+    background: white;
+    color: #1a1a1a;
+    font-family: 'Inter', sans-serif;
+}
+
+.hora-option:hover:not(.disabled) {
+    border-color: #9e2a2b;
+    background: rgba(158, 42, 43, 0.04);
+    transform: scale(1.04);
+}
+
+.hora-option.selected {
+    border-color: #9e2a2b;
+    background: #9e2a2b;
+    color: white;
+    box-shadow: 0 2px 8px rgba(158, 42, 43, 0.25);
+}
+
+.hora-option.disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
+    text-decoration: line-through;
+}
+
+.hora-option .hora-disponibles {
+    display: block;
+    font-size: 0.6rem;
+    color: rgba(26, 26, 26, 0.3);
+    font-weight: 400;
+}
+
+.hora-option.selected .hora-disponibles { color: rgba(255, 255, 255, 0.6); }
+
+.horas-loading {
+    text-align: center;
+    padding: 20px;
+    color: rgba(26, 26, 26, 0.3);
+    grid-column: 1 / -1;
+}
+
+.horas-error {
+    color: #ef4444;
+    font-size: 0.85rem;
+    text-align: center;
+    padding: 12px;
+    grid-column: 1 / -1;
+}
+
+@media (max-width: 480px) {
+    .horas-grid {
+        grid-template-columns: repeat(auto-fill, minmax(70px, 1fr));
+        gap: 6px;
+    }
+    .turno-pct-bar { width: 44px; }
+}
+</style>
 
 <style>
 /* ============================================
@@ -1002,5 +1280,66 @@ document.addEventListener('keydown', function(e) {
         grid-template-columns: 1fr;
         gap: 0;
     }
+}
+
+/* ============================================
+   ESTILOS ADICIONALES DE MODALRESERVA
+   ============================================ */
+.capacidad-info {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 8px;
+    padding: 8px 12px;
+    background: rgba(255, 250, 240, 0.5);
+    border-radius: 8px;
+    font-size: 0.75rem;
+    color: rgba(26, 26, 26, 0.4);
+    grid-column: 1 / -1;
+}
+
+.hora-seleccionada-info {
+    margin-top: 8px;
+    font-size: 0.85rem;
+    font-weight: 500;
+    text-align: center;
+    grid-column: 1 / -1;
+}
+
+.horas-error {
+    color: #ef4444;
+    font-size: 0.85rem;
+    text-align: center;
+    padding: 12px;
+    grid-column: 1 / -1;
+}
+
+.horas-error small {
+    display: block;
+    margin-top: 4px;
+    font-size: 0.75rem;
+    color: rgba(239, 68, 68, 0.6);
+}
+
+.hora-option.disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
+    text-decoration: line-through;
+}
+
+.hora-option.disabled:hover {
+    border-color: rgba(26, 26, 26, 0.08);
+    background: white;
+    transform: none;
+}
+
+.hora-option .hora-disponibles {
+    display: block;
+    font-size: 0.6rem;
+    color: rgba(26, 26, 26, 0.3);
+    font-weight: 400;
+}
+
+.hora-option.selected .hora-disponibles {
+    color: rgba(255, 255, 255, 0.6);
 }
 </style>

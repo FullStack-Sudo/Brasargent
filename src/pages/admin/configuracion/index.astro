@@ -1,516 +1,654 @@
 ---
 // src/pages/admin/configuracion/index.astro
-// Gestión de usuarios y roles
+// Página de configuración con switches
 
 import AdminLayout from '../../../layouts/AdminLayout.astro';
 import pool from '../../../lib/db';
 
-// Obtener todos los usuarios
-const usuariosData = await pool.query(`
-    SELECT 
-        u.id,
-        u.nombre,
-        u.apellido,
-        u.email,
-        u.telefono,
-        u.rol,
-        u.activo,
-        s.nombre AS sucursal_nombre,
-        u.created_at
-    FROM usuarios u
-    LEFT JOIN sucursales s ON u.sucursal_id = s.id
-    ORDER BY u.created_at DESC
-`) as any[];
+// Obtener configuración actual
+const [configuracion] = await pool.query(
+    'SELECT clave, valor, tipo, descripcion FROM configuracion_sistema ORDER BY id'
+) as any[];
 
-const usuarios = usuariosData[0] || [];
-
-// Obtener sucursales para asignar
-const sucursalesData = await pool.query(`
-    SELECT id, nombre FROM sucursales WHERE activo = 1
-`) as any[];
-const sucursales = sucursalesData[0] || [];
-
-// Estadísticas por rol
-const totalUsuarios = usuarios.length;
-const admins = usuarios.filter((u: any) => u.rol === 'admin').length;
-const meseros = usuarios.filter((u: any) => u.rol === 'mesero').length;
-const cocineros = usuarios.filter((u: any) => u.rol === 'cocinero').length;
-
-const roles = ['admin', 'mesero', 'cocinero'];
-const rolLabels: Record<string, string> = {
-    'admin': '👑 Administrador',
-    'mesero': '🍽️ Mesero',
-    'cocinero': '👨‍🍳 Cocinero'
+// Agrupar por categoría
+const modulos = {
+    reservas: configuracion.find(c => c.clave === 'modulo_reservas'),
+    cocina: configuracion.find(c => c.clave === 'modulo_cocina'),
+    menu: configuracion.find(c => c.clave === 'modulo_menu'),
+    clientes: configuracion.find(c => c.clave === 'modulo_clientes')
 };
-const rolColors: Record<string, string> = {
-    'admin': '#9e2a2b',
-    'mesero': '#3b82f6',
-    'cocinero': '#f59e0b'
+
+// Función para formatear el estado
+const getEstado = (valor: string) => {
+    return valor === 'true' ? '✅ Activo' : '❌ Inactivo';
+};
+
+const getEstadoClass = (valor: string) => {
+    return valor === 'true' ? 'estado-activo' : 'estado-inactivo';
+};
+
+const getSwitchClass = (valor: string) => {
+    return valor === 'true' ? 'switch-on' : 'switch-off';
 };
 ---
 
-<AdminLayout title="Configuración" description="Gestión de usuarios y roles del sistema">
-    <!-- Estadísticas -->
-    <div class="stats-grid">
-        <div class="stat-card">
-            <div class="stat-icon" style="background: rgba(59, 130, 246, 0.1); color: #3b82f6;">👥</div>
-            <div class="stat-info">
-                <span class="stat-number">{totalUsuarios}</span>
-                <span class="stat-label">Total Usuarios</span>
+<AdminLayout title="Configuración" description="Control de funcionalidades del sistema">
+    <div class="configuracion-page">
+        <!-- Header -->
+        <div class="page-header">
+            <div>
+                <h1>⚙️ Configuración del Sistema</h1>
+                <p>Activa o desactiva módulos según las necesidades del restaurante</p>
             </div>
         </div>
-        <div class="stat-card">
-            <div class="stat-icon" style="background: rgba(158, 42, 43, 0.1); color: #9e2a2b;">👑</div>
-            <div class="stat-info">
-                <span class="stat-number">{admins}</span>
-                <span class="stat-label">Administradores</span>
-            </div>
-        </div>
-        <div class="stat-card">
-            <div class="stat-icon" style="background: rgba(59, 130, 246, 0.1); color: #3b82f6;">🍽️</div>
-            <div class="stat-info">
-                <span class="stat-number">{meseros}</span>
-                <span class="stat-label">Meseros</span>
-            </div>
-        </div>
-        <div class="stat-card">
-            <div class="stat-icon" style="background: rgba(245, 158, 11, 0.1); color: #f59e0b;">👨‍🍳</div>
-            <div class="stat-info">
-                <span class="stat-number">{cocineros}</span>
-                <span class="stat-label">Cocineros</span>
-            </div>
-        </div>
-    </div>
 
-    <!-- Formulario para crear usuario -->
-    <div class="section-card" style="margin-bottom: 24px;">
-        <div class="section-header">
-            <h2 style="font-size: 1.1rem; font-weight: 600; color: #1a1a1a; margin-bottom: 16px;">👤 Crear Nuevo Usuario</h2>
+        <!-- Tarjeta de Información -->
+        <div class="info-card">
+            <div class="info-icon">ℹ️</div>
+            <div class="info-content">
+                <strong>Control de Funcionalidades</strong>
+                <p>Los switches permiten activar o desactivar módulos completos. Al desactivar un módulo, el acceso a sus rutas queda restringido.</p>
+            </div>
         </div>
-        <form id="formCrearUsuario" class="crear-usuario-form">
-            <div class="form-row">
-                <div class="form-group">
-                    <label>Nombre *</label>
-                    <input type="text" id="nombreUsuario" placeholder="Carlos" required />
-                </div>
-                <div class="form-group">
-                    <label>Apellido</label>
-                    <input type="text" id="apellidoUsuario" placeholder="Gómez" />
-                </div>
-            </div>
-            <div class="form-row">
-                <div class="form-group">
-                    <label>Email *</label>
-                    <input type="email" id="emailUsuario" placeholder="carlos@brasargent.com" required />
-                </div>
-                <div class="form-group">
-                    <label>Teléfono</label>
-                    <input type="tel" id="telefonoUsuario" placeholder="70000111" />
-                </div>
-            </div>
-            <div class="form-row">
-                <div class="form-group">
-                    <label>Contraseña *</label>
-                    <input type="password" id="passwordUsuario" placeholder="••••••••" required minlength="6" />
-                </div>
-                <div class="form-group">
-                    <label>Rol *</label>
-                    <select id="rolUsuario" required>
-                        <option value="">Seleccionar rol</option>
-                        <option value="admin">👑 Administrador</option>
-                        <option value="mesero">🍽️ Mesero</option>
-                        <option value="cocinero">👨‍🍳 Cocinero</option>
-                    </select>
-                </div>
-            </div>
-            <div class="form-group">
-                <label>Sucursal</label>
-                <select id="sucursalUsuario">
-                    <option value="">Sin asignar</option>
-                    {sucursales.map((s: any) => (
-                        <option value={s.id}>{s.nombre}</option>
-                    ))}
-                </select>
-            </div>
-            <button type="submit" class="btn-crear" style="margin-top: 16px;">➕ Crear Usuario</button>
-        </form>
-    </div>
 
-    <!-- Tabla de Usuarios -->
-    <div class="section-card">
-        <div class="section-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
-            <h2 style="font-size: 1.1rem; font-weight: 600; color: #1a1a1a; margin: 0;">👥 Usuarios del Sistema</h2>
-            <span class="usuarios-total">{totalUsuarios} usuarios</span>
+        <!-- Switches -->
+        <div class="switches-grid">
+            <!-- Módulo Reservas -->
+            <div class="switch-card">
+                <div class="switch-header">
+                    <span class="switch-icon">📅</span>
+                    <div>
+                        <h3>Reservas</h3>
+                        <p>Sistema de reservas completo</p>
+                    </div>
+                </div>
+                <div class="switch-body">
+                    <div class="switch-container">
+                        <label class="switch">
+                            <input 
+                                type="checkbox" 
+                                id="switch_reservas"
+                                checked={modulos.reservas?.valor === 'true'}
+                                onchange="toggleModulo('modulo_reservas', this.checked)"
+                            />
+                            <span class="slider"></span>
+                        </label>
+                        <span class={`estado-badge ${getEstadoClass(modulos.reservas?.valor || 'false')}`}>
+                            {getEstado(modulos.reservas?.valor || 'false')}
+                        </span>
+                    </div>
+                    <div class="switch-descripcion">
+                        {modulos.reservas?.descripcion || 'Gestión de reservas'}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Módulo Cocina -->
+            <div class="switch-card">
+                <div class="switch-header">
+                    <span class="switch-icon">🔥</span>
+                    <div>
+                        <h3>Cocina</h3>
+                        <p>Pedidos mesero → cocina</p>
+                    </div>
+                </div>
+                <div class="switch-body">
+                    <div class="switch-container">
+                        <label class="switch">
+                            <input 
+                                type="checkbox" 
+                                id="switch_cocina"
+                                checked={modulos.cocina?.valor === 'true'}
+                                onchange="toggleModulo('modulo_cocina', this.checked)"
+                            />
+                            <span class="slider"></span>
+                        </label>
+                        <span class={`estado-badge ${getEstadoClass(modulos.cocina?.valor || 'false')}`}>
+                            {getEstado(modulos.cocina?.valor || 'false')}
+                        </span>
+                    </div>
+                    <div class="switch-descripcion">
+                        {modulos.cocina?.descripcion || 'Sistema de pedidos y cocina'}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Módulo Menú -->
+            <div class="switch-card">
+                <div class="switch-header">
+                    <span class="switch-icon">🍽️</span>
+                    <div>
+                        <h3>Menú</h3>
+                        <p>Gestión de platos por sucursal</p>
+                    </div>
+                </div>
+                <div class="switch-body">
+                    <div class="switch-container">
+                        <label class="switch">
+                            <input 
+                                type="checkbox" 
+                                id="switch_menu"
+                                checked={modulos.menu?.valor === 'true'}
+                                onchange="toggleModulo('modulo_menu', this.checked)"
+                            />
+                            <span class="slider"></span>
+                        </label>
+                        <span class={`estado-badge ${getEstadoClass(modulos.menu?.valor || 'false')}`}>
+                            {getEstado(modulos.menu?.valor || 'false')}
+                        </span>
+                    </div>
+                    <div class="switch-descripcion">
+                        {modulos.menu?.descripcion || 'Gestión de menú por sucursal'}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Módulo Clientes -->
+            <div class="switch-card">
+                <div class="switch-header">
+                    <span class="switch-icon">👥</span>
+                    <div>
+                        <h3>Clientes</h3>
+                        <p>Gestión de clientes y historial</p>
+                    </div>
+                </div>
+                <div class="switch-body">
+                    <div class="switch-container">
+                        <label class="switch">
+                            <input 
+                                type="checkbox" 
+                                id="switch_clientes"
+                                checked={modulos.clientes?.valor === 'true'}
+                                onchange="toggleModulo('modulo_clientes', this.checked)"
+                            />
+                            <span class="slider"></span>
+                        </label>
+                        <span class={`estado-badge ${getEstadoClass(modulos.clientes?.valor || 'false')}`}>
+                            {getEstado(modulos.clientes?.valor || 'false')}
+                        </span>
+                    </div>
+                    <div class="switch-descripcion">
+                        {modulos.clientes?.descripcion || 'Gestión de clientes y reservas'}
+                    </div>
+                </div>
+            </div>
         </div>
-        
-        {usuarios.length === 0 ? (
-            <div class="empty-state">
-                <span class="empty-icon">👤</span>
-                <p>No hay usuarios registrados</p>
+
+        <!-- Sidebar Dinámico (Actualizado según switches) -->
+        <div class="sidebar-preview">
+            <h3>📋 Vista Previa del Menú</h3>
+            <p>Así se verá el sidebar según los módulos activos:</p>
+            <div class="sidebar-preview-menu">
+                <div class={`preview-item ${modulos.reservas?.valor === 'true' ? 'active' : 'disabled'}`}>
+                    📅 Reservas {modulos.reservas?.valor === 'true' ? '✅' : '🔒'}
+                </div>
+                <div class={`preview-item ${modulos.clientes?.valor === 'true' ? 'active' : 'disabled'}`}>
+                    👥 Clientes {modulos.clientes?.valor === 'true' ? '✅' : '🔒'}
+                </div>
+                <div class={`preview-item ${modulos.menu?.valor === 'true' ? 'active' : 'disabled'}`}>
+                    🍽️ Menú {modulos.menu?.valor === 'true' ? '✅' : '🔒'}
+                </div>
+                <div class={`preview-item ${modulos.cocina?.valor === 'true' ? 'active' : 'disabled'}`}>
+                    🔥 Cocina {modulos.cocina?.valor === 'true' ? '✅' : '🔒'}
+                </div>
+                <div class="preview-item siempre-activo">⚙️ Configuración</div>
             </div>
-        ) : (
-            <div class="table-wrapper">
-                <table class="tabla-usuarios">
-                    <thead>
-                        <tr>
-                            <th>Usuario</th>
-                            <th>Email</th>
-                            <th>Teléfono</th>
-                            <th>Rol</th>
-                            <th>Sucursal</th>
-                            <th>Estado</th>
-                            <th>Acciones</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {usuarios.map((usuario: any) => (
-                            <tr>
-                                <td>
-                                    <strong>{usuario.nombre} {usuario.apellido || ''}</strong>
-                                </td>
-                                <td>{usuario.email}</td>
-                                <td>{usuario.telefono || '-'}</td>
-                                <td>
-                                    <span class="badge-rol" style={`background: ${rolColors[usuario.rol] || '#6b7280'}20; color: ${rolColors[usuario.rol] || '#6b7280'}`}>
-                                        {rolLabels[usuario.rol] || usuario.rol}
-                                    </span>
-                                </td>
-                                <td>{usuario.sucursal_nombre || 'Sin asignar'}</td>
-                                <td>
-                                    <span class={`badge ${usuario.activo ? 'badge-activo' : 'badge-inactivo'}`}>
-                                        {usuario.activo ? '✅ Activo' : '❌ Inactivo'}
-                                    </span>
-                                </td>
-                                <td>
-                                    <div class="acciones-btns">
-                                        <button class="btn-editar-usuario" onclick={`editarUsuario(${usuario.id})`}>✏️</button>
-                                        <button class="btn-toggle" onclick={`toggleUsuario(${usuario.id})`}>🔄</button>
-                                    </div>
-                                </td>
-                            </tr>
-                        ))}
-                    </tbody>
-                </table>
-            </div>
-        )}
+        </div>
     </div>
 </AdminLayout>
 
 <style is:global>
 /* ============================================
-   ESTILOS DE CONFIGURACIÓN
+   CONFIGURACIÓN - ESTILOS
    ============================================ */
-.section-card {
-    background: white;
-    border-radius: 12px;
-    padding: 24px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+.configuracion-page {
+    max-width: 900px;
+    margin: 0 auto;
 }
 
-.crear-usuario-form {
+.page-header {
+    margin-bottom: 24px;
+}
+
+.page-header h1 {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.8rem;
+    color: #1a1a1a;
+    margin: 0;
+}
+
+.page-header p {
+    color: rgba(26, 26, 26, 0.5);
+    margin: 4px 0 0;
+}
+
+/* Info Card */
+.info-card {
+    background: rgba(59, 130, 246, 0.04);
+    border: 1px solid rgba(59, 130, 246, 0.08);
+    border-radius: 12px;
+    padding: 16px 20px;
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+    margin-bottom: 24px;
+}
+
+.info-icon {
+    font-size: 1.5rem;
+    flex-shrink: 0;
+}
+
+.info-content strong {
+    display: block;
+    color: #1a1a1a;
+    font-size: 0.95rem;
+}
+
+.info-content p {
+    color: rgba(26, 26, 26, 0.5);
+    font-size: 0.85rem;
+    margin: 4px 0 0;
+}
+
+/* Switches Grid */
+.switches-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    gap: 16px;
+    margin-bottom: 32px;
+}
+
+.switch-card {
+    background: white;
+    border-radius: 14px;
+    padding: 20px 24px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+    transition: all 0.3s ease;
+    border: 1px solid rgba(26, 26, 26, 0.04);
+}
+
+.switch-card:hover {
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+}
+
+.switch-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 14px;
+}
+
+.switch-icon {
+    font-size: 1.8rem;
+}
+
+.switch-header h3 {
+    font-size: 1rem;
+    font-weight: 600;
+    color: #1a1a1a;
+    margin: 0;
+}
+
+.switch-header p {
+    font-size: 0.8rem;
+    color: rgba(26, 26, 26, 0.4);
+    margin: 2px 0 0;
+}
+
+.switch-body {
     display: flex;
     flex-direction: column;
+    gap: 8px;
+}
+
+.switch-container {
+    display: flex;
+    align-items: center;
     gap: 16px;
 }
 
-.crear-usuario-form .form-row {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 16px;
+/* ============================================
+   SWITCH TOGGLE - ESTILOS
+   ============================================ */
+.switch {
+    position: relative;
+    display: inline-block;
+    width: 52px;
+    height: 28px;
+    flex-shrink: 0;
 }
 
-.crear-usuario-form .form-group {
+.switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: #ccc;
+    border-radius: 28px;
+    transition: all 0.3s ease;
+}
+
+.slider::before {
+    content: '';
+    position: absolute;
+    height: 20px;
+    width: 20px;
+    left: 4px;
+    bottom: 4px;
+    background: white;
+    border-radius: 50%;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.switch input:checked + .slider {
+    background: #9e2a2b;
+}
+
+.switch input:checked + .slider::before {
+    transform: translateX(24px);
+}
+
+.switch input:disabled + .slider {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* Estado Badge */
+.estado-badge {
+    font-size: 0.75rem;
+    font-weight: 500;
+    padding: 4px 12px;
+    border-radius: 20px;
+}
+
+.estado-activo {
+    background: rgba(16, 185, 129, 0.1);
+    color: #10b981;
+}
+
+.estado-inactivo {
+    background: rgba(239, 68, 68, 0.1);
+    color: #ef4444;
+}
+
+.switch-descripcion {
+    font-size: 0.75rem;
+    color: rgba(26, 26, 26, 0.3);
+    padding-top: 4px;
+    border-top: 1px solid rgba(26, 26, 26, 0.04);
+}
+
+/* ============================================
+   SIDEBAR PREVIEW
+   ============================================ */
+.sidebar-preview {
+    background: #1a1a1a;
+    border-radius: 14px;
+    padding: 24px;
+    color: #fffaf0;
+}
+
+.sidebar-preview h3 {
+    font-size: 1rem;
+    font-weight: 600;
+    margin: 0 0 4px;
+}
+
+.sidebar-preview > p {
+    font-size: 0.85rem;
+    color: rgba(255, 250, 240, 0.3);
+    margin: 0 0 16px;
+}
+
+.sidebar-preview-menu {
     display: flex;
     flex-direction: column;
     gap: 4px;
 }
 
-.crear-usuario-form .form-group label {
-    font-size: 0.85rem;
-    font-weight: 500;
-    color: #1a1a1a;
-}
-
-.crear-usuario-form .form-group input,
-.crear-usuario-form .form-group select {
-    padding: 10px 14px;
-    border: 1.5px solid rgba(26, 26, 26, 0.08);
-    border-radius: 10px;
+.preview-item {
+    padding: 10px 16px;
+    border-radius: 8px;
     font-size: 0.9rem;
-    font-family: 'Inter', sans-serif;
     transition: all 0.3s ease;
-    background: white;
-    color: #1a1a1a;
 }
 
-.crear-usuario-form .form-group input:focus,
-.crear-usuario-form .form-group select:focus {
-    outline: none;
-    border-color: #9e2a2b;
-    box-shadow: 0 0 0 3px rgba(158, 42, 43, 0.08);
-}
-
-.btn-crear {
-    padding: 12px 28px;
-    background: #9e2a2b;
+.preview-item.active {
+    background: rgba(158, 42, 43, 0.12);
     color: #fffaf0;
-    border: none;
-    border-radius: 10px;
-    font-size: 0.95rem;
-    font-weight: 500;
-    cursor: pointer;
-    transition: all 0.3s ease;
-    font-family: 'Inter', sans-serif;
-    align-self: flex-start;
 }
 
-.btn-crear:hover {
-    background: #7a2021;
-    transform: scale(1.02);
+.preview-item.disabled {
+    color: rgba(255, 250, 240, 0.2);
+    text-decoration: line-through;
 }
 
-.usuarios-total {
-    font-size: 0.85rem;
-    color: rgba(26, 26, 26, 0.4);
+.preview-item.siempre-activo {
+    color: rgba(255, 250, 240, 0.4);
+    border-top: 1px solid rgba(255, 250, 240, 0.04);
+    margin-top: 4px;
+    padding-top: 12px;
 }
 
-.badge-rol {
-    display: inline-block;
-    padding: 4px 14px;
-    border-radius: 20px;
-    font-size: 0.75rem;
-    font-weight: 500;
-}
-
-.table-wrapper {
-    overflow-x: auto;
-}
-
-.tabla-usuarios {
-    width: 100%;
-    border-collapse: collapse;
-}
-
-.tabla-usuarios thead {
-    background: #f8f5f0;
-}
-
-.tabla-usuarios th {
-    padding: 10px 14px;
-    text-align: left;
-    font-size: 0.7rem;
-    font-weight: 600;
-    color: rgba(26, 26, 26, 0.4);
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    border-bottom: 1px solid rgba(26, 26, 26, 0.06);
-}
-
-.tabla-usuarios td {
-    padding: 10px 14px;
-    font-size: 0.85rem;
-    color: #1a1a1a;
-    border-bottom: 1px solid rgba(26, 26, 26, 0.04);
-    vertical-align: middle;
-}
-
-.tabla-usuarios tr:hover td {
-    background: rgba(255, 250, 240, 0.3);
-}
-
-.acciones-btns {
-    display: flex;
-    gap: 6px;
-}
-
-.acciones-btns button {
-    width: 32px;
-    height: 32px;
-    border: none;
-    border-radius: 6px;
-    cursor: pointer;
-    font-size: 0.9rem;
-    transition: all 0.3s ease;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-.btn-editar-usuario {
-    background: rgba(59, 130, 246, 0.1);
-    color: #3b82f6;
-}
-
-.btn-editar-usuario:hover {
-    background: rgba(59, 130, 246, 0.2);
-    transform: scale(1.1);
-}
-
-.btn-toggle {
-    background: rgba(245, 158, 11, 0.1);
-    color: #f59e0b;
-}
-
-.btn-toggle:hover {
-    background: rgba(245, 158, 11, 0.2);
-    transform: scale(1.1);
-}
-
-.badge-activo { background: rgba(16, 185, 129, 0.1); color: #10b981; }
-.badge-inactivo { background: rgba(239, 68, 68, 0.1); color: #ef4444; }
-.badge { display: inline-block; padding: 4px 12px; border-radius: 20px; font-size: 0.75rem; font-weight: 500; }
-
+/* ============================================
+   RESPONSIVE
+   ============================================ */
 @media (max-width: 768px) {
-    .crear-usuario-form .form-row {
+    .switches-grid {
         grid-template-columns: 1fr;
     }
     
-    .btn-crear {
-        width: 100%;
-        text-align: center;
+    .switch-card {
+        padding: 16px 18px;
+    }
+}
+
+@media (max-width: 480px) {
+    .switch-container {
+        flex-wrap: wrap;
     }
 }
 </style>
 
-<script>
+<script is:inline>
 // ============================================
-// CREAR USUARIO
+// TOGGLE DE MÓDULO
 // ============================================
-document.getElementById('formCrearUsuario')?.addEventListener('submit', async function(e) {
-    e.preventDefault();
+async function toggleModulo(clave, valor) {
+    const badge = document.querySelector(`.switch-card:has(#switch_${clave.replace('modulo_', '')}) .estado-badge`);
+    const switchEl = document.getElementById(`switch_${clave.replace('modulo_', '')}`);
     
-    const btn = document.querySelector('.btn-crear') as HTMLButtonElement;
-    const originalText = btn.textContent;
-    btn.textContent = '⏳ Creando...';
-    btn.disabled = true;
-    
-    const data = {
-        nombre: (document.getElementById('nombreUsuario') as HTMLInputElement).value.trim(),
-        apellido: (document.getElementById('apellidoUsuario') as HTMLInputElement).value.trim(),
-        email: (document.getElementById('emailUsuario') as HTMLInputElement).value.trim(),
-        telefono: (document.getElementById('telefonoUsuario') as HTMLInputElement).value.trim(),
-        password: (document.getElementById('passwordUsuario') as HTMLInputElement).value,
-        rol: (document.getElementById('rolUsuario') as HTMLSelectElement).value,
-        sucursal_id: (document.getElementById('sucursalUsuario') as HTMLSelectElement).value || null
-    };
-    
-    if (!data.nombre) {
-        alert('❌ El nombre es obligatorio');
-        btn.textContent = originalText;
-        btn.disabled = false;
-        return;
-    }
-    
-    if (!data.email || !data.email.includes('@')) {
-        alert('❌ Ingresa un email válido');
-        btn.textContent = originalText;
-        btn.disabled = false;
-        return;
-    }
-    
-    if (!data.password || data.password.length < 6) {
-        alert('❌ La contraseña debe tener al menos 6 caracteres');
-        btn.textContent = originalText;
-        btn.disabled = false;
-        return;
-    }
-    
-    if (!data.rol) {
-        alert('❌ Selecciona un rol');
-        btn.textContent = originalText;
-        btn.disabled = false;
-        return;
-    }
+    // Deshabilitar temporalmente
+    switchEl.disabled = true;
     
     try {
-        console.log('📤 Enviando datos:', data);
-        
-        const response = await fetch('/api/usuarios/crear', {
+        const response = await fetch('/api/configuracion', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(data)
-        });
-        
-        console.log('📥 Respuesta recibida:', response.status);
-        
-        let result;
-        try {
-            result = await response.json();
-        } catch (parseError) {
-            console.error('Error al parsear respuesta:', parseError);
-            throw new Error('Error al procesar la respuesta del servidor');
-        }
-        
-        if (result.success) {
-            alert('✅ Usuario creado exitosamente');
-            location.reload();
-        } else {
-            alert('❌ Error: ' + (result.error || 'Error desconocido'));
-            console.error('Error detallado:', result);
-        }
-    } catch (error: any) {
-        console.error('❌ Error de conexión:', error);
-        alert('❌ Error de conexión. Verifica: \n' +
-              '1. Que el servidor esté corriendo\n' +
-              '2. Que la base de datos esté activa\n' +
-              '3. Revisa la consola para más detalles\n\n' +
-              'Error: ' + (error.message || 'Error desconocido'));
-    } finally {
-        if (btn) {
-            btn.textContent = originalText;
-            btn.disabled = false;
-        }
-    }
-});
-
-// ============================================
-// PRUEBA DE CONEXIÓN AL CARGAR LA PÁGINA
-// ============================================
-async function testConnection() {
-    try {
-        const response = await fetch('/api/usuarios/test');
-        const result = await response.json();
-        if (result.success) {
-            console.log('✅ Conexión a la API exitosa');
-        } else {
-            console.warn('⚠️ La API responde pero con error:', result);
-        }
-    } catch (error) {
-        console.error('❌ No se puede conectar a la API:', error);
-    }
-}
-
-document.addEventListener('DOMContentLoaded', testConnection);
-
-// ============================================
-// EDITAR USUARIO
-// ============================================
-(window as any).editarUsuario = function(id: number) {
-    // Redirigir a página de edición
-    window.location.href = `/admin/configuracion/editar/${id}`;
-};
-
-// ============================================
-// TOGGLE USUARIO (Activar/Desactivar)
-// ============================================
-(window as any).toggleUsuario = async function(id: number) {
-    if (!confirm('¿Cambiar el estado de este usuario?')) return;
-    
-    try {
-        const response = await fetch(`/api/usuarios/${id}/toggle`, {
-            method: 'POST'
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                clave: clave,
+                valor: valor ? 'true' : 'false'
+            })
         });
         
         const result = await response.json();
         
         if (result.success) {
-            alert('✅ Estado actualizado');
-            location.reload();
+            // Actualizar badge
+            if (badge) {
+                const texto = valor ? '✅ Activo' : '❌ Inactivo';
+                badge.textContent = texto;
+                badge.className = `estado-badge ${valor ? 'estado-activo' : 'estado-inactivo'}`;
+            }
+            
+            // Actualizar preview del sidebar
+            actualizarPreview(clave, valor);
+            
+            // Mostrar notificación
+            mostrarNotificacion(
+                valor ? '✅ Módulo activado' : '❌ Módulo desactivado',
+                valor ? 'La funcionalidad está disponible' : 'La funcionalidad ha sido desactivada',
+                valor ? 'exito' : 'error'
+            );
+            
+            // Recargar después de 2 segundos para aplicar cambios
+            setTimeout(() => {
+                location.reload();
+            }, 2000);
+            
         } else {
             alert('❌ Error: ' + result.error);
+            switchEl.checked = !valor;
         }
     } catch (error) {
         alert('❌ Error de conexión');
+        switchEl.checked = !valor;
+    } finally {
+        switchEl.disabled = false;
     }
-};
+}
+
+// ============================================
+// ACTUALIZAR PREVIEW DEL SIDEBAR
+// ============================================
+function actualizarPreview(clave, valor) {
+    const mapping = {
+        'modulo_reservas': '📅 Reservas',
+        'modulo_clientes': '👥 Clientes',
+        'modulo_menu': '🍽️ Menú',
+        'modulo_cocina': '🔥 Cocina'
+    };
+    
+    const items = document.querySelectorAll('.preview-item');
+    items.forEach(item => {
+        const texto = item.textContent.trim();
+        const claveEncontrada = Object.keys(mapping).find(key => mapping[key] === texto.replace(/[✅🔒]/g, '').trim());
+        
+        if (claveEncontrada === clave) {
+            if (valor) {
+                item.className = 'preview-item active';
+                item.textContent = `${mapping[clave]} ✅`;
+            } else {
+                item.className = 'preview-item disabled';
+                item.textContent = `${mapping[clave]} 🔒`;
+            }
+        }
+    });
+}
+
+// ============================================
+// NOTIFICACIONES
+// ============================================
+function mostrarNotificacion(titulo, mensaje, tipo = 'info') {
+    const toast = document.createElement('div');
+    toast.className = `toast-notificacion toast-${tipo}`;
+    toast.innerHTML = `
+        <span class="toast-icon">${tipo === 'exito' ? '✅' : tipo === 'error' ? '❌' : 'ℹ️'}</span>
+        <div>
+            <strong>${titulo}</strong>
+            <p>${mensaje}</p>
+        </div>
+        <button onclick="this.parentElement.remove()">✕</button>
+    `;
+    document.body.appendChild(toast);
+    
+    setTimeout(() => {
+        if (toast.parentElement) {
+            toast.remove();
+        }
+    }, 3000);
+}
 </script>
+
+<style is:global>
+/* ============================================
+   TOAST NOTIFICACIONES
+   ============================================ */
+.toast-notificacion {
+    position: fixed;
+    top: 24px;
+    right: 24px;
+    z-index: 10000;
+    background: #1a1a1a;
+    color: #fffaf0;
+    padding: 16px 20px;
+    border-radius: 14px;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    min-width: 280px;
+    max-width: 420px;
+    animation: slideInRight 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes slideInRight {
+    from {
+        opacity: 0;
+        transform: translateX(100px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+.toast-exito {
+    border-left: 4px solid #10b981;
+}
+
+.toast-error {
+    border-left: 4px solid #ef4444;
+}
+
+.toast-icon {
+    font-size: 1.5rem;
+}
+
+.toast-notificacion strong {
+    display: block;
+    font-weight: 600;
+    font-size: 0.95rem;
+}
+
+.toast-notificacion p {
+    margin: 2px 0 0;
+    font-size: 0.85rem;
+    color: rgba(255, 250, 240, 0.6);
+}
+
+.toast-notificacion button {
+    background: transparent;
+    border: none;
+    color: rgba(255, 250, 240, 0.3);
+    font-size: 1.2rem;
+    cursor: pointer;
+    padding: 4px 8px;
+    transition: color 0.3s ease;
+}
+
+.toast-notificacion button:hover {
+    color: #fffaf0;
+}
+
+@media (max-width: 480px) {
+    .toast-notificacion {
+        top: 12px;
+        right: 12px;
+        left: 12px;
+        min-width: auto;
+    }
+}
+</style>

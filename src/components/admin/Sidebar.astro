@@ -1,42 +1,88 @@
 ---
 // src/components/admin/Sidebar.astro
-// Sidebar dinámico según rol del usuario
+// Sidebar dinámico según módulos activos
 
-// Obtener rol del usuario de la cookie
-const userRole = Astro.cookies.get('user_role')?.value || 'mesero';
+import pool from '../../lib/db';
+
+// Obtener configuración de módulos
+let configuracion = [];
+try {
+    const [rows] = await pool.query(
+        'SELECT clave, valor FROM configuracion_sistema'
+    );
+    configuracion = rows as any[];
+} catch (e) {
+    console.error("Error cargando configuracion:", e);
+}
+
+// Crear mapa de módulos activos con valores por defecto
+const modulosActivos: Record<string, boolean> = {
+    modulo_reservas: true,
+    modulo_clientes: true,
+    modulo_menu: true,
+    modulo_cocina: false  // 🔴 DESACTIVADO POR DEFECTO
+};
+
+configuracion.forEach((item: any) => {
+    modulosActivos[item.clave] = item.valor === 'true';
+});
+
+// Obtener rol del usuario
+const userRole = Astro.cookies.get('user_role')?.value || 'admin';
 const userName = Astro.cookies.get('user_name')?.value || 'Usuario';
 const currentPath = Astro.url.pathname;
 
-// Definir enlaces según rol
+// Definir enlaces según módulos activos y rol
 const links = [];
 
 // Admin: Acceso completo
 if (userRole === 'admin') {
-    links.push(
-        { href: '/admin/dashboard', icon: '📊', label: 'Dashboard' },
-        { href: '/admin/reservas', icon: '📅', label: 'Reservas' },
-        { href: '/admin/clientes', icon: '👥', label: 'Clientes' },
-        { href: '/admin/menu', icon: '🍽️', label: 'Menú' },
-        { href: '/admin/sucursales', icon: '🏢', label: 'Sucursales' },
-        { href: '/admin/configuracion', icon: '⚙️', label: 'Configuración' },
-        { href: '/admin/cocina', icon: '🔥', label: 'Cocina' }
-    );
+    // Dashboard siempre visible
+    links.push({ href: '/admin/dashboard', icon: '📊', label: 'Dashboard' });
+    
+    // Módulo Reservas
+    if (modulosActivos['modulo_reservas']) {
+        links.push({ href: '/admin/reservas', icon: '📅', label: 'Reservas' });
+    }
+    
+    // Módulo Clientes
+    if (modulosActivos['modulo_clientes']) {
+        links.push({ href: '/admin/clientes', icon: '👥', label: 'Clientes' });
+    }
+    
+    // Módulo Menú
+    if (modulosActivos['modulo_menu']) {
+        links.push({ href: '/admin/menu', icon: '🍽️', label: 'Menú' });
+    }
+    
+    // Módulo Cocina
+    if (modulosActivos['modulo_cocina']) {
+        links.push({ href: '/admin/cocina', icon: '🔥', label: 'Cocina' });
+    }
+    
+    // Sucursales siempre visible
+    links.push({ href: '/admin/sucursales', icon: '🏢', label: 'Sucursales' });
+    
+    // Configuración siempre visible
+    links.push({ href: '/admin/configuracion', icon: '⚙️', label: 'Configuración' });
 }
 
-// Mesero: Acceso limitado
+// Mesero: Acceso limitado a módulos activos
 if (userRole === 'mesero') {
-    links.push(
-        { href: '/admin/reservas', icon: '📅', label: 'Reservas' },
-        { href: '/admin/clientes', icon: '👥', label: 'Clientes' },
-        { href: '/admin/cocina', icon: '🔥', label: 'Cocina' }
-    );
+    if (modulosActivos['modulo_reservas']) {
+        links.push({ href: '/admin/reservas', icon: '📅', label: 'Reservas' });
+    }
+    if (modulosActivos['modulo_clientes']) {
+        links.push({ href: '/admin/clientes', icon: '👥', label: 'Clientes' });
+    }
+    if (modulosActivos['modulo_cocina']) {
+        links.push({ href: '/admin/cocina', icon: '🔥', label: 'Cocina' });
+    }
 }
 
-// Cocinero: Solo Cocina
-if (userRole === 'cocinero') {
-    links.push(
-        { href: '/admin/cocina', icon: '🔥', label: 'Cocina' }
-    );
+// Cocinero: Solo Cocina si está activa
+if (userRole === 'cocinero' && modulosActivos['modulo_cocina']) {
+    links.push({ href: '/admin/cocina', icon: '🔥', label: 'Cocina' });
 }
 ---
 
@@ -64,15 +110,23 @@ if (userRole === 'cocinero') {
     
     <!-- Navegación -->
     <nav class="sidebar-nav">
-        {links.map((link) => (
-            <a 
-                href={link.href} 
-                class={`sidebar-link ${currentPath === link.href || currentPath.startsWith(link.href + '/') ? 'active' : ''}`}
-            >
-                <span class="link-icon">{link.icon}</span>
-                <span class="link-text">{link.label}</span>
-            </a>
-        ))}
+        {links.length === 0 ? (
+            <div class="sidebar-empty">
+                <span>🔒</span>
+                <p>No hay módulos disponibles</p>
+                <small>Contacta al administrador</small>
+            </div>
+        ) : (
+            links.map((link) => (
+                <a 
+                    href={link.href} 
+                    class={`sidebar-link ${currentPath === link.href || currentPath.startsWith(link.href + '/') ? 'active' : ''}`}
+                >
+                    <span class="link-icon">{link.icon}</span>
+                    <span class="link-text">{link.label}</span>
+                </a>
+            ))
+        )}
     </nav>
     
     <!-- Footer -->
@@ -230,6 +284,28 @@ if (userRole === 'cocinero') {
 .link-text {
     flex: 1;
     text-align: left;
+}
+
+.sidebar-empty {
+    text-align: center;
+    padding: 32px 16px;
+}
+
+.sidebar-empty span {
+    font-size: 2rem;
+    display: block;
+    margin-bottom: 8px;
+}
+
+.sidebar-empty p {
+    color: rgba(255, 250, 240, 0.3);
+    font-size: 0.9rem;
+    margin: 0;
+}
+
+.sidebar-empty small {
+    color: rgba(255, 250, 240, 0.15);
+    font-size: 0.7rem;
 }
 
 .sidebar-footer {

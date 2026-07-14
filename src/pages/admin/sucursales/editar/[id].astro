@@ -1,20 +1,955 @@
 ---
-import AdminLayout from '../../../../layouts/AdminLayout.astro';
+// src/pages/admin/sucursales/editar/[id].astro
+// Edición completa de sucursal
 
+import AdminLayout from '../../../../layouts/AdminLayout.astro';
+import pool from '../../../../lib/db';
+
+// Obtener ID de la sucursal
 const { id } = Astro.params;
 
-// Auth check
-const session = Astro.cookies.get("session");
-if (!session || session.value !== "authenticated") {
-    return Astro.redirect("/admin/login");
+// Obtener datos de la sucursal
+const [rows] = await pool.query(
+    `SELECT 
+        s.*,
+        (SELECT COUNT(*) FROM pedidos_cocina_grupo WHERE sucursal_id = s.id AND estado != 'entregado') AS pedidos_activos
+     FROM sucursales s 
+     WHERE s.id = ?`,
+    [id]
+) as any[];
+
+const sucursal = rows[0];
+
+// Si no existe, redirigir
+if (!sucursal) {
+    return Astro.redirect('/admin/sucursales');
 }
+
+// Obtener estadísticas de reservas para cubiertos
+const [statsRows] = await pool.query(
+    `SELECT 
+        COALESCE(SUM(numero_personas), 0) AS ocupados_actuales
+     FROM reservas 
+     WHERE sucursal_id = ? 
+     AND fecha = CURDATE() 
+     AND estado = 'confirmada'`,
+    [id]
+) as any[];
+
+const stats = statsRows[0];
+
+// Calcular cubiertos
+const capacidad_total = sucursal.capacidad_total || 120;
+const cubiertos_ocupados = stats?.ocupados_actuales || 0;
+const cubiertos_disponibles = capacidad_total - cubiertos_ocupados;
+
+// Parsear horarios
+let horarios: any = {};
+try {
+    horarios = typeof sucursal.horarios === 'string' 
+        ? JSON.parse(sucursal.horarios) 
+        : sucursal.horarios || {};
+} catch {
+    horarios = {};
+}
+
+// Días de la semana
+const diasSemana = [
+    { id: 'lunes', label: 'Lunes' },
+    { id: 'martes', label: 'Martes' },
+    { id: 'miercoles', label: 'Miércoles' },
+    { id: 'jueves', label: 'Jueves' },
+    { id: 'viernes', label: 'Viernes' },
+    { id: 'sabado', label: 'Sábado' },
+    { id: 'domingo', label: 'Domingo' }
+];
+
+// Conceptos disponibles
+const conceptos = [
+    { value: 'Churrasquería', label: '🔥 Churrasquería' },
+    { value: 'Rodizio Tradicional', label: '🥩 Rodizio Tradicional' },
+    { value: 'Restaurante', label: '🍽️ Restaurante' },
+    { value: 'Fast Grill', label: '⚡ Fast Grill' },
+    { value: 'Parrilla', label: '🔥 Parrilla' }
+];
+
+// Formatear horario para mostrar
+const formatearHorario = (horarioStr: any) => {
+    if (!horarioStr) return 'Cerrado';
+    const bloques = typeof horarioStr === 'string' ? JSON.parse(horarioStr) : horarioStr;
+    if (!bloques || bloques.length === 0) return 'Cerrado';
+    return bloques.map((b: any) => `${b.inicio} - ${b.fin}`).join(' / ');
+};
 ---
 
-<AdminLayout title="Editar Sucursal" description="Modifica los detalles de la sucursal">
-    <div class="section-card text-center py-12">
-        <span class="text-4xl block mb-4">🏢</span>
-        <h2 class="text-2xl font-serif text-gray-900 font-semibold mb-2">Editar Sucursal #{id}</h2>
-        <p class="text-gray-500">Módulo en construcción. Aquí podrás modificar el nombre, concepto, dirección y horarios de la sucursal.</p>
-        <a href="/admin/sucursales" class="btn-volver mt-6 inline-block px-6 py-2 bg-gray-100 text-gray-700 rounded-lg font-medium hover:bg-gray-200 transition-colors">Volver a Sucursales</a>
+<AdminLayout title={`Editar ${sucursal.nombre}`} description="Modifica los datos de la sucursal">
+    <div class="editar-sucursal">
+        <!-- Header -->
+        <div class="page-header">
+            <div>
+                <h1>✏️ Editar {sucursal.nombre}</h1>
+                <p>Modifica los datos, horarios y capacidad de la sucursal</p>
+            </div>
+            <a href="/admin/sucursales" class="btn-volver">← Volver a Sucursales</a>
+        </div>
+
+        <!-- Información de Cubiertos -->
+        <div class="cubiertos-resumen">
+            <div class="cubiertos-item total">
+                <span class="cubiertos-icon">🪑</span>
+                <div>
+                    <span class="cubiertos-numero">{capacidad_total}</span>
+                    <span class="cubiertos-label">Capacidad Total</span>
+                </div>
+            </div>
+            <div class="cubiertos-item ocupados">
+                <span class="cubiertos-icon">🔴</span>
+                <div>
+                    <span class="cubiertos-numero">{cubiertos_ocupados}</span>
+                    <span class="cubiertos-label">Ocupados (hoy)</span>
+                </div>
+            </div>
+            <div class="cubiertos-item disponibles">
+                <span class="cubiertos-icon">🟢</span>
+                <div>
+                    <span class="cubiertos-numero">{cubiertos_disponibles}</span>
+                    <span class="cubiertos-label">Disponibles (hoy)</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Formulario -->
+        <form id="formEditarSucursal" class="form-sucursal">
+            <!-- Información General -->
+            <div class="form-section">
+                <h3>📋 Información General</h3>
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Nombre de la Sucursal *</label>
+                        <input 
+                            type="text" 
+                            id="nombre" 
+                            value={sucursal.nombre}
+                            placeholder="Ej: Churrasquería"
+                            required
+                        />
+                    </div>
+                    <div class="form-group">
+                        <label>Concepto *</label>
+                        <select id="concepto" required>
+                            {conceptos.map(c => (
+                                <option value={c.value} selected={c.value === sucursal.concepto}>
+                                    {c.label}
+                                </option>
+                            ))}
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Dirección *</label>
+                    <input 
+                        type="text" 
+                        id="direccion" 
+                        value={sucursal.direccion}
+                        placeholder="Ej: Sucursal Beni, Av. casi - 5to anillo"
+                        required
+                    />
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Teléfono *</label>
+                        <input 
+                            type="tel" 
+                            id="telefono" 
+                            value={sucursal.telefono}
+                            placeholder="Ej: 70000001"
+                            required
+                        />
+                    </div>
+                    <div class="form-group">
+                        <label>Capacidad Total (Cubiertos)</label>
+                        <input 
+                            type="number" 
+                            id="capacidad" 
+                            value={sucursal.capacidad_total || 120}
+                            min="1"
+                            max="500"
+                        />
+                        <span class="field-hint">Número total de cubiertos disponibles</span>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Rating (Opcional)</label>
+                    <input 
+                        type="number" 
+                        id="rating" 
+                        value={sucursal.rating || 4.5}
+                        step="0.1"
+                        min="0"
+                        max="5"
+                    />
+                </div>
+
+                <div class="form-group checkbox-group">
+                    <label class="checkbox-label">
+                        <input type="checkbox" id="activo" checked={sucursal.activo === 1} />
+                        <span class="custom-checkbox"></span>
+                        <div>
+                            <strong>Sucursal Activa</strong>
+                            <small>Si está inactiva, no aparecerá en la página pública</small>
+                        </div>
+                    </label>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group checkbox-group">
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="permiteReservas" checked={sucursal.permite_reservas === 1} />
+                            <span class="custom-checkbox"></span>
+                            <div>
+                                <strong>📅 Permite Reservas</strong>
+                                <small>Si está activo, los clientes pueden reservar en esta sucursal</small>
+                            </div>
+                        </label>
+                    </div>
+                    
+                    <div class="form-group checkbox-group">
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="permiteCubiertos" checked={sucursal.permite_cubiertos === 1} />
+                            <span class="custom-checkbox"></span>
+                            <div>
+                                <strong>🪑 Permite Cubiertos</strong>
+                                <small>Si está activo, muestra disponibilidad de cubiertos</small>
+                            </div>
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Horarios de Atención -->
+            <div class="form-section">
+                <h3>🕐 Horarios de Atención</h3>
+                <p class="section-desc">Configura los horarios para cada día de la semana</p>
+
+                <div class="horarios-container">
+                    {diasSemana.map((dia) => {
+                        const horarioDia = horarios[dia.id] || { activo: true, bloques: [{ inicio: '11:30', fin: '15:00' }] };
+                        const bloques = horarioDia.bloques || [{ inicio: '11:30', fin: '15:00' }];
+                        
+                        return (
+                            <div class="horario-dia" data-dia={dia.id}>
+                                <div class="dia-header">
+                                    <div class="dia-info">
+                                        <span class="dia-nombre">{dia.label}</span>
+                                    </div>
+                                    <div class="dia-controls">
+                                        <label class="switch-small">
+                                            <input 
+                                                type="checkbox" 
+                                                class="dia-activo" 
+                                                checked={horarioDia.activo !== false}
+                                                onchange="toggleDia(this)"
+                                            />
+                                            <span class="slider-small"></span>
+                                        </label>
+                                        <button type="button" class="btn-agregar-bloque" onclick="agregarBloque(this)">
+                                            ➕ Agregar Horario
+                                        </button>
+                                    </div>
+                                </div>
+                                <div class="dia-bloques">
+                                    {bloques.map((bloque: any, index: number) => (
+                                        <div class="bloque-horario" data-index={index}>
+                                            <div class="bloque-inputs">
+                                                <div class="bloque-item">
+                                                    <label>Inicio</label>
+                                                    <input 
+                                                        type="time" 
+                                                        class="bloque-inicio" 
+                                                        value={bloque.inicio || '11:30'}
+                                                    />
+                                                </div>
+                                                <div class="bloque-item">
+                                                    <label>Fin</label>
+                                                    <input 
+                                                        type="time" 
+                                                        class="bloque-fin" 
+                                                        value={bloque.fin || '15:00'}
+                                                    />
+                                                </div>
+                                            </div>
+                                            <button type="button" class="btn-eliminar-bloque" onclick="eliminarBloque(this)">
+                                                ✕
+                                            </button>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        );
+                    })}
+                </div>
+            </div>
+
+            <!-- Botones de Acción -->
+            <div class="form-actions">
+                <a href="/admin/sucursales" class="btn-cancelar">Cancelar</a>
+                <button type="submit" class="btn-guardar" id="btnGuardar">
+                    💾 Guardar Cambios
+                </button>
+            </div>
+        </form>
     </div>
 </AdminLayout>
+
+<style is:global>
+/* ============================================
+   EDICIÓN DE SUCURSAL - ESTILOS
+   ============================================ */
+.editar-sucursal {
+    max-width: 900px;
+    margin: 0 auto;
+}
+
+.page-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 24px;
+}
+
+.page-header h1 {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.8rem;
+    color: #1a1a1a;
+    margin: 0;
+}
+
+.page-header p {
+    color: rgba(26, 26, 26, 0.5);
+    margin: 4px 0 0;
+}
+
+.btn-volver {
+    color: #1a1a1a;
+    text-decoration: none;
+    padding: 8px 16px;
+    border-radius: 8px;
+    border: 1px solid rgba(26, 26, 26, 0.1);
+    transition: all 0.3s ease;
+}
+
+.btn-volver:hover {
+    background: rgba(26, 26, 26, 0.04);
+}
+
+/* Cubiertos Resumen */
+.cubiertos-resumen {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+    margin-bottom: 24px;
+}
+
+.cubiertos-item {
+    background: white;
+    border-radius: 12px;
+    padding: 16px 20px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+
+.cubiertos-icon {
+    font-size: 1.8rem;
+}
+
+.cubiertos-numero {
+    display: block;
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #1a1a1a;
+}
+
+.cubiertos-label {
+    font-size: 0.8rem;
+    color: rgba(26, 26, 26, 0.4);
+}
+
+.cubiertos-item.total .cubiertos-numero { color: #3b82f6; }
+.cubiertos-item.ocupados .cubiertos-numero { color: #ef4444; }
+.cubiertos-item.disponibles .cubiertos-numero { color: #10b981; }
+
+/* Formulario */
+.form-sucursal {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+}
+
+.form-section {
+    background: white;
+    border-radius: 14px;
+    padding: 24px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+
+.form-section h3 {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: #1a1a1a;
+    margin: 0 0 4px;
+}
+
+.section-desc {
+    font-size: 0.85rem;
+    color: rgba(26, 26, 26, 0.4);
+    margin: 0 0 20px;
+}
+
+.form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+}
+
+.form-group {
+    margin-bottom: 16px;
+}
+
+.form-group:last-child {
+    margin-bottom: 0;
+}
+
+.form-group label {
+    display: block;
+    font-weight: 500;
+    color: #1a1a1a;
+    font-size: 0.85rem;
+    margin-bottom: 4px;
+}
+
+.form-group input,
+.form-group select {
+    width: 100%;
+    padding: 10px 14px;
+    border: 1.5px solid rgba(26, 26, 26, 0.08);
+    border-radius: 10px;
+    font-size: 0.95rem;
+    font-family: 'Inter', sans-serif;
+    transition: all 0.3s ease;
+    background: white;
+    color: #1a1a1a;
+}
+
+.form-group input:focus,
+.form-group select:focus {
+    outline: none;
+    border-color: #9e2a2b;
+    box-shadow: 0 0 0 3px rgba(158, 42, 43, 0.08);
+}
+
+.form-group .field-hint {
+    display: block;
+    color: rgba(26, 26, 26, 0.3);
+    font-size: 0.75rem;
+    margin-top: 4px;
+}
+
+/* Checkbox */
+.checkbox-group {
+    margin-top: 4px;
+}
+
+.checkbox-label {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    cursor: pointer;
+    padding: 10px 14px;
+    background: rgba(26, 26, 26, 0.02);
+    border-radius: 10px;
+    transition: all 0.3s ease;
+}
+
+.checkbox-label:hover {
+    background: rgba(26, 26, 26, 0.04);
+}
+
+.checkbox-label input[type="checkbox"] {
+    display: none;
+}
+
+.custom-checkbox {
+    width: 20px;
+    height: 20px;
+    min-width: 20px;
+    border: 2px solid rgba(26, 26, 26, 0.15);
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s ease;
+    margin-top: 2px;
+}
+
+.checkbox-label input:checked + .custom-checkbox {
+    background: #9e2a2b;
+    border-color: #9e2a2b;
+}
+
+.checkbox-label input:checked + .custom-checkbox::after {
+    content: '✓';
+    color: white;
+    font-size: 14px;
+    font-weight: bold;
+}
+
+.checkbox-label strong {
+    display: block;
+    font-weight: 500;
+    font-size: 0.9rem;
+    color: #1a1a1a;
+}
+
+.checkbox-label small {
+    color: rgba(26, 26, 26, 0.4);
+    font-size: 0.8rem;
+}
+
+/* Horarios */
+.horarios-container {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.horario-dia {
+    background: rgba(255, 250, 240, 0.3);
+    border-radius: 10px;
+    padding: 14px 16px;
+    border: 1px solid rgba(26, 26, 26, 0.04);
+}
+
+.dia-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+}
+
+.dia-info {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.dia-nombre {
+    font-weight: 600;
+    font-size: 0.95rem;
+    color: #1a1a1a;
+    min-width: 90px;
+}
+
+.dia-controls {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+/* Switch Pequeño */
+.switch-small {
+    position: relative;
+    display: inline-block;
+    width: 36px;
+    height: 20px;
+    flex-shrink: 0;
+}
+
+.switch-small input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.slider-small {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: #ccc;
+    border-radius: 20px;
+    transition: all 0.3s ease;
+}
+
+.slider-small::before {
+    content: '';
+    position: absolute;
+    height: 14px;
+    width: 14px;
+    left: 3px;
+    bottom: 3px;
+    background: white;
+    border-radius: 50%;
+    transition: all 0.3s ease;
+}
+
+.switch-small input:checked + .slider-small {
+    background: #10b981;
+}
+
+.switch-small input:checked + .slider-small::before {
+    transform: translateX(16px);
+}
+
+.btn-agregar-bloque {
+    padding: 4px 12px;
+    background: rgba(158, 42, 43, 0.08);
+    color: #9e2a2b;
+    border: none;
+    border-radius: 6px;
+    font-size: 0.75rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-family: 'Inter', sans-serif;
+}
+
+.btn-agregar-bloque:hover {
+    background: rgba(158, 42, 43, 0.15);
+}
+
+.dia-bloques {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding-left: 10px;
+}
+
+.bloque-horario {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: white;
+    padding: 8px 12px;
+    border-radius: 8px;
+    border: 1px solid rgba(26, 26, 26, 0.04);
+}
+
+.bloque-inputs {
+    display: flex;
+    gap: 12px;
+    flex: 1;
+    align-items: center;
+}
+
+.bloque-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.bloque-item label {
+    font-size: 0.7rem;
+    color: rgba(26, 26, 26, 0.3);
+    font-weight: 500;
+}
+
+.bloque-item input {
+    padding: 4px 8px;
+    border: 1px solid rgba(26, 26, 26, 0.08);
+    border-radius: 6px;
+    font-size: 0.8rem;
+    font-family: 'Inter', sans-serif;
+    background: white;
+    width: 90px;
+}
+
+.btn-eliminar-bloque {
+    background: transparent;
+    border: none;
+    color: #ef4444;
+    cursor: pointer;
+    font-size: 0.9rem;
+    padding: 4px;
+    transition: all 0.3s ease;
+}
+
+.btn-eliminar-bloque:hover {
+    transform: scale(1.2);
+}
+
+/* Form Actions */
+.form-actions {
+    display: flex;
+    gap: 12px;
+    justify-content: flex-end;
+    padding-top: 8px;
+}
+
+.btn-cancelar,
+.btn-guardar {
+    padding: 12px 32px;
+    border: none;
+    border-radius: 10px;
+    font-size: 0.95rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-family: 'Inter', sans-serif;
+    text-decoration: none;
+}
+
+.btn-cancelar {
+    background: transparent;
+    color: #1a1a1a;
+    border: 1.5px solid rgba(26, 26, 26, 0.1);
+}
+
+.btn-cancelar:hover {
+    background: rgba(26, 26, 26, 0.04);
+}
+
+.btn-guardar {
+    background: linear-gradient(135deg, #9e2a2b, #7a2021);
+    color: #fffaf0;
+    box-shadow: 0 4px 16px rgba(158, 42, 43, 0.2);
+}
+
+.btn-guardar:hover {
+    transform: scale(1.02);
+    box-shadow: 0 6px 24px rgba(158, 42, 43, 0.3);
+}
+
+.btn-guardar:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none !important;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .cubiertos-resumen {
+        grid-template-columns: 1fr;
+    }
+    
+    .form-row {
+        grid-template-columns: 1fr;
+        gap: 0;
+    }
+    
+    .page-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 12px;
+    }
+    
+    .form-actions {
+        flex-direction: column-reverse;
+    }
+    
+    .btn-cancelar,
+    .btn-guardar {
+        width: 100%;
+        text-align: center;
+    }
+    
+    .bloque-inputs {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 4px;
+    }
+    
+    .bloque-item input {
+        width: 100%;
+    }
+    
+    .dia-header {
+        flex-wrap: wrap;
+        gap: 8px;
+    }
+    
+    .dia-controls {
+        flex-wrap: wrap;
+    }
+}
+</style>
+
+<script define:vars={{ id }}>
+// ============================================
+// MANEJO DE HORARIOS
+// ============================================
+
+// Agregar bloque de horario
+function agregarBloque(btn) {
+    const diaContainer = btn.closest('.horario-dia');
+    const bloquesContainer = diaContainer.querySelector('.dia-bloques');
+    
+    const nuevoBloque = document.createElement('div');
+    nuevoBloque.className = 'bloque-horario';
+    nuevoBloque.innerHTML = `
+        <div class="bloque-inputs">
+            <div class="bloque-item">
+                <label>Inicio</label>
+                <input type="time" class="bloque-inicio" value="18:30" />
+            </div>
+            <div class="bloque-item">
+                <label>Fin</label>
+                <input type="time" class="bloque-fin" value="22:00" />
+            </div>
+        </div>
+        <button type="button" class="btn-eliminar-bloque" onclick="eliminarBloque(this)">✕</button>
+    `;
+    
+    bloquesContainer.appendChild(nuevoBloque);
+}
+
+// Eliminar bloque de horario
+function eliminarBloque(btn) {
+    const bloque = btn.closest('.bloque-horario');
+    const diaContainer = bloque.closest('.horario-dia');
+    const bloques = diaContainer.querySelectorAll('.bloque-horario');
+    
+    if (bloques.length <= 1) {
+        alert('Debe haber al menos un bloque de horario por día');
+        return;
+    }
+    
+    if (confirm('¿Eliminar este bloque de horario?')) {
+        bloque.remove();
+    }
+}
+
+// Toggle día activo/inactivo
+function toggleDia(checkbox) {
+    const diaContainer = checkbox.closest('.horario-dia');
+    const bloques = diaContainer.querySelectorAll('.bloque-horario input');
+    const btnAgregar = diaContainer.querySelector('.btn-agregar-bloque');
+    
+    if (checkbox.checked) {
+        bloques.forEach(input => input.disabled = false);
+        btnAgregar.disabled = false;
+    } else {
+        bloques.forEach(input => input.disabled = true);
+        btnAgregar.disabled = true;
+    }
+}
+
+// ============================================
+// ENVÍO DEL FORMULARIO
+// ============================================
+document.getElementById('formEditarSucursal').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    
+    const btn = document.getElementById('btnGuardar');
+    btn.textContent = '⏳ Guardando...';
+    btn.disabled = true;
+    
+    // Recolectar datos del formulario
+    const nombre = document.getElementById('nombre').value.trim();
+    const concepto = document.getElementById('concepto').value;
+    const direccion = document.getElementById('direccion').value.trim();
+    const telefono = document.getElementById('telefono').value.trim();
+    const capacidad = parseInt(document.getElementById('capacidad').value) || 120;
+    const rating = parseFloat(document.getElementById('rating').value) || 4.5;
+    const activo = document.getElementById('activo').checked;
+    const permiteReservas = document.getElementById('permiteReservas').checked;
+    const permiteCubiertos = document.getElementById('permiteCubiertos').checked;
+    
+    // Validaciones
+    if (!nombre) {
+        alert('❌ El nombre de la sucursal es obligatorio');
+        btn.textContent = '💾 Guardar Cambios';
+        btn.disabled = false;
+        return;
+    }
+    
+    if (!direccion) {
+        alert('❌ La dirección es obligatoria');
+        btn.textContent = '💾 Guardar Cambios';
+        btn.disabled = false;
+        return;
+    }
+    
+    if (!telefono) {
+        alert('❌ El teléfono es obligatorio');
+        btn.textContent = '💾 Guardar Cambios';
+        btn.disabled = false;
+        return;
+    }
+    
+    // Recolectar horarios
+    const horarios = {};
+    const dias = document.querySelectorAll('.horario-dia');
+    
+    dias.forEach(dia => {
+        const diaId = dia.dataset.dia;
+        const diaActivo = dia.querySelector('.dia-activo').checked;
+        const bloques = [];
+        const bloqueElements = dia.querySelectorAll('.bloque-horario');
+        
+        bloqueElements.forEach(bloque => {
+            const inicio = bloque.querySelector('.bloque-inicio').value;
+            const fin = bloque.querySelector('.bloque-fin').value;
+            if (inicio && fin) {
+                bloques.push({ inicio, fin });
+            }
+        });
+        
+        horarios[diaId] = {
+            activo: diaActivo,
+            bloques: bloques
+        };
+    });
+    
+    // Preparar datos
+    const data = {
+        id: id,
+        nombre,
+        concepto,
+        direccion,
+        telefono,
+        capacidad_total: capacidad,
+        rating,
+        activo: activo ? 1 : 0,
+        permite_reservas: permiteReservas ? 1 : 0,
+        permite_cubiertos: permiteCubiertos ? 1 : 0,
+        horarios: horarios
+    };
+    
+    try {
+        const response = await fetch('/api/sucursales/editar', {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(data)
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            alert('✅ Sucursal actualizada exitosamente');
+            window.location.href = '/admin/sucursales';
+        } else {
+            alert('❌ Error: ' + result.error);
+            btn.textContent = '💾 Guardar Cambios';
+            btn.disabled = false;
+        }
+    } catch (error) {
+        alert('❌ Error de conexión. Intenta de nuevo.');
+        btn.textContent = '💾 Guardar Cambios';
+        btn.disabled = false;
+    }
+});
+
+// Adjuntar handlers a window para que los eventos inline los encuentren en módulos de Astro
+window.agregarBloque = agregarBloque;
+window.eliminarBloque = eliminarBloque;
+window.toggleDia = toggleDia;
+</script>

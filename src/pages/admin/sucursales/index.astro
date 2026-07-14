@@ -83,8 +83,8 @@ const sucursales = sucursalesData[0] || [];
                     </div>
                     
                     <div class="sucursal-actions">
-                        <a href={`/admin/sucursales/editar/${sucursal.id}`} class="btn-editar-capacidad">
-                            ✏️ Editar Capacidad
+                        <a href={`/admin/sucursales/editar/${sucursal.id}`} class="btn-editar">
+                            ✏️ Editar
                         </a>
                         <a href={`/admin/sucursales/cubiertos/${sucursal.id}`} class="btn-ajustar">
                             ⚙️ Ajustar Cubiertos
@@ -237,7 +237,7 @@ const sucursales = sucursalesData[0] || [];
     gap: 10px;
 }
 
-.btn-editar-capacidad,
+.btn-editar,
 .btn-ajustar {
     flex: 1;
     padding: 10px 16px;
@@ -252,12 +252,12 @@ const sucursales = sucursalesData[0] || [];
     font-family: 'Inter', sans-serif;
 }
 
-.btn-editar-capacidad {
+.btn-editar {
     background: rgba(59, 130, 246, 0.08);
     color: #3b82f6;
 }
 
-.btn-editar-capacidad:hover {
+.btn-editar:hover {
     background: rgba(59, 130, 246, 0.15);
     transform: scale(1.02);
 }

@@ -1,4 +1,5 @@
 import type { MiddlewareHandler } from 'astro';
+import { checkFeatureToggle } from './middleware/featureToggles';
 
 // Rutas protegidas por rol
 const ROLES = {
@@ -35,13 +36,8 @@ export const onRequest: MiddlewareHandler = async ({ request, cookies, redirect 
         // Obtener rol del usuario
         const userRole = cookies.get('user_role')?.value || 'mesero';
 
-        // Admin tiene acceso a todo
-        if (userRole === 'admin') {
-            return next();
-        }
-
         // Mesero y Cocinero tienen acceso limitado
-        if (!rutaPermitida(userRole, path)) {
+        if (userRole !== 'admin' && !rutaPermitida(userRole, path)) {
             // Redirigir según rol
             if (userRole === 'mesero') {
                 return redirect('/admin/reservas');
@@ -49,6 +45,14 @@ export const onRequest: MiddlewareHandler = async ({ request, cookies, redirect 
                 return redirect('/admin/cocina');
             }
             return redirect('/admin/login');
+        }
+        
+        // Verificar feature toggles (excepto API de configuración)
+        if (!path.startsWith('/api/configuracion') && !path.startsWith('/api/auth')) {
+            const { allowed, redirectTo } = await checkFeatureToggle(path);
+            if (!allowed && redirectTo) {
+                return redirect(redirectTo);
+            }
         }
     }
 

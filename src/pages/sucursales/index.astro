@@ -1,0 +1,1602 @@
+---
+// src/pages/sucursales/index.astro
+// Página pública de sucursales - RESPETA HORARIOS DEL ADMIN
+import Layout from '../../layouts/Layout.astro';
+import pool from '../../lib/db';
+
+// Obtener sucursales activas con datos de cubiertos
+const [rows] = await pool.query(`
+    SELECT 
+        id,
+        nombre,
+        concepto,
+        rating,
+        resenas,
+        direccion,
+        horarios,
+        telefono,
+        capacidad_total,
+        COALESCE(cubiertos_disponibles, capacidad_total) AS cubiertos_disponibles,
+        COALESCE(cubiertos_ocupados, 0) AS cubiertos_ocupados,
+        permite_reservas,
+        permite_cubiertos
+    FROM sucursales
+    WHERE activo = 1
+    ORDER BY nombre
+`) as any[];
+
+const sucursales = rows || [];
+
+// ============================================
+// FUNCIONES DE VALIDACIÓN DE HORARIOS
+// (Todas usan Intl.DateTimeFormat con tz Bolivia)
+// ============================================
+
+/** Día en formato clave: 'lunes', 'martes', ... 'miercoles' (sin tildes) */
+function getDiaActual(): string {
+    const dia = new Intl.DateTimeFormat('es-ES', {
+        timeZone: 'America/La_Paz',
+        weekday: 'long'
+    }).format(new Date());
+    // Quita tildes: miércoles → miercoles, sábado → sabado
+    return dia.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+}
+
+/** Hora actual en Bolivia en formato HH:mm (24h) */
+function getHoraActualBolivia(): string {
+    return new Intl.DateTimeFormat('en-US', {
+        timeZone: 'America/La_Paz',
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: false
+    }).format(new Date());
+}
+
+/** ¿La sucursal tiene horario configurado y activo para hoy? */
+function estaAbiertaHoy(horarios: any): boolean {
+    try {
+        const h = typeof horarios === 'string' ? JSON.parse(horarios) : horarios;
+        const dia = getDiaActual();
+        const hoy = h?.[dia];
+        return !!(hoy?.activo && hoy?.bloques?.length > 0);
+    } catch {
+        return false;
+    }
+}
+
+/** ¿La sucursal está ABIERTA en este momento según sus bloques horarios? */
+function estaAbiertaAhora(horarios: any): boolean {
+    try {
+        const h = typeof horarios === 'string' ? JSON.parse(horarios) : horarios;
+        const dia = getDiaActual();
+        const hoy = h?.[dia];
+        if (!hoy?.activo || !hoy?.bloques?.length) return false;
+        const ahora = getHoraActualBolivia();
+        return hoy.bloques.some((b: any) => ahora >= b.inicio && ahora <= b.fin);
+    } catch {
+        return false;
+    }
+}
+
+/** Texto del horario de hoy para mostrar en la card */
+function getHorarioHoy(horarios: any): string {
+    try {
+        const h = typeof horarios === 'string' ? JSON.parse(horarios) : horarios;
+        const dia = getDiaActual();
+        const hoy = h?.[dia];
+        if (!hoy?.activo || !hoy?.bloques?.length) return '🔴 Cerrado hoy';
+        const bloques = hoy.bloques.map((b: any) => `${b.inicio} - ${b.fin}`).join(' / ');
+        return `🟢 ${bloques}`;
+    } catch {
+        return '⚠️ Horario no disponible';
+    }
+}
+
+/** HTML con el horario de todos los días */
+function getHorarioCompleto(horarios: any): string {
+    if (!horarios) return 'Horario no disponible';
+    try {
+        const h = typeof horarios === 'string' ? JSON.parse(horarios) : horarios;
+        const dias  = ['lunes','martes','miercoles','jueves','viernes','sabado','domingo'];
+        const nombres = ['Lunes','Martes','Miércoles','Jueves','Viernes','Sábado','Domingo'];
+        const hoy = getDiaActual();
+        return dias.map((dia, i) => {
+            const horario = h?.[dia];
+            const esHoy = dia === hoy;
+            const clase = esHoy ? (horario?.activo ? 'dia-hoy' : 'dia-hoy cerrado') : '';
+            if (horario?.activo && horario?.bloques?.length > 0) {
+                const bloques = horario.bloques.map((b: any) => `${b.inicio} - ${b.fin}`).join(' / ');
+                return `<span class="${clase}">${nombres[i]}: ${bloques}</span>`;
+            }
+            return `<span class="${clase}">${nombres[i]}: 🔴 Cerrado</span>`;
+        }).join(' | ');
+    } catch {
+        return 'Horario no disponible';
+    }
+}
+---
+
+<Layout title="Sucursales - BRASARGENT">
+    <div class="sucursales-page">
+        <div class="sucursales-header">
+            <h1>📍 Nuestras Sucursales</h1>
+            <p>Encuentra la sucursal más cercana y reserva tu mesa</p>
+        </div>
+        
+        <div class="sucursales-grid">
+            {sucursales.map((sucursal: any) => {
+                const icono = sucursal.nombre === 'Churrasquería' ? '🔥' :
+                             sucursal.nombre === 'Fast Grill' ? '⚡' : '🥩';
+                const color = sucursal.nombre === 'Churrasquería' ? '#9e2a2b' :
+                             sucursal.nombre === 'Fast Grill' ? '#d4af37' : '#d4a574';
+                
+                // ============================================
+                // 🔴 VALIDACIÓN COMPLETA DE 7 PASOS
+                // ============================================
+
+                // PASO 1: ¿Permite reservas según BD?
+                const permiteReservas = sucursal.permite_reservas === 1;
+
+                // PASO 2: ¿Hay horarios configurados?
+                const tieneHorarios = !!sucursal.horarios;
+
+                // PASO 3: ¿Está abierta hoy (tiene bloques activos para este día)?
+                const abiertoHoy = estaAbiertaHoy(sucursal.horarios);
+
+                // PASO 4: ¿Está abierta AHORA (hora actual dentro de un bloque)?
+                const abiertoAhora = estaAbiertaAhora(sucursal.horarios);
+
+                // PASO 5: ¿Hay cubiertos disponibles?
+                const cubiertos = Number(sucursal.cubiertos_disponibles ?? sucursal.capacidad_total ?? 0);
+                const hayCubiertos = cubiertos > 0;
+
+                // DECISIÓN FINAL: mostrar botón activo solo si todo está OK
+                const puedeReservar = permiteReservas && tieneHorarios && abiertoHoy && abiertoAhora && hayCubiertos;
+
+                // Razón clara para mostrar en botón deshabilitado
+                let razonDeshabilitado = '';
+                if (!permiteReservas)         razonDeshabilitado = '🚫 No acepta reservas';
+                else if (!tieneHorarios)      razonDeshabilitado = '⚠️ Horario no disponible';
+                else if (!abiertoHoy)         razonDeshabilitado = '🔴 Cerrado hoy';
+                else if (!abiertoAhora)       razonDeshabilitado = '🔴 Cerrado ahora';
+                else if (!hayCubiertos)       razonDeshabilitado = '🪑 Sin disponibilidad';
+
+                // Horario de hoy en texto
+                const horarioHoy = getHorarioHoy(sucursal.horarios);
+                
+                return (
+                    <div class="sucursal-card" style={`border-top: 4px solid ${color}`}>
+                        <div class="sucursal-header">
+                            <div class="sucursal-info">
+                                <span class="sucursal-icon" style={`color: ${color}`}>{icono}</span>
+                                <div>
+                                    <h3>{sucursal.nombre}</h3>
+                                    <span class="sucursal-concepto">{sucursal.concepto || 'Restaurante'}</span>
+                                </div>
+                            </div>
+                            <div class="sucursal-rating">
+                                ★ {sucursal.rating || 4.5} <span>({sucursal.resenas || 0} reseñas)</span>
+                            </div>
+                        </div>
+                        
+                        <div class="sucursal-detalles">
+                            <p>📍 {sucursal.direccion}</p>
+                            
+                            <!-- HORARIO DE HOY -->
+                            <div class="horario-hoy">
+                                <span class="horario-label">🕐 Hoy</span>
+                                <span class={`horario-estado ${abiertoAhora ? 'abierto' : 'cerrado'}`}>
+                                    {horarioHoy}
+                                </span>
+                            </div>
+                            
+                            <!-- HORARIO COMPLETO (acordeón) -->
+                            <details class="horario-completo">
+                                <summary>📋 Ver horario completo</summary>
+                                <div class="horario-detalle">
+                                    <span set:html={getHorarioCompleto(sucursal.horarios)}></span>
+                                </div>
+                            </details>
+                            
+                            <p>📞 <a href={`https://wa.me/${sucursal.telefono}`} target="_blank">{sucursal.telefono}</a></p>
+                            <p>🪑 Capacidad: {sucursal.capacidad_total || 120} cubiertos</p>
+                            
+                            {sucursal.permite_cubiertos === 1 && (
+                                <span class="badge-cubiertos">✅ Cubiertos disponibles</span>
+                            )}
+
+                            {!permiteReservas && (
+                                <span class="badge-no-reservas">🚫 No acepta reservas</span>
+                            )}
+                        </div>
+                        
+                        <div class="sucursal-actions">
+                            <a href="#" class="btn-ubicacion">📍 Ubicación</a>
+                            <a href="#" class="btn-menu">🍽️ Menú</a>
+                            <a href={`https://wa.me/${sucursal.telefono}`} target="_blank" class="btn-whatsapp">💬 WhatsApp</a>
+                            
+                            {/* 🔴 BOTÓN RESERVAR — 7 validaciones requeridas */}
+                            {puedeReservar ? (
+                                <button
+                                    class="btn-reservar"
+                                    onclick={`window.abrirModalPublico(${sucursal.id})`}
+                                    title="Reservar mesa"
+                                >
+                                    📅 Reservar
+                                </button>
+                            ) : (
+                                <button
+                                    class="btn-reservar-disabled"
+                                    disabled
+                                    title={razonDeshabilitado}
+                                >
+                                    {razonDeshabilitado || '🚫 No disponible'}
+                                </button>
+                            )}
+                        </div>
+                    </div>
+                );
+            })}
+        </div>
+    </div>
+</Layout>
+
+<style>
+/* ============================================
+   ESTILOS DE SUCURSALES (ACTUALIZADO)
+   ============================================ */
+.sucursales-page {
+    padding: 120px 24px 60px;
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+.sucursales-header {
+    text-align: center;
+    margin-bottom: 48px;
+}
+
+.sucursales-header h1 {
+    font-family: 'Playfair Display', serif;
+    font-size: 2.5rem;
+    color: #1a1a1a;
+}
+
+.sucursales-header p {
+    color: rgba(26, 26, 26, 0.5);
+    font-size: 1.1rem;
+}
+
+.sucursales-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+    gap: 32px;
+}
+
+.sucursal-card {
+    background: white;
+    border-radius: 16px;
+    padding: 24px;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+    transition: all 0.3s ease;
+    border-top: 4px solid #9e2a2b;
+}
+
+.sucursal-card:hover {
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.1);
+    transform: translateY(-4px);
+}
+
+.sucursal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 12px;
+}
+
+.sucursal-info {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.sucursal-icon {
+    font-size: 2rem;
+}
+
+.sucursal-info h3 {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: #1a1a1a;
+    margin: 0;
+}
+
+.sucursal-concepto {
+    font-size: 0.75rem;
+    color: rgba(26, 26, 26, 0.4);
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.sucursal-rating {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: #d4af37;
+}
+
+.sucursal-rating span {
+    font-weight: 400;
+    color: rgba(26, 26, 26, 0.3);
+}
+
+.sucursal-detalles {
+    background: rgba(255, 250, 240, 0.5);
+    border-radius: 10px;
+    padding: 12px 16px;
+    margin: 12px 0 16px;
+}
+
+.sucursal-detalles p {
+    margin: 4px 0;
+    font-size: 0.85rem;
+    color: #1a1a1a;
+}
+
+.sucursal-detalles a {
+    color: #25d366;
+    text-decoration: none;
+}
+
+.sucursal-detalles a:hover {
+    text-decoration: underline;
+}
+
+/* Horario de Hoy - Destacado */
+.horario-hoy {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 12px;
+    background: rgba(26, 26, 26, 0.04);
+    border-radius: 8px;
+    margin: 4px 0 8px;
+}
+
+.horario-label {
+    font-weight: 600;
+    font-size: 0.8rem;
+    color: rgba(26, 26, 26, 0.4);
+}
+
+.horario-estado {
+    font-weight: 500;
+    font-size: 0.85rem;
+}
+
+.horario-estado.abierto {
+    color: #10b981;
+}
+
+.horario-estado.cerrado {
+    color: #ef4444;
+}
+
+/* Horario Completo - Acordeón */
+.horario-completo {
+    margin: 4px 0 8px;
+}
+
+.horario-completo summary {
+    cursor: pointer;
+    font-size: 0.8rem;
+    color: rgba(26, 26, 26, 0.4);
+    padding: 4px 0;
+    user-select: none;
+}
+
+.horario-completo summary:hover {
+    color: #9e2a2b;
+}
+
+.horario-detalle {
+    padding: 8px 12px;
+    background: rgba(255, 250, 240, 0.3);
+    border-radius: 6px;
+    font-size: 0.75rem;
+    color: #1a1a1a;
+    line-height: 1.8;
+    margin-top: 4px;
+}
+
+.horario-detalle .dia-hoy {
+    font-weight: 600;
+    color: #9e2a2b;
+}
+
+.horario-detalle .dia-hoy.cerrado {
+    color: #ef4444;
+}
+
+.horario-detalle span {
+    white-space: nowrap;
+}
+
+.badge-cubiertos {
+    display: inline-block;
+    padding: 2px 12px;
+    background: rgba(16, 185, 129, 0.1);
+    color: #10b981;
+    border-radius: 20px;
+    font-size: 0.7rem;
+    font-weight: 500;
+    margin-top: 4px;
+}
+
+.badge-no-reservas {
+    display: inline-block;
+    padding: 2px 12px;
+    background: rgba(239, 68, 68, 0.08);
+    color: #ef4444;
+    border-radius: 20px;
+    font-size: 0.7rem;
+    font-weight: 500;
+    margin-top: 4px;
+}
+
+.sucursal-actions {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+}
+
+.sucursal-actions a,
+.sucursal-actions button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    padding: 8px 6px;
+    border: none;
+    border-radius: 8px;
+    font-size: 0.75rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    text-decoration: none;
+    font-family: 'Inter', sans-serif;
+}
+
+.btn-ubicacion {
+    background: rgba(158, 42, 43, 0.08);
+    color: #9e2a2b;
+}
+
+.btn-ubicacion:hover {
+    background: rgba(158, 42, 43, 0.15);
+}
+
+.btn-menu {
+    background: rgba(158, 42, 43, 0.08);
+    color: #9e2a2b;
+}
+
+.btn-menu:hover {
+    background: rgba(158, 42, 43, 0.15);
+}
+
+.btn-whatsapp {
+    background: rgba(37, 211, 102, 0.08);
+    color: #25d366;
+}
+
+.btn-whatsapp:hover {
+    background: rgba(37, 211, 102, 0.15);
+}
+
+.btn-reservar {
+    background: rgba(212, 175, 55, 0.12);
+    color: #b8941f;
+    border: 1px solid rgba(212, 175, 55, 0.2);
+}
+
+.btn-reservar:hover {
+    background: rgba(212, 175, 55, 0.2);
+    transform: scale(1.02);
+}
+
+.btn-reservar-disabled {
+    background: rgba(107, 114, 128, 0.08);
+    color: #6b7280;
+    cursor: not-allowed;
+    opacity: 0.5;
+    border: 1px solid rgba(107, 114, 128, 0.1);
+}
+
+.btn-reservar-disabled:hover {
+    transform: none !important;
+}
+
+@media (max-width: 768px) {
+    .sucursal-actions {
+        grid-template-columns: repeat(2, 1fr);
+    }
+    .horario-detalle span {
+        display: block;
+        white-space: normal;
+    }
+}
+
+@media (max-width: 480px) {
+    .sucursales-grid {
+        grid-template-columns: 1fr;
+    }
+}
+</style>
+
+<style is:global>
+/* ============================================
+   ESTILOS DEL MODAL GENERADO
+   ============================================ */
+.modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(8px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+    padding: 16px;
+    animation: fadeIn 0.3s ease;
+    transition: opacity 0.3s ease;
+}
+
+.modal-overlay.hidden {
+    display: none;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+.modal-container {
+    background: #fffaf0;
+    border-radius: 24px;
+    max-width: 520px;
+    width: 100%;
+    max-height: 95vh;
+    overflow-y: auto;
+    box-shadow: 0 25px 80px rgba(0, 0, 0, 0.4);
+    animation: slideUp 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes slideUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px) scale(0.96);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+.modal-header {
+    padding: 24px 28px 16px;
+    border-bottom: 1px solid rgba(26, 26, 26, 0.06);
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    position: sticky;
+    top: 0;
+    background: #fffaf0;
+    border-radius: 24px 24px 0 0;
+    z-index: 10;
+}
+
+.modal-title {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+}
+
+.modal-title .icon {
+    font-size: 2rem;
+    background: rgba(158, 42, 43, 0.08);
+    padding: 8px 10px;
+    border-radius: 12px;
+}
+
+.modal-title h2 {
+    font-size: 1.3rem;
+    font-weight: 700;
+    color: #1a1a1a;
+    margin: 0;
+    font-family: 'Playfair Display', serif;
+}
+
+.modal-title p {
+    color: rgba(26, 26, 26, 0.4);
+    font-size: 0.85rem;
+    margin: 2px 0 0;
+}
+
+.modal-close {
+    background: transparent;
+    border: none;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    color: #1a1a1a;
+    transition: all 0.3s ease;
+    padding: 0;
+    font-size: 1.2rem;
+}
+
+.modal-close:hover {
+    background: rgba(26, 26, 26, 0.06);
+}
+
+.modal-body {
+    padding: 20px 28px 8px;
+}
+
+.form-group {
+    margin-bottom: 16px;
+}
+
+.form-group label {
+    display: block;
+    font-weight: 500;
+    color: #1a1a1a;
+    font-size: 0.9rem;
+    margin-bottom: 5px;
+}
+
+.form-group input,
+.form-group textarea,
+.form-group select {
+    width: 100%;
+    padding: 12px 16px;
+    border: 1.5px solid rgba(26, 26, 26, 0.1);
+    border-radius: 12px;
+    font-size: 0.95rem;
+    font-family: 'Inter', sans-serif;
+    transition: all 0.3s ease;
+    background: white;
+    color: #1a1a1a;
+}
+
+.telefono-wrapper {
+    display: flex;
+    gap: 8px;
+}
+
+.telefono-wrapper select {
+    width: 130px;
+    padding: 12px 8px;
+}
+
+.form-group input:focus,
+.form-group textarea:focus {
+    outline: none;
+    border-color: #9e2a2b;
+    box-shadow: 0 0 0 4px rgba(158, 42, 43, 0.08);
+}
+
+.field-hint {
+    display: block;
+    color: rgba(26, 26, 26, 0.3);
+    font-size: 0.75rem;
+    margin-top: 4px;
+}
+
+.error-message {
+    display: none;
+    color: #ef4444;
+    font-size: 0.8rem;
+    margin-top: 4px;
+}
+
+.modal-footer {
+    padding: 16px 28px 24px;
+    border-top: 1px solid rgba(26, 26, 26, 0.06);
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+    position: sticky;
+    bottom: 0;
+    background: #fffaf0;
+    border-radius: 0 0 24px 24px;
+}
+
+.btn-cancel,
+.btn-save {
+    padding: 12px 32px;
+    border: none;
+    border-radius: 12px;
+    font-size: 0.95rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-family: 'Inter', sans-serif;
+}
+
+.btn-cancel {
+    background: transparent;
+    color: #1a1a1a;
+    border: 1.5px solid rgba(26, 26, 26, 0.1);
+}
+
+.btn-cancel:hover {
+    background: rgba(26, 26, 26, 0.04);
+}
+
+.btn-save {
+    background: linear-gradient(135deg, #9e2a2b 0%, #7a2021 100%);
+    color: #fffaf0;
+    box-shadow: 0 4px 16px rgba(158, 42, 43, 0.25);
+    min-width: 160px;
+}
+
+.btn-save:hover {
+    transform: scale(1.02);
+    box-shadow: 0 6px 24px rgba(158, 42, 43, 0.35);
+}
+
+.horas-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+    gap: 8px;
+    margin-top: 8px;
+    max-height: 200px;
+    overflow-y: auto;
+    padding: 4px;
+}
+
+.hora-option {
+    padding: 8px 12px;
+    border: 1.5px solid rgba(26, 26, 26, 0.08);
+    border-radius: 8px;
+    text-align: center;
+    font-size: 0.85rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    background: white;
+    color: #1a1a1a;
+    font-family: 'Inter', sans-serif;
+}
+
+.hora-option:hover:not(.disabled) {
+    border-color: #9e2a2b;
+    background: rgba(158, 42, 43, 0.04);
+}
+
+.hora-option.selected {
+    border-color: #9e2a2b;
+    background: #9e2a2b;
+    color: white;
+}
+
+.hora-option.disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
+    text-decoration: line-through;
+}
+
+.hora-option .hora-disponibles {
+    display: block;
+    font-size: 0.6rem;
+    color: rgba(26, 26, 26, 0.3);
+    font-weight: 400;
+}
+
+.hora-option.selected .hora-disponibles {
+    color: rgba(255, 255, 255, 0.6);
+}
+
+.horas-loading {
+    text-align: center;
+    padding: 20px;
+    color: rgba(26, 26, 26, 0.3);
+    grid-column: 1 / -1;
+}
+
+.horas-error {
+    color: #ef4444;
+    font-size: 0.85rem;
+    text-align: center;
+    padding: 12px;
+    grid-column: 1 / -1;
+}
+
+/* --- Estilos de Turnos y Reloj Digital --- */
+.turnos-loading {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    padding: 16px;
+    color: rgba(26, 26, 26, 0.4);
+    font-size: 0.9rem;
+}
+.turnos-error {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: #fef2f2;
+    border: 1px solid #fee2e2;
+    color: #9e2a2b;
+    padding: 12px 16px;
+    border-radius: 12px;
+    font-size: 0.9rem;
+    margin-bottom: 12px;
+}
+.turnos-error-icon {
+    font-size: 1.2rem;
+}
+.turnos-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 12px;
+    margin-top: 8px;
+    margin-bottom: 16px;
+}
+@media (min-width: 480px) {
+    .turnos-grid {
+        grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+    }
+}
+.turno-card {
+    background: #ffffff;
+    border: 1.5px solid rgba(26, 26, 26, 0.08);
+    border-radius: 14px;
+    padding: 14px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+    overflow: hidden;
+    outline: none;
+}
+.turno-card:hover:not(.turno-card--disabled) {
+    transform: translateY(-2px);
+    border-color: #9e2a2b;
+    box-shadow: 0 6px 18px rgba(158, 42, 43, 0.08);
+}
+.turno-card--selected {
+    border-color: #9e2a2b !important;
+    background: rgba(158, 42, 43, 0.02) !important;
+    box-shadow: 0 4px 16px rgba(158, 42, 43, 0.06);
+}
+.turno-card--selected::after {
+    content: "✓";
+    position: absolute;
+    top: 6px;
+    right: 8px;
+    background: #9e2a2b;
+    color: white;
+    font-size: 0.7rem;
+    font-weight: bold;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.turno-card--disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+    background: #f9f9f9;
+}
+.turno-icono {
+    font-size: 1.6rem;
+    margin-bottom: 6px;
+}
+.turno-info {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    margin-bottom: 8px;
+}
+.turno-nombre {
+    font-weight: 700;
+    font-size: 0.9rem;
+    color: #1a1a1a;
+}
+.turno-horario {
+    font-size: 0.75rem;
+    color: rgba(26, 26, 26, 0.4);
+}
+.turno-badge {
+    width: 100%;
+    margin-top: auto;
+}
+.turno-pct-bar {
+    width: 100%;
+    height: 4px;
+    background: rgba(26, 26, 26, 0.06);
+    border-radius: 2px;
+    overflow: hidden;
+    margin-bottom: 4px;
+}
+.turno-pct-fill {
+    height: 100%;
+    background: #10b981;
+    border-radius: 2px;
+    transition: width 0.3s ease;
+}
+.turno-casi-lleno .turno-pct-fill {
+    background: #f59e0b;
+}
+.turno-lleno .turno-pct-fill {
+    background: #ef4444;
+}
+.turno-badge-label {
+    font-size: 0.7rem;
+    font-weight: 600;
+}
+.turno-disponible .turno-badge-label {
+    color: #10b981;
+}
+.turno-casi-lleno .turno-badge-label {
+    color: #f59e0b;
+}
+.turno-lleno .turno-badge-label {
+    color: #ef4444;
+}
+
+/* --- Estilos de Reloj Digital y Capacidad --- */
+.horas-wrapper {
+    margin-top: 16px;
+    border-top: 1px dashed rgba(26, 26, 26, 0.08);
+    padding-top: 16px;
+}
+.reloj-digital-container {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    background: #fffdf9;
+    border: 1.5px solid rgba(158, 42, 43, 0.15);
+    border-radius: 16px;
+    padding: 10px 16px;
+    max-width: 240px;
+    margin: 8px auto 12px;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.02);
+}
+.reloj-select {
+    font-size: 1.4rem !important;
+    font-weight: 700 !important;
+    border: 1px solid rgba(26, 26, 26, 0.15) !important;
+    background: #ffffff !important;
+    border-radius: 8px !important;
+    padding: 6px 12px !important;
+    color: #1a1a1a;
+    cursor: pointer;
+    outline: none !important;
+    transition: all 0.2s ease;
+}
+.reloj-select:hover {
+    border-color: #9e2a2b !important;
+    background: rgba(158, 42, 43, 0.02) !important;
+}
+.reloj-select:focus {
+    border-color: #9e2a2b !important;
+    box-shadow: 0 0 0 3px rgba(158, 42, 43, 0.1) !important;
+}
+.reloj-select:focus {
+    box-shadow: none !important;
+    border: none !important;
+}
+.reloj-colon {
+    font-size: 1.6rem;
+    font-weight: 800;
+    color: #9e2a2b;
+    animation: blink 1s step-start infinite;
+}
+@keyframes blink {
+    50% { opacity: 0; }
+}
+.capacidad-info {
+    width: 100%;
+    background: #fdfaf2;
+    border: 1px solid rgba(245, 158, 11, 0.15);
+    border-radius: 12px;
+    padding: 10px 14px;
+    display: flex;
+    justify-content: space-around;
+    gap: 12px;
+    font-size: 0.85rem;
+    margin-top: 12px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.01);
+}
+.info-disponibles {
+    font-weight: 700;
+    color: #10b981;
+}
+.info-total {
+    font-weight: 500;
+    color: rgba(26, 26, 26, 0.5);
+}
+
+/* --- Estilos de Botones de Cantidad +/- --- */
+.cantidad-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 6px;
+}
+.btn-cantidad {
+    width: 36px;
+    height: 36px;
+    border: none;
+    border-radius: 8px;
+    font-size: 1.25rem;
+    font-weight: bold;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+}
+.btn-menos {
+    background-color: #ef4444; /* Rojo */
+    color: white;
+}
+.btn-menos:hover {
+    background-color: #dc2626;
+    transform: scale(1.05);
+}
+.btn-mas {
+    background-color: #10b981; /* Verde */
+    color: white;
+}
+.btn-mas:hover {
+    background-color: #059669;
+    transform: scale(1.05);
+}
+.cantidad-wrapper input[type="number"] {
+    width: 70px !important;
+    height: 36px !important;
+    padding: 0 8px !important;
+    text-align: center !important;
+    border: 1.5px solid rgba(26, 26, 26, 0.1) !important;
+    border-radius: 8px !important;
+    font-size: 1rem !important;
+    font-weight: 600 !important;
+    background: white !important;
+    color: #1a1a1a !important;
+    -moz-appearance: textfield;
+}
+.cantidad-wrapper input[type="number"]::-webkit-outer-spin-button,
+.cantidad-wrapper input[type="number"]::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+.cantidad-label {
+    font-size: 0.9rem;
+    color: rgba(26, 26, 26, 0.4);
+    font-weight: 500;
+    margin-left: 6px;
+    text-transform: capitalize;
+}
+
+/* --- Reloj Info (disponibilidad debajo del reloj) --- */
+.reloj-info {
+    text-align: center;
+    font-size: 0.85rem;
+    padding: 8px 12px;
+    border-radius: 10px;
+    transition: all 0.3s ease;
+    min-height: 20px;
+}
+.reloj-info.disponible {
+    color: #10b981;
+    background: rgba(16, 185, 129, 0.06);
+    border: 1px solid rgba(16, 185, 129, 0.12);
+}
+.reloj-info.lleno {
+    color: #ef4444;
+    background: rgba(239, 68, 68, 0.06);
+    border: 1px solid rgba(239, 68, 68, 0.12);
+}
+
+/* --- Loading Spinner --- */
+.loading-spinner {
+    width: 28px;
+    height: 28px;
+    border: 3px solid rgba(158, 42, 43, 0.15);
+    border-top-color: #9e2a2b;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+}
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+/* --- Sección Niños/Bebés --- */
+.form-section {
+    margin-top: 8px;
+    padding-top: 12px;
+    border-top: 1px dashed rgba(26, 26, 26, 0.08);
+}
+.section-desc {
+    font-size: 0.8rem;
+    color: rgba(26, 26, 26, 0.4);
+    margin: 0 0 12px;
+    text-align: center;
+}
+
+/* --- Centrado de selectores de personas --- */
+.personas-section {
+    max-width: 320px;
+    margin-left: auto;
+    margin-right: auto;
+}
+.personas-section .cantidad-wrapper {
+    justify-content: center;
+}
+.personas-section label {
+    text-align: center;
+}
+</style>
+
+<script is:inline>
+// ============================================
+// 🔴 CARGAR TURNOS Y HORAS DESDE LA API
+// ============================================
+
+window._cargarTurnosModal = async function(sucursalId, fecha) {
+    const loadingEl   = document.getElementById('turnosLoading');
+    const errorEl     = document.getElementById('turnosError');
+    const containerEl = document.getElementById('turnosContainer');
+    const gridEl      = document.getElementById('turnosGrid');
+    const horasWrap   = document.getElementById('horasWrapper');
+    const horasEl     = document.getElementById('horasContainer');
+    const fechaInput  = document.getElementById('fechaReserva');
+    const turnoInput  = document.getElementById('turnoReserva');
+    const horaInput   = document.getElementById('horaReserva');
+
+    // Reset estado
+    loadingEl.classList.remove('hidden');
+    errorEl.classList.add('hidden');
+    containerEl.classList.add('hidden');
+    horasWrap.classList.add('hidden');
+    gridEl.innerHTML = '';
+    // ⚠️ NO destruir horasEl.innerHTML — contiene los <select> del reloj digital estático.
+    // Solo limpiar las opciones de los selects y la info.
+    const _relojH = document.getElementById('relojHora');
+    const _relojM = document.getElementById('relojMinuto');
+    const _relojI = document.getElementById('relojInfo');
+    if (_relojH) _relojH.innerHTML = '';
+    if (_relojM) _relojM.innerHTML = '';
+    if (_relojI) _relojI.innerHTML = '';
+    // Eliminar la capacidad dinámica si existe
+    const _capOld = horasWrap?.querySelector('.capacidad-info');
+    if (_capOld) _capOld.remove();
+    turnoInput.value = '';
+    horaInput.value = '';
+    window._turnoData = null;
+
+    try {
+        const response = await fetch(`/api/reservas/horas-disponibles?sucursal_id=${sucursalId}&fecha=${fecha}`);
+        const result = await response.json();
+        
+        loadingEl.classList.add('hidden');
+
+        if (!result.success) {
+            errorEl.innerHTML = `<span class="turnos-error-icon">⚠️</span><span>${result.error || 'Error al cargar disponibilidad'}</span>`;
+            errorEl.classList.remove('hidden');
+            return;
+        }
+
+        const data = result.data;
+
+        // Validar y ajustar fecha mínima si el día de hoy ya venció/está cerrado
+        if (data.proxima_fecha_disponible) {
+            fechaInput.min = data.proxima_fecha_disponible;
+            if (fechaInput.value < data.proxima_fecha_disponible) {
+                fechaInput.value = data.proxima_fecha_disponible;
+                // Cargar la nueva fecha disponible automáticamente
+                window._cargarTurnosModal(sucursalId, data.proxima_fecha_disponible);
+                return;
+            }
+        }
+
+        // Verificar si permite reservas
+        if (data.permite_reservas === false) {
+            errorEl.innerHTML = '<span class="turnos-error-icon">🚫</span><span>Esta sucursal no acepta reservas en este momento</span>';
+            errorEl.classList.remove('hidden');
+            return;
+        }
+        
+        // Verificar si está abierta/disponible
+        if (!data.disponible && (!data.turnos || data.turnos.length === 0)) {
+            errorEl.innerHTML = `<span class="turnos-error-icon">🗓️</span><span>${data.mensaje || 'La sucursal está cerrada este día'}</span>`;
+            errorEl.classList.remove('hidden');
+            return;
+        }
+
+        // Guardar datos en window
+        window._turnoData = data;
+
+        // Renderizar tarjetas de turno
+        const iconos = { manana: '☀️', tarde: '🌅', noche: '🌙' };
+        let html = '';
+        data.turnos.forEach(turno => {
+            const icono      = iconos[turno.tipo] || '⏰';
+            const pct        = turno.disponibilidad;
+            const estadoClase = pct === 0 ? 'turno-lleno' : pct < 30 ? 'turno-casi-lleno' : 'turno-disponible';
+            const estadoLabel = pct === 0 ? 'Sin cupos' : pct < 30 ? 'Casi lleno' : 'Disponible';
+            const disabled    = !turno.disponible ? 'disabled' : '';
+
+            html += `
+                <button
+                    type="button"
+                    class="turno-card ${!turno.disponible ? 'turno-card--disabled' : ''}"
+                    data-turno-tipo="${turno.tipo}"
+                    ${disabled}
+                    onclick="window._seleccionarTurnoModal(this)"
+                >
+                    <span class="turno-icono">${icono}</span>
+                    <div class="turno-info">
+                        <span class="turno-nombre">${turno.label}</span>
+                        <span class="turno-horario">${turno.inicio} – ${turno.fin}</span>
+                    </div>
+                    <div class="turno-badge ${estadoClase}">
+                        <div class="turno-pct-bar"><div class="turno-pct-fill" style="width:${100 - pct}%"></div></div>
+                        <span class="turno-badge-label">${estadoLabel}</span>
+                    </div>
+                </button>
+            `;
+        });
+
+        gridEl.innerHTML = html;
+        containerEl.classList.remove('hidden');
+        
+    } catch (error) {
+        loadingEl.classList.add('hidden');
+        errorEl.innerHTML = '<span class="turnos-error-icon">❌</span><span>Error de conexión. Intenta de nuevo.</span>';
+        errorEl.classList.remove('hidden');
+        console.error('Error cargando turnos:', error);
+    }
+}
+
+// Alias para mantener compatibilidad
+window.cargarHorasDisponibles = window._cargarTurnosModal;
+
+// ============================================
+// SELECCIONAR TURNO Y CARGAR RELOJ DIGITAL
+// ============================================
+
+window._seleccionarTurnoModal = function(element) {
+    if (element.disabled || element.classList.contains('turno-card--disabled')) return;
+
+    const gridEl      = document.getElementById('turnosGrid');
+    const horasWrap   = document.getElementById('horasWrapper');
+    const turnoInput  = document.getElementById('turnoReserva');
+    const horaInput   = document.getElementById('horaReserva');
+    
+    const selectHora  = document.getElementById('relojHora');
+    const selectMin   = document.getElementById('relojMinuto');
+    const relojInfo   = document.getElementById('relojInfo');
+
+    // Deseleccionar todos
+    gridEl.querySelectorAll('.turno-card').forEach(c => c.classList.remove('turno-card--selected'));
+    element.classList.add('turno-card--selected');
+
+    const tipoTurno = element.dataset.turnoTipo;
+    turnoInput.value = tipoTurno;
+
+    // Ocultar error de turno
+    const errorTurno = document.getElementById('errorTurno');
+    if (errorTurno) errorTurno.style.display = 'none';
+
+    // Limpiar hora seleccionada anterior
+    horaInput.value = '';
+    
+    // Obtener horas del turno seleccionado
+    const data = window._turnoData;
+    if (!data) return;
+
+    const turno = data.turnos.find(t => t.tipo === tipoTurno);
+    if (!turno) return;
+
+    // Extraer horas únicas (HH)
+    const horasUnicas = [...new Set(turno.horas.map(h => h.hora.split(':')[0]))].sort();
+
+    // Llenar select de horas
+    selectHora.innerHTML = horasUnicas.map(h => `<option value="${h}">${h}</option>`).join('');
+
+    // Función para actualizar minutos según la hora seleccionada
+    function actualizarMinutos() {
+        const horaSel = selectHora.value;
+        const minutos = Array.from({length: 60}, (_, i) => String(i).padStart(2, '0'));
+
+        selectMin.innerHTML = minutos.map(min => {
+            return `<option value="${min}">${min}</option>`;
+        }).join('');
+
+        actualizarValorFinal();
+    }
+
+    // Función para actualizar el valor final de la hora y su cupo
+    function actualizarValorFinal() {
+        const horaSel = selectHora.value;
+        const minSel = selectMin.value;
+        if (!horaSel || !minSel) {
+            horaInput.value = '';
+            if (relojInfo) relojInfo.innerHTML = '';
+            return;
+        }
+
+        const horaCompleta = `${horaSel}:${minSel}`;
+        horaInput.value = horaCompleta;
+
+        if (relojInfo) {
+            relojInfo.innerHTML = '';
+        }
+
+        // Limpiar error de hora
+        const errorHora = document.getElementById('errorHora');
+        if (errorHora) errorHora.style.display = 'none';
+    }
+
+    // Bindear eventos
+    selectHora.onchange = actualizarMinutos;
+    selectMin.onchange = actualizarValorFinal;
+
+    // Inicializar minutos e info
+    actualizarMinutos();
+
+    // Renderizar Info de capacidad general (fuera del grid de horas)
+    let capInfo = horasWrap.querySelector('.capacidad-info');
+    if (!capInfo) {
+        capInfo = document.createElement('div');
+        capInfo.className = 'capacidad-info';
+        horasWrap.appendChild(capInfo);
+    }
+    capInfo.innerHTML = `
+        <span class="info-disponibles">🪑 ${data.disponibles_hoy} cubiertos disponibles hoy</span>
+        <span class="info-total">📋 Capacidad total: ${data.capacidad_total}</span>
+    `;
+
+    // Mostrar sección con animación
+    horasWrap.classList.remove('hidden');
+    horasWrap.classList.add('horas-animate-in');
+    setTimeout(() => horasWrap.classList.remove('horas-animate-in'), 400);
+}
+
+// ============================================
+// SELECCIONAR HORA (Mantenido por compatibilidad)
+// ============================================
+
+window._seleccionarHoraModal = function(element) {
+    // Obsoleto por el Reloj Digital
+}
+
+window.seleccionarHora = window._seleccionarHoraModal;
+
+// ============================================
+// CAMBIAR CANTIDAD ADULTOS/NIÑOS/BEBÉS
+// ============================================
+
+window._cambiarCantidad = function(inputId, delta, min = 0, max = 10) {
+    const input = document.getElementById(inputId);
+    if (!input) return;
+    let valor = parseInt(input.value) + delta;
+    valor = Math.max(min, Math.min(max, valor));
+    input.value = valor;
+}
+
+// ============================================
+// ABRIR MODAL DE RESERVA (CON VALIDACIÓN)
+// ============================================
+
+function abrirModalReserva(sucursalId, sucursalNombre) {
+    window._sucursalId = sucursalId;
+    window._sucursalNombre = sucursalNombre;
+    
+    // Obtener fecha actual en Bolivia (en-CA garantiza formato YYYY-MM-DD sin bidi)
+    const hoyBolivia = new Intl.DateTimeFormat('en-CA', {
+        timeZone: 'America/La_Paz',
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit'
+    }).format(new Date());
+    
+    abrirModalReservaUI(sucursalId, sucursalNombre, hoyBolivia);
+}
+
+// ============================================
+// ABRIR MODAL UI
+// ============================================
+
+function abrirModalReservaUI(sucursalId, sucursalNombre, fechaActual) {
+    const modalHTML = `
+        <div class="modal-overlay" id="modalReservaCliente" onclick="cerrarModalReserva()">
+            <div class="modal-container" onclick="event.stopPropagation()">
+                <div class="modal-header">
+                    <div class="modal-title">
+                        <span class="icon">📅</span>
+                        <div>
+                            <h2>Reservar en ${sucursalNombre}</h2>
+                            <p>Completa tus datos para solicitar una reserva</p>
+                        </div>
+                    </div>
+                    <button class="modal-close" onclick="cerrarModalReserva()">✕</button>
+                </div>
+                
+                <form id="formReservaCliente" class="modal-body">
+                    <div class="form-group">
+                        <label>👤 Nombres Completos *</label>
+                        <input type="text" id="nombreCliente" placeholder="Carlos Gómez Pérez" required />
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>📱 Número Celular *</label>
+                        <div class="telefono-wrapper">
+                            <select id="codigoPais">
+                                <option value="591">🇧🇴 +591 (Bolivia)</option>
+                                <option value="1">🇺🇸 +1 (EE.UU.)</option>
+                                <option value="34">🇪🇸 +34 (España)</option>
+                                <option value="52">🇲🇽 +52 (México)</option>
+                            </select>
+                            <input type="tel" id="telefonoCliente" placeholder="70000111" required />
+                        </div>
+                    </div>
+                    
+                    <!-- Fecha -->
+                    <div class="form-group">
+                        <label>📅 Fecha <span class="required">*</span></label>
+                        <input type="date" id="fechaReserva" min="${fechaActual}" value="${fechaActual}" required />
+                    </div>
+                    
+                    <!-- Selector de Turno y Hora (UI Original Estática) -->
+                    <div class="form-group" id="grupoTurnoHora">
+                        <div id="turnosContainer" class="turnos-container">
+                            <label class="field-label">
+                                Turno
+                                <span class="required">*</span>
+                            </label>
+                            <div id="turnosGrid" class="turnos-grid"></div>
+                            <span class="error-message" id="errorTurno" style="display: none; color: #ef4444; font-size: 0.8rem; margin-top: 4px;">Por favor selecciona un turno</span>
+
+                            <div id="horasWrapper" class="horas-wrapper hidden">
+                                <div id="horasContainer" class="reloj-digital-wrapper">
+                                    <div class="reloj-digital-container">
+                                        <select id="relojHora" class="reloj-select"></select>
+                                        <span class="reloj-colon">:</span>
+                                        <select id="relojMinuto" class="reloj-select"></select>
+                                    </div>
+                                    <div id="relojInfo" class="reloj-info" style="display: none;"></div>
+                                </div>
+                                <span class="error-message" id="errorHora" style="display: none; color: #ef4444; font-size: 0.8rem; margin-top: 4px;">Por favor selecciona una hora</span>
+                            </div>
+                        </div>
+
+                        <input type="hidden" id="turnoReserva" />
+                        <input type="hidden" id="horaReserva" required />
+                    </div>
+                    
+                    <div class="form-group personas-section">
+                        <label>👥 Número de Adultos *</label>
+                        <div class="cantidad-wrapper">
+                            <button type="button" class="btn-cantidad btn-menos" onclick="window._cambiarCantidad('personasReserva', -1, 1, 20)">−</button>
+                            <input type="number" id="personasReserva" value="2" min="1" max="20" oninput="this.value = Math.max(1, Math.min(20, parseInt(this.value) || 2))" required />
+                            <button type="button" class="btn-cantidad btn-mas" onclick="window._cambiarCantidad('personasReserva', 1, 1, 20)">+</button>
+                            <span class="cantidad-label">adultos</span>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>📝 Comentarios <span class="optional">(Opcional)</span></label>
+                        <textarea id="observacionesReserva" rows="2" placeholder="Ej: Prefiero mesa cerca de la ventana"></textarea>
+                    </div>
+                </form>
+                
+                <div class="modal-footer">
+                    <button type="button" class="btn-cancel" onclick="cerrarModalReserva()">Cancelar</button>
+                    <button type="submit" class="btn-save" id="btnEnviarReserva" form="formReservaCliente">
+                        <span class="btn-text">📅 Solicitar Reserva</span>
+                        <span class="btn-spinner hidden">⏳</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    document.body.insertAdjacentHTML('beforeend', modalHTML);
+    document.body.classList.add('modal-open');
+    
+    // Cargar turnos (estáticos en UI local) cuando cambie la fecha
+    document.getElementById('fechaReserva').addEventListener('change', function() {
+        window._cargarTurnosModal(sucursalId, this.value);
+    });
+    
+    // Cargar turnos inmediatamente
+    window._cargarTurnosModal(sucursalId, fechaActual);
+    
+    document.getElementById('formReservaCliente').addEventListener('submit', async function(e) {
+        e.preventDefault();
+        
+        const turnoInput = document.getElementById('turnoReserva');
+        const horaInput = document.getElementById('horaReserva');
+        const turnoSeleccionado = turnoInput?.value;
+        const horaSeleccionada = horaInput?.value;
+
+        if (!turnoSeleccionado) {
+            alert('❌ Por favor selecciona un turno (Mañana/Tarde/Noche)');
+            return;
+        }
+        
+        if (!horaSeleccionada) {
+            alert('❌ Por favor selecciona una hora disponible');
+            return;
+        }
+        
+        const btn = document.getElementById('btnEnviarReserva');
+        btn.classList.add('loading');
+        btn.disabled = true;
+        
+        const data = {
+            sucursal_id: sucursalId,
+            nombre_cliente: document.getElementById('nombreCliente').value.trim(),
+            telefono: document.getElementById('telefonoCliente').value.trim(),
+            codigo_pais: document.getElementById('codigoPais').value,
+            fecha: document.getElementById('fechaReserva').value,
+            turno: turnoSeleccionado,
+            hora: horaSeleccionada,
+            numero_personas: parseInt(document.getElementById('personasReserva').value),
+            observaciones: document.getElementById('observacionesReserva').value.trim()
+        };
+        
+        try {
+            const response = await fetch('/api/reservas/cliente', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            });
+            const result = await response.json();
+            
+            if (result.success) {
+                alert('✅ Reserva solicitada con éxito. Te confirmaremos por WhatsApp.');
+                cerrarModalReserva();
+            } else {
+                alert('❌ Error: ' + result.error);
+                btn.classList.remove('loading');
+                btn.disabled = false;
+            }
+        } catch (err) {
+            alert('❌ Error de red');
+            btn.classList.remove('loading');
+            btn.disabled = false;
+        }
+    });
+}
+
+function cerrarModalReserva() {
+    const modal = document.getElementById('modalReservaCliente');
+    if (modal) {
+        modal.style.opacity = '0';
+        setTimeout(() => modal.remove(), 300);
+    }
+    document.body.classList.remove('modal-open');
+}
+
+window.abrirModalReserva = abrirModalReserva;
+window.cerrarModalReserva = cerrarModalReserva;
+window.seleccionarHora = seleccionarHora;
+</script>

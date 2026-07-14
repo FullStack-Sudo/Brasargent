@@ -7,9 +7,9 @@ const sucursales = [
     rating: 4.3,
     reviews: "1.2K",
     address: "Sucursal Beni, Av. casi - 5to anillo ",
-    days: "Lunes a Domingo",
+    days: "",
     hours:
-      "11:30 am / 15:00 pm - 18:30 pm / 22:00 pm - Domingo 11:30 am - 15:00 pm",
+      "Lunes a Sabado 11:30 am - 15:00 pm / 18:30 pm - 22:00 pm / Domingo 11:30 am - 15:00 pm",
     image: "/img/sucursales/beni.jpeg",
     whatsapp: "59178007700", // Reemplazar con el número real
     mapUrl: "https://maps.app.goo.gl/Ee8GbY1Ufdon1KC88",
@@ -38,7 +38,7 @@ const sucursales = [
     reviews: "100",
     address: "Las Brisas",
     hours:
-      "Lunes a Sabado desde las 11:30 am a las 03:30 pm / 06:30 pm a las 22:00 pm / Domingo 11:30 am - 15:30 pm",
+      "Lunes a Sabado 11:30 am - 15:30 pm / 18:30 pm - 22:00 pm / Domingo 11:30 am - 15:30 pm",
     image: "/img/sucursales/RODIZIO.webp",
     whatsapp: "59178555509", // Reemplazar con el número real
     type: "Restaurante",
@@ -298,31 +298,22 @@ const sucursales = [
                   </a>
 
                   <!-- Botón Reservar - Dorado (Circular/Pill) -->
-                  <button 
-                      class="btn-reservar w-16 h-16 flex items-center justify-center bg-[#d4af37] text-white rounded-full hover:bg-[#b8941f] hover:shadow-2xl hover:shadow-[#d4af37]/60 transition-all duration-300 hover:scale-110 group" 
-                      onclick={`abrirModalReserva(${index + 1}, '${sucursal.name}')`}
-                      data-sucursal-id={index + 1}
-                      title="Reservar mesa"
-                  >
-                      <svg class="w-7 h-7 group-hover:scale-110 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
-                      </svg>
-                  </button>
+                  {sucursal.name !== "Fast Grill" && (
+                    <button 
+                        class="btn-reservar w-16 h-16 flex items-center justify-center bg-[#d4af37] text-white rounded-full hover:bg-[#b8941f] hover:shadow-2xl hover:shadow-[#d4af37]/60 transition-all duration-300 hover:scale-110 group" 
+                        onclick={`abrirModalReserva(${index + 1}, '${sucursal.name}')`}
+                        data-sucursal-id={index + 1}
+                        title="Reservar mesa"
+                    >
+                        <svg class="w-7 h-7 group-hover:scale-110 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                        </svg>
+                    </button>
+                  )}
                 </div>
 
                 {/* Spacer inferior para centrar botones */}
-                <div class="grow" />
-
-                {/* Logo en el pie de la tarjeta */}
-                <div class="flex justify-center items-center mt-20 h-10 w-full px-4 text-center">
-                  <img
-                    src={sucursal.footerLogo || "/img/logo/LOGO1SF.png"}
-                    alt="Brasargent Logo"
-                    class="h-full w-auto object-contain opacity-100 hover:scale-105 transition-all duration-300 pointer-events-none"
-                  />
-                </div>
-              </div>
-
+                <div class="grow"></div>
               </div>
             </div>
           ))
@@ -458,12 +449,10 @@ const sucursales = [
 
 <script>
 // ============================================
-// MODAL DE RESERVA - CORREGIDO
+// MODAL DE RESERVA - CON VALIDACIÓN DE HORARIOS
 // ============================================
 
 window.abrirModalReserva = function(sucursalId, sucursalNombre) {
-    console.log('Abriendo modal para:', sucursalNombre); // Debug
-    
     // Verificar si ya existe un modal abierto
     const existente = document.getElementById('modalReservaCliente');
     if (existente) {
@@ -509,24 +498,100 @@ window.abrirModalReserva = function(sucursalId, sucursalNombre) {
                             </select>
                             <input type="tel" id="telefonoCliente" placeholder="70000111" required />
                         </div>
-                    </div>
-                    
-                    <!-- Fecha y Hora -->
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label>📅 Fecha <span class="required">*</span></label>
-                            <input type="date" id="fechaReserva" required />
-                        </div>
-                        <div class="form-group">
-                            <label>🕐 Hora <span class="required">*</span></label>
-                            <input type="time" id="horaReserva" required />
-                        </div>
-                    </div>
-                    
-                    <!-- Personas -->
+                    </div>                    
+                    <!-- Fecha -->
                     <div class="form-group">
-                        <label>👥 Número de Personas <span class="required">*</span></label>
-                        <input type="number" id="personasReserva" min="1" max="20" value="2" required />
+                        <label>📅 Fecha <span class="required">*</span></label>
+                        <input type="date" id="fechaReserva" required />
+                        <span class="field-hint">Selecciona el día de tu reserva</span>
+                    </div>
+                    
+                    <!-- Selector de Turno y Hora (UI Original Estática) -->
+                    <div class="form-group" id="grupoTurnoHora">
+                        <div id="turnosContainer" class="turnos-container">
+                            <label class="field-label">
+                                Turno
+                                <span class="required">*</span>
+                            </label>
+                            <div id="turnosGrid" class="turnos-grid"></div>
+                            <span class="error-message" id="errorTurno" style="display: none; color: #ef4444; font-size: 0.8rem; margin-top: 4px;">Por favor selecciona un turno</span>
+
+                            <div id="horasWrapper" class="horas-wrapper hidden">
+                                <div id="horasContainer" class="reloj-digital-wrapper">
+                                    <div class="reloj-digital-container">
+                                        <select id="relojHora" class="reloj-select"></select>
+                                        <span class="reloj-colon">:</span>
+                                        <select id="relojMinuto" class="reloj-select"></select>
+                                    </div>
+                                    <div id="relojInfo" class="reloj-info" style="display: none;"></div>
+                                </div>
+                                <span class="error-message" id="errorHora" style="display: none; color: #ef4444; font-size: 0.8rem; margin-top: 4px;">Por favor selecciona una hora</span>
+                            </div>
+                        </div>
+
+                        <input type="hidden" id="turnoReserva" />
+                        <input type="hidden" id="horaReserva" required />
+                    </div>
+                    
+                    <!-- Personas (adultos) -->
+                    <div class="form-group personas-section">
+                        <label>👥 Número de Adultos <span class="required">*</span></label>
+                        <div class="cantidad-wrapper">
+                            <button type="button" class="btn-cantidad btn-menos" onclick="window._cambiarCantidad('personasReserva', -1, 1, 20)">−</button>
+                            <input type="number" id="personasReserva" value="2" min="1" max="20" oninput="this.value = Math.max(1, Math.min(20, parseInt(this.value) || 2))" required />
+                            <button type="button" class="btn-cantidad btn-mas" onclick="window._cambiarCantidad('personasReserva', 1, 1, 20)">+</button>
+                            <span class="cantidad-label">adultos</span>
+                        </div>
+                    </div>
+                    
+                    <!-- 👶 SECCIÓN NIÑOS Y BEBÉS -->
+                    <div class="form-section personas-section">
+                        <p class="section-desc">Indica si vienes con niños para preparar todo con anticipación</p>
+                        
+                        <!-- Niños -->
+                        <div class="form-group">
+                            <label>👧 Niños (2-12 años)</label>
+                            <div class="cantidad-wrapper">
+                                <button type="button" class="btn-cantidad btn-menos" onclick="window._cambiarCantidad('cantidadNinos', -1)">−</button>
+                                <input type="number" id="cantidadNinos" value="0" min="0" max="10" oninput="this.value = Math.max(0, Math.min(10, parseInt(this.value) || 0))" />
+                                <button type="button" class="btn-cantidad btn-mas" onclick="window._cambiarCantidad('cantidadNinos', 1)">+</button>
+                                <span class="cantidad-label">niños</span>
+                            </div>
+                        </div>
+                        
+                        <!-- Bebés -->
+                        <div class="form-group">
+                            <label>👶 Bebés (0-2 años)</label>
+                            <div class="cantidad-wrapper">
+                                <button type="button" class="btn-cantidad btn-menos" onclick="window._cambiarCantidad('cantidadBebes', -1)">−</button>
+                                <input type="number" id="cantidadBebes" value="0" min="0" max="10" oninput="this.value = Math.max(0, Math.min(10, parseInt(this.value) || 0))" />
+                                <button type="button" class="btn-cantidad btn-mas" onclick="window._cambiarCantidad('cantidadBebes', 1)">+</button>
+                                <span class="cantidad-label">bebés</span>
+                            </div>
+                        </div>
+                        
+                        <!-- Opciones adicionales -->
+                        <div class="checkbox-group">
+                            <label class="checkbox-label">
+                                <input type="checkbox" id="necesitaSilla" />
+                                <span class="custom-checkbox"></span>
+                                <div>
+                                    <strong>🪑 Necesita silla para bebé</strong>
+                                    <small>Prepararemos una silla alta</small>
+                                </div>
+                            </label>
+                        </div>
+                        
+                        <div class="checkbox-group">
+                            <label class="checkbox-label">
+                                <input type="checkbox" id="necesitaMenuInfantil" />
+                                <span class="custom-checkbox"></span>
+                                <div>
+                                    <strong>🍽️ Necesita menú infantil</strong>
+                                    <small>Opciones especiales para niños</small>
+                                </div>
+                            </label>
+                        </div>
                     </div>
                     
                     <!-- Comentarios -->
@@ -552,19 +617,24 @@ window.abrirModalReserva = function(sucursalId, sucursalNombre) {
     document.body.insertAdjacentHTML('beforeend', modalHTML);
     document.body.classList.add('modal-open');
     
-    // Configurar fecha mínima
+    // Configurar fecha mínima de acuerdo al huso horario de Bolivia (en-CA garantiza formato YYYY-MM-DD sin bidi)
     const fechaInput = document.getElementById('fechaReserva');
-    const hoy = new Date();
-    fechaInput.min = hoy.toISOString().split('T')[0];
-    fechaInput.value = fechaInput.min;
+    const hoyBolivia = new Intl.DateTimeFormat('en-CA', {
+        timeZone: 'America/La_Paz',
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit'
+    }).format(new Date());
+    fechaInput.min = hoyBolivia;
+    fechaInput.value = hoyBolivia;
     
-    // Configurar hora actual
-    const horaInput = document.getElementById('horaReserva');
-    const ahora = new Date();
-    let horas = ahora.getHours();
-    let minutos = Math.ceil(ahora.getMinutes() / 30) * 30;
-    if (minutos === 60) { horas++; minutos = 0; }
-    horaInput.value = `${String(horas).padStart(2, '0')}:${String(minutos).padStart(2, '0')}`;
+    // Cargar turnos (estáticos en UI local) cuando cambie la fecha
+    fechaInput.addEventListener('change', function() {
+        window._cargarTurnosModal(sucursalId, this.value);
+    });
+    
+    // Cargar turnos inmediatamente
+    window._cargarTurnosModal(sucursalId, hoyBolivia);
     
     // Manejar envío
     document.getElementById('formReservaCliente').addEventListener('submit', async function(e) {
@@ -573,8 +643,200 @@ window.abrirModalReserva = function(sucursalId, sucursalNombre) {
     });
 }
 
+window._cargarTurnosModal = async function(sucursalId, fecha) {
+    const containerEl = document.getElementById('turnosContainer');
+    const gridEl      = document.getElementById('turnosGrid');
+    const horasWrap   = document.getElementById('horasWrapper');
+    const turnoInput  = document.getElementById('turnoReserva');
+    const horaInput   = document.getElementById('horaReserva');
+
+    // Reset estado
+    if (containerEl) containerEl.classList.remove('hidden');
+    if (horasWrap) horasWrap.classList.add('hidden');
+    if (gridEl) gridEl.innerHTML = '<div class="turnos-loading" style="padding: 1rem; text-align: center;"><div class="loading-spinner" style="border: 2px solid rgba(0,0,0,0.1); border-left-color: #9e2a2b; border-radius: 50%; width: 20px; height: 20px; animation: spin 1s linear infinite; display: inline-block;"></div></div>';
+    
+    const _relojH = document.getElementById('relojHora');
+    const _relojM = document.getElementById('relojMinuto');
+    if (_relojH) _relojH.innerHTML = '';
+    if (_relojM) _relojM.innerHTML = '';
+    
+    if (turnoInput) turnoInput.value = '';
+    if (horaInput) horaInput.value = '';
+
+    try {
+        const response = await fetch(`/api/reservas/horas-disponibles?sucursal_id=${sucursalId}&fecha=${fecha}`);
+        const result = await response.json();
+        
+        if (!result.success || !result.data || !result.data.turnos) {
+            if (gridEl) gridEl.innerHTML = '<span class="error-message" style="color: #ef4444; font-size: 0.9rem;">No se pudieron cargar los horarios para esta fecha.</span>';
+            return;
+        }
+
+        const data = result.data;
+        window._turnoData = data;
+
+        const iconos = { manana: '☀️', tarde: '🌅', noche: '🌙', continuo: '🔁' };
+        let html = '';
+        
+        if (data.turnos.length === 0) {
+            html = '<span style="color: #666; font-size: 0.9rem; grid-column: 1 / -1; text-align: center; padding: 1rem;">No hay atención configurada en esta fecha.</span>';
+        } else {
+            data.turnos.forEach(turno => {
+                const icono = iconos[turno.tipo] || '⏰';
+                
+                // Renderizamos la tarjeta limpia, sin bloqueos ni barras de capacidad
+                html += `
+                    <button
+                        type="button"
+                        class="turno-card"
+                        data-turno-tipo="${turno.tipo}"
+                        onclick="window._seleccionarTurnoModal(this)"
+                    >
+                        <span class="turno-icono">${icono}</span>
+                        <div class="turno-info">
+                            <span class="turno-nombre">${turno.label}</span>
+                            <span class="turno-horario">${turno.inicio} – ${turno.fin}</span>
+                        </div>
+                    </button>
+                `;
+            });
+        }
+
+        if (gridEl) gridEl.innerHTML = html;
+        
+    } catch (error) {
+        console.error('Error cargando turnos:', error);
+        if (gridEl) gridEl.innerHTML = '<span class="error-message" style="color: #ef4444; font-size: 0.9rem;">Error de conexión. Intenta de nuevo.</span>';
+    }
+}
+
+// Alias para mantener compatibilidad
+window._cargarHorasModal = window._cargarTurnosModal;
+
 // ============================================
-// ENVIAR RESERVA
+// SELECCIONAR TURNO Y CARGAR RELOJ DIGITAL
+// ============================================
+
+window._seleccionarTurnoModal = function(element) {
+    if (element.disabled || element.classList.contains('turno-card--disabled')) return;
+
+    const gridEl      = document.getElementById('turnosGrid');
+    const horasWrap   = document.getElementById('horasWrapper');
+    const turnoInput  = document.getElementById('turnoReserva');
+    const horaInput   = document.getElementById('horaReserva');
+    
+    const selectHora  = document.getElementById('relojHora');
+    const selectMin   = document.getElementById('relojMinuto');
+    const relojInfo   = document.getElementById('relojInfo');
+
+    // Deseleccionar todos
+    gridEl.querySelectorAll('.turno-card').forEach(c => c.classList.remove('turno-card--selected'));
+    element.classList.add('turno-card--selected');
+
+    const tipoTurno = element.dataset.turnoTipo;
+    turnoInput.value = tipoTurno;
+
+    // Ocultar error de turno
+    const errorTurno = document.getElementById('errorTurno');
+    if (errorTurno) errorTurno.style.display = 'none';
+
+    // Limpiar hora seleccionada anterior
+    horaInput.value = '';
+    
+    // Obtener horas del turno seleccionado
+    const data = window._turnoData;
+    if (!data) return;
+
+    const turno = data.turnos.find(t => t.tipo === tipoTurno);
+    if (!turno) return;
+
+    // Extraer horas únicas (HH)
+    const horasUnicas = [...new Set(turno.horas.map(h => h.hora.split(':')[0]))].sort();
+
+    // Llenar select de horas
+    selectHora.innerHTML = horasUnicas.map(h => `<option value="${h}">${h}</option>`).join('');
+
+    // Función para actualizar minutos según la hora seleccionada
+    function actualizarMinutos() {
+        const horaSel = selectHora.value;
+        const minutos = Array.from({length: 60}, (_, i) => String(i).padStart(2, '0'));
+
+        selectMin.innerHTML = minutos.map(min => {
+            return `<option value="${min}">${min}</option>`;
+        }).join('');
+
+        actualizarValorFinal();
+    }
+
+    // Función para actualizar el valor final de la hora y su cupo
+    function actualizarValorFinal() {
+        const horaSel = selectHora.value;
+        const minSel = selectMin.value;
+        if (!horaSel || !minSel) {
+            horaInput.value = '';
+            if (relojInfo) relojInfo.innerHTML = '';
+            return;
+        }
+
+        const horaCompleta = `${horaSel}:${minSel}`;
+        horaInput.value = horaCompleta;
+
+        if (relojInfo) {
+            relojInfo.innerHTML = '';
+        }
+
+        // Limpiar error de hora
+        const errorHora = document.getElementById('errorHora');
+        if (errorHora) errorHora.style.display = 'none';
+    }
+
+    // Bindear eventos
+    selectHora.onchange = actualizarMinutos;
+    selectMin.onchange = actualizarValorFinal;
+
+    // Inicializar minutos e info
+    actualizarMinutos();
+
+    // Renderizar Info de capacidad general (fuera del grid de horas)
+    let capInfo = horasWrap.querySelector('.capacidad-info');
+    if (!capInfo) {
+        capInfo = document.createElement('div');
+        capInfo.className = 'capacidad-info';
+        horasWrap.appendChild(capInfo);
+    }
+    capInfo.innerHTML = `
+        <span class="info-disponibles">🪑 ${data.disponibles_hoy} cubiertos disponibles hoy</span>
+        <span class="info-total">📋 Capacidad total: ${data.capacidad_total}</span>
+    `;
+
+    // Mostrar sección con animación
+    horasWrap.classList.remove('hidden');
+    horasWrap.classList.add('horas-animate-in');
+    setTimeout(() => horasWrap.classList.remove('horas-animate-in'), 400);
+}
+
+// ============================================
+// SELECCIONAR HORA (Mantenido por compatibilidad)
+// ============================================
+
+window._seleccionarHoraModal = function(element) {
+    // Obsoleto por el nuevo Reloj Digital
+}
+
+// ============================================
+// CAMBIAR CANTIDAD ADULTOS/NIÑOS/BEBÉS
+// ============================================
+
+window._cambiarCantidad = function(inputId, delta, min = 0, max = 10) {
+    const input = document.getElementById(inputId);
+    if (!input) return;
+    let valor = parseInt(input.value) + delta;
+    valor = Math.max(min, Math.min(max, valor));
+    input.value = valor;
+}
+
+// ============================================
+// ENVIAR RESERVA - CON NIÑOS, TURNO Y VALIDACIÓN DE HORA
 // ============================================
 
 window.enviarReserva = async function(sucursalId, sucursalNombre) {
@@ -586,43 +848,51 @@ window.enviarReserva = async function(sucursalId, sucursalNombre) {
     const telefono = document.getElementById('telefonoCliente').value.trim();
     const codigoPais = document.getElementById('codigoPais').value;
     const fecha = document.getElementById('fechaReserva').value;
+    const turno = document.getElementById('turnoReserva').value;
     const hora = document.getElementById('horaReserva').value;
     const personas = parseInt(document.getElementById('personasReserva').value);
     const observaciones = document.getElementById('observacionesReserva').value.trim();
     
-    // Validaciones
+    // 👶 Campos de niños
+    const cantidadNinos = parseInt(document.getElementById('cantidadNinos')?.value) || 0;
+    const cantidadBebes = parseInt(document.getElementById('cantidadBebes')?.value) || 0;
+    const necesitaSilla = document.getElementById('necesitaSilla')?.checked || false;
+    const necesitaMenuInfantil = document.getElementById('necesitaMenuInfantil')?.checked || false;
+    
+    // Validaciones en cliente
     if (!nombre || nombre.length < 3) {
-        alert('Por favor ingresa tu nombre completo');
-        btn.classList.remove('loading');
-        btn.disabled = false;
+        alert('❌ Por favor ingresa tu nombre completo');
+        btn.classList.remove('loading'); btn.disabled = false;
         return;
     }
     
     if (!telefono || telefono.length < 7) {
-        alert('Por favor ingresa un número de teléfono válido');
-        btn.classList.remove('loading');
-        btn.disabled = false;
+        alert('❌ Por favor ingresa un número de teléfono válido');
+        btn.classList.remove('loading'); btn.disabled = false;
         return;
     }
     
     if (!fecha) {
-        alert('Por favor selecciona una fecha');
-        btn.classList.remove('loading');
-        btn.disabled = false;
+        alert('❌ Por favor selecciona una fecha');
+        btn.classList.remove('loading'); btn.disabled = false;
+        return;
+    }
+
+    if (!turno) {
+        alert('❌ Por favor selecciona un turno (Mañana/Tarde/Noche)');
+        btn.classList.remove('loading'); btn.disabled = false;
         return;
     }
     
     if (!hora) {
-        alert('Por favor selecciona una hora');
-        btn.classList.remove('loading');
-        btn.disabled = false;
+        alert('❌ Por favor selecciona una hora disponible de las opciones mostradas');
+        btn.classList.remove('loading'); btn.disabled = false;
         return;
     }
     
     if (!personas || personas < 1) {
-        alert('Por favor ingresa el número de personas');
-        btn.classList.remove('loading');
-        btn.disabled = false;
+        alert('❌ Por favor ingresa el número de personas');
+        btn.classList.remove('loading'); btn.disabled = false;
         return;
     }
     
@@ -633,8 +903,13 @@ window.enviarReserva = async function(sucursalId, sucursalNombre) {
         codigo_pais: codigoPais,
         telefono_completo: `${codigoPais}${telefono}`,
         fecha: fecha,
+        turno: turno,
         hora: hora,
         numero_personas: personas,
+        cantidad_ninos: cantidadNinos,
+        cantidad_bebes: cantidadBebes,
+        necesita_silla_bebe: necesitaSilla,
+        necesita_menu_infantil: necesitaMenuInfantil,
         observaciones: observaciones || null
     };
     
@@ -649,14 +924,14 @@ window.enviarReserva = async function(sucursalId, sucursalNombre) {
         
         if (result.success) {
             window.cerrarModalReserva();
-            window.mostrarModalConfirmacion(sucursalNombre, nombre, fecha, hora);
+            window.mostrarModalConfirmacion(sucursalNombre, nombre, fecha, hora, personas, cantidadNinos, cantidadBebes, necesitaSilla, necesitaMenuInfantil);
         } else {
-            alert(result.error || 'Error al solicitar la reserva');
+            alert('❌ ' + (result.error || 'Error al solicitar la reserva'));
             btn.classList.remove('loading');
             btn.disabled = false;
         }
     } catch (error) {
-        alert('Error de conexión. Intenta de nuevo.');
+        alert('❌ Error de conexión. Intenta de nuevo.');
         btn.classList.remove('loading');
         btn.disabled = false;
     }
@@ -681,7 +956,23 @@ window.cerrarModalReserva = function() {
 // MODAL DE CONFIRMACIÓN
 // ============================================
 
-window.mostrarModalConfirmacion = function(sucursalNombre, nombreCliente, fecha, hora) {
+window.mostrarModalConfirmacion = function(sucursalNombre, nombreCliente, fecha, hora, personas, ninos, bebes, silla, menuInf) {
+    // Construir HTML de niños si aplica
+    let ninosHTML = '';
+    if (ninos > 0) {
+        ninosHTML += `<div class="confirmacion-item"><span class="confirmacion-label">👧 Niños:</span><span class="confirmacion-valor">${ninos}</span></div>`;
+    }
+    if (bebes > 0) {
+        ninosHTML += `<div class="confirmacion-item"><span class="confirmacion-label">👶 Bebés:</span><span class="confirmacion-valor">${bebes}</span></div>`;
+    }
+    let prepHTML = '';
+    if (silla || menuInf) {
+        let prep = [];
+        if (silla) prep.push('🪑 Silla bebé');
+        if (menuInf) prep.push('🍽️ Menú infantil');
+        prepHTML = `<div class="confirmacion-item"><span class="confirmacion-label">📋 Preparación:</span><span class="confirmacion-valor">${prep.join(', ')}</span></div>`;
+    }
+
     const modalHTML = `
         <div class="modal-overlay modal-confirmacion" id="modalConfirmacion" onclick="window.cerrarModalConfirmacion()">
             <div class="modal-container modal-confirmacion-container" onclick="event.stopPropagation()">
@@ -699,12 +990,18 @@ window.mostrarModalConfirmacion = function(sucursalNombre, nombreCliente, fecha,
                         </div>
                         <div class="confirmacion-item">
                             <span class="confirmacion-label">Fecha:</span>
-                            <span class="confirmacion-valor">${new Date(fecha).toLocaleDateString('es-ES')}</span>
+                            <span class="confirmacion-valor">${new Date(fecha + 'T12:00:00').toLocaleDateString('es-ES')}</span>
                         </div>
                         <div class="confirmacion-item">
                             <span class="confirmacion-label">Hora:</span>
                             <span class="confirmacion-valor">${hora}</span>
                         </div>
+                        <div class="confirmacion-item">
+                            <span class="confirmacion-label">Adultos:</span>
+                            <span class="confirmacion-valor">${personas || 2}</span>
+                        </div>
+                        ${ninosHTML}
+                        ${prepHTML}
                     </div>
                     <button class="btn-confirmacion" onclick="window.cerrarModalConfirmacion()">
                         ¡Entendido!
@@ -717,7 +1014,6 @@ window.mostrarModalConfirmacion = function(sucursalNombre, nombreCliente, fecha,
     document.body.insertAdjacentHTML('beforeend', modalHTML);
     document.body.classList.add('modal-open');
     
-    // Auto-cerrar después de 8 segundos
     setTimeout(() => {
         window.cerrarModalConfirmacion();
     }, 8000);
@@ -1078,6 +1374,438 @@ document.addEventListener('keydown', function(e) {
         width: 100%;
         text-align: center;
     }
+}
+
+/* ============================================
+   HORAS DISPONIBLES - BOTONES DINÁMICOS
+   ============================================ */
+.horas-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(85px, 1fr));
+    gap: 8px;
+    margin-top: 8px;
+    max-height: 220px;
+    overflow-y: auto;
+    padding: 4px;
+}
+
+.hora-option {
+    padding: 10px 8px;
+    border: 1.5px solid rgba(26, 26, 26, 0.08);
+    border-radius: 10px;
+    text-align: center;
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    background: white;
+    color: #1a1a1a;
+    font-family: 'Inter', sans-serif;
+}
+
+.hora-option:hover {
+    border-color: #9e2a2b;
+    background: rgba(158, 42, 43, 0.04);
+    transform: scale(1.03);
+}
+
+.hora-option.selected {
+    border-color: #9e2a2b;
+    background: #9e2a2b;
+    color: white;
+    box-shadow: 0 4px 12px rgba(158, 42, 43, 0.3);
+}
+
+.hora-option .hora-disponibles {
+    display: block;
+    font-size: 0.6rem;
+    color: rgba(26, 26, 26, 0.3);
+    font-weight: 400;
+    margin-top: 2px;
+}
+
+.hora-option.selected .hora-disponibles {
+    color: rgba(255, 255, 255, 0.6);
+}
+
+.horas-loading {
+    text-align: center;
+    padding: 20px;
+    color: rgba(26, 26, 26, 0.3);
+    font-size: 0.85rem;
+    grid-column: 1 / -1;
+}
+
+.horas-error {
+    color: #ef4444;
+    font-size: 0.85rem;
+    text-align: center;
+    padding: 16px;
+    grid-column: 1 / -1;
+    background: rgba(239, 68, 68, 0.04);
+    border-radius: 10px;
+    border: 1px solid rgba(239, 68, 68, 0.1);
+}
+
+.field-hint {
+    display: block;
+    color: rgba(26, 26, 26, 0.3);
+    font-size: 0.75rem;
+    margin-top: 4px;
+}
+
+@media (max-width: 480px) {
+    .horas-grid {
+        grid-template-columns: repeat(auto-fill, minmax(70px, 1fr));
+        gap: 6px;
+    }
+}
+
+/* ============================================
+   CANTIDAD DE NIÑOS Y BEBÉS
+   ============================================ */
+.cantidad-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 8px;
+    margin-bottom: 8px;
+}
+
+.btn-cantidad {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    border-radius: 8px;
+    font-size: 1.25rem;
+    font-weight: bold;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    border: none;
+    user-select: none;
+}
+
+.btn-menos {
+    background-color: #ef4444; /* Rojo */
+    color: white;
+}
+
+.btn-menos:hover {
+    background-color: #dc2626;
+    transform: scale(1.05);
+}
+
+.btn-mas {
+    background-color: #10b981; /* Verde */
+    color: white;
+}
+
+.btn-mas:hover {
+    background-color: #059669;
+    transform: scale(1.05);
+}
+
+.cantidad-wrapper input[type="number"] {
+    width: 70px !important;
+    height: 40px !important;
+    padding: 0 8px !important;
+    text-align: center !important;
+    border: 1.5px solid rgba(26, 26, 26, 0.1) !important;
+    border-radius: 8px !important;
+    font-size: 1rem !important;
+    font-weight: 600 !important;
+    background: white !important;
+    color: #1a1a1a !important;
+    -moz-appearance: textfield;
+}
+
+.cantidad-wrapper input[type="number"]::-webkit-outer-spin-button,
+.cantidad-wrapper input[type="number"]::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+.cantidad-label {
+    font-size: 0.9rem;
+    color: rgba(26, 26, 26, 0.4);
+    font-weight: 500;
+    margin-left: 6px;
+    text-transform: capitalize;
+}
+
+/* --- Estilos de Turnos --- */
+.turnos-loading {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    padding: 16px;
+    color: rgba(26, 26, 26, 0.4);
+    font-size: 0.9rem;
+}
+.turnos-error {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: #fef2f2;
+    border: 1px solid #fee2e2;
+    color: #9e2a2b;
+    padding: 12px 16px;
+    border-radius: 12px;
+    font-size: 0.9rem;
+    margin-bottom: 12px;
+}
+.turnos-error-icon {
+    font-size: 1.2rem;
+}
+.turnos-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 12px;
+    margin-top: 8px;
+    margin-bottom: 16px;
+}
+@media (min-width: 480px) {
+    .turnos-grid {
+        grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+    }
+}
+.turno-card {
+    background: #ffffff;
+    border: 1.5px solid rgba(26, 26, 26, 0.08);
+    border-radius: 14px;
+    padding: 14px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+    overflow: hidden;
+    outline: none;
+}
+.turno-card:hover:not(.turno-card--disabled) {
+    transform: translateY(-2px);
+    border-color: #9e2a2b;
+    box-shadow: 0 6px 18px rgba(158, 42, 43, 0.08);
+}
+.turno-card--selected {
+    border-color: #9e2a2b !important;
+    background: rgba(158, 42, 43, 0.02) !important;
+    box-shadow: 0 4px 16px rgba(158, 42, 43, 0.06);
+}
+.turno-card--selected::after {
+    content: "✓";
+    position: absolute;
+    top: 6px;
+    right: 8px;
+    background: #9e2a2b;
+    color: white;
+    font-size: 0.7rem;
+    font-weight: bold;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.turno-card--disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+    background: #f9f9f9;
+}
+.turno-icono {
+    font-size: 1.6rem;
+    margin-bottom: 6px;
+}
+.turno-info {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    margin-bottom: 8px;
+}
+.turno-nombre {
+    font-weight: 700;
+    font-size: 0.9rem;
+    color: #1a1a1a;
+}
+.turno-horario {
+    font-size: 0.75rem;
+    color: rgba(26, 26, 26, 0.4);
+}
+.turno-badge {
+    width: 100%;
+    margin-top: auto;
+}
+.turno-pct-bar {
+    width: 100%;
+    height: 4px;
+    background: rgba(26, 26, 26, 0.06);
+    border-radius: 2px;
+    overflow: hidden;
+    margin-bottom: 4px;
+}
+.turno-pct-fill {
+    height: 100%;
+    background: #10b981;
+    border-radius: 2px;
+    transition: width 0.3s ease;
+}
+.turno-casi-lleno .turno-pct-fill {
+    background: #f59e0b;
+}
+.turno-lleno .turno-pct-fill {
+    background: #ef4444;
+}
+.turno-badge-label {
+    font-size: 0.7rem;
+    font-weight: 600;
+}
+.turno-disponible .turno-badge-label {
+    color: #10b981;
+}
+.turno-casi-lleno .turno-badge-label {
+    color: #f59e0b;
+}
+.turno-lleno .turno-badge-label {
+    color: #ef4444;
+}
+
+/* --- Estilos de Reloj Digital y Capacidad --- */
+.horas-wrapper {
+    margin-top: 16px;
+    border-top: 1px dashed rgba(26, 26, 26, 0.08);
+    padding-top: 16px;
+}
+.reloj-digital-container {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    background: #fffdf9;
+    border: 1.5px solid rgba(158, 42, 43, 0.15);
+    border-radius: 16px;
+    padding: 10px 16px;
+    max-width: 240px;
+    margin: 8px auto 12px;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.02);
+}
+.reloj-select {
+    font-size: 1.4rem !important;
+    font-weight: 700 !important;
+    border: 1px solid rgba(26, 26, 26, 0.15) !important;
+    background: #ffffff !important;
+    border-radius: 8px !important;
+    padding: 6px 12px !important;
+    color: #1a1a1a;
+    cursor: pointer;
+    outline: none !important;
+    transition: all 0.2s ease;
+}
+.reloj-select:hover {
+    border-color: #9e2a2b !important;
+    background: rgba(158, 42, 43, 0.02) !important;
+}
+.reloj-select:focus {
+    border-color: #9e2a2b !important;
+    box-shadow: 0 0 0 3px rgba(158, 42, 43, 0.1) !important;
+}
+.reloj-select:focus {
+    box-shadow: none !important;
+    border: none !important;
+}
+.reloj-colon {
+    font-size: 1.6rem;
+    font-weight: 800;
+    color: #9e2a2b;
+    animation: blink 1s step-start infinite;
+}
+@keyframes blink {
+    50% { opacity: 0; }
+}
+.capacidad-info {
+    width: 100%;
+    background: #fdfaf2;
+    border: 1px solid rgba(245, 158, 11, 0.15);
+    border-radius: 12px;
+    padding: 10px 14px;
+    display: flex;
+    justify-content: space-around;
+    gap: 12px;
+    font-size: 0.85rem;
+    margin-top: 12px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.01);
+}
+.info-disponibles {
+    font-weight: 700;
+    color: #10b981;
+}
+.info-total {
+    font-weight: 500;
+    color: rgba(26, 26, 26, 0.5);
+}
+
+/* --- Reloj Info (disponibilidad debajo del reloj) --- */
+.reloj-info {
+    text-align: center;
+    font-size: 0.85rem;
+    padding: 8px 12px;
+    border-radius: 10px;
+    transition: all 0.3s ease;
+    min-height: 20px;
+}
+.reloj-info.disponible {
+    color: #10b981;
+    background: rgba(16, 185, 129, 0.06);
+    border: 1px solid rgba(16, 185, 129, 0.12);
+}
+.reloj-info.lleno {
+    color: #ef4444;
+    background: rgba(239, 68, 68, 0.06);
+    border: 1px solid rgba(239, 68, 68, 0.12);
+}
+
+/* --- Loading Spinner --- */
+.loading-spinner {
+    width: 28px;
+    height: 28px;
+    border: 3px solid rgba(158, 42, 43, 0.15);
+    border-top-color: #9e2a2b;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+}
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+/* --- Sección Niños/Bebés --- */
+.form-section {
+    margin-top: 8px;
+    padding-top: 12px;
+    border-top: 1px dashed rgba(26, 26, 26, 0.08);
+}
+.section-desc {
+    font-size: 0.8rem;
+    color: rgba(26, 26, 26, 0.4);
+    margin: 0 0 12px;
+    text-align: center;
+}
+
+/* --- Centrado de selectores de personas --- */
+.personas-section {
+    max-width: 320px;
+    margin-left: auto;
+    margin-right: auto;
+}
+.personas-section .cantidad-wrapper {
+    justify-content: center;
+}
+.personas-section label {
+    text-align: center;
 }
 </style>
 

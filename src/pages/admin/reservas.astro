@@ -22,6 +22,10 @@ let sql = `
         r.fecha,
         r.hora,
         r.numero_personas,
+        r.cantidad_ninos,
+        r.cantidad_bebes,
+        r.necesita_silla_bebe,
+        r.necesita_menu_infantil,
         r.estado,
         r.observaciones,
         r.created_at,
@@ -204,8 +208,12 @@ const estadoTexto = (estado: string) => {
                                 <th>Teléfono</th>
                                 <th>Sucursal</th>
                                 <th>Fecha</th>
+                                <th>Turno</th>
                                 <th>Hora</th>
                                 <th>Personas</th>
+                                <th>👶 Niños</th>
+                                <th>👶 Bebés</th>
+                                <th>Preparación</th>
                                 <th>Cubiertos</th>
                                 <th>Estado</th>
                                 <th>Acciones</th>
@@ -226,8 +234,22 @@ const estadoTexto = (estado: string) => {
                                     </td>
                                     <td>{reserva.sucursal_nombre}</td>
                                     <td>{formatearFecha(reserva.fecha)}</td>
+                                    <td>
+                                        {reserva.turno ? (
+                                            <span class={`badge-turno turno-${reserva.turno}`}>
+                                                {reserva.turno === 'manana' ? '☀️ Mañana' : reserva.turno === 'tarde' ? '🌅 Tarde' : '🌙 Noche'}
+                                            </span>
+                                        ) : <span style="color: rgba(26,26,26,0.3); font-size:0.8rem">-</span>}
+                                    </td>
                                     <td>{reserva.hora}</td>
                                     <td>{reserva.numero_personas}</td>
+                                    <td>{reserva.cantidad_ninos || 0}</td>
+                                    <td>{reserva.cantidad_bebes || 0}</td>
+                                    <td>
+                                        {reserva.necesita_silla_bebe ? <span class="badge-silla">🪑 Silla</span> : ''}
+                                        {reserva.necesita_menu_infantil ? <span class="badge-menu">🍽️ Menu</span> : ''}
+                                        {(!reserva.necesita_silla_bebe && !reserva.necesita_menu_infantil) ? <span class="badge-nada">-</span> : ''}
+                                    </td>
                                     <td>{reserva.cubiertos_reservados || '-'}</td>
                                     <td>
                                         <span class={`badge ${estadoBadge(reserva.estado)}`}>
@@ -661,6 +683,19 @@ window.borrarReserva = async function(id) {
 
 .badge-pendiente { background: rgba(245, 158, 11, 0.1); color: #f59e0b; }
 .badge-confirmada { background: rgba(16, 185, 129, 0.1); color: #10b981; }
+
+/* Turno badges */
+.badge-turno {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-weight: 500;
+    white-space: nowrap;
+}
+.turno-manana { background: rgba(251, 191, 36, 0.12); color: #d97706; }
+.turno-tarde  { background: rgba(249, 115, 22, 0.12); color: #ea580c; }
+.turno-noche  { background: rgba(99, 102, 241, 0.12); color: #4f46e5; }
 .badge-rechazada { background: rgba(239, 68, 68, 0.1); color: #ef4444; }
 .badge-cancelada { background: rgba(107, 114, 128, 0.1); color: #6b7280; }
 
@@ -811,5 +846,33 @@ window.borrarReserva = async function(id) {
         padding: 8px 12px;
         font-size: 0.8rem;
     }
+}
+
+/* ============================================
+   BADGES PARA NIÑOS
+   ============================================ */
+.badge-silla {
+    display: inline-block;
+    padding: 2px 8px;
+    background: rgba(59, 130, 246, 0.1);
+    color: #3b82f6;
+    border-radius: 12px;
+    font-size: 0.7rem;
+    margin: 2px;
+}
+
+.badge-menu {
+    display: inline-block;
+    padding: 2px 8px;
+    background: rgba(16, 185, 129, 0.1);
+    color: #10b981;
+    border-radius: 12px;
+    font-size: 0.7rem;
+    margin: 2px;
+}
+
+.badge-nada {
+    color: rgba(26, 26, 26, 0.2);
+    font-size: 0.7rem;
 }
 </style>
