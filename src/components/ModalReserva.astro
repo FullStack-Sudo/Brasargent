@@ -340,7 +340,9 @@ window.enviarFormularioReserva = async function(e, sucursalId, sucursalNombre) {
             cerrarModalReserva(null, sucursalId);
             
             // 🎉 MOSTRAR MODAL DE CONFIRMACIÓN
-            mostrarModalConfirmacion(sucursalNombre, data.nombre_cliente, data.fecha, data.hora);
+            // Pasamos null/false para bebes y sillas ya que esos campos no existen en el form actual, 
+            // pero adultos se asume que es data.numero_personas
+            mostrarModalConfirmacion(sucursalNombre, data.nombre_cliente, data.fecha, data.hora, data.numero_personas, data.ninos, 0, false, false);
         } else {
             mostrarErrorModal(result.error || 'Error al solicitar la reserva');
         }
@@ -408,33 +410,89 @@ document.addEventListener('DOMContentLoaded', () => {
 // 🎉 MODAL DE CONFIRMACIÓN
 // ============================================
 
-window.mostrarModalConfirmacion = function(sucursalNombre, nombreCliente, fecha, hora) {
+window.mostrarModalConfirmacion = function(sucursalNombre, nombreCliente, fecha, hora, adultos, ninos, necesitaSilla, numeroReserva) {
+    // Formatear fecha
+    const fechaObj = new Date(fecha + 'T12:00:00');
+    const fechaFormateada = isNaN(fechaObj.getTime()) ? fecha : fechaObj.toLocaleDateString('es-ES', {
+        weekday: 'long',
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+    });
+    
+    // Calcular total de personas
+    const totalPersonas = (adultos || 0) + (ninos || 0);
+    
     const modalHTML = `
         <div class="modal-overlay modal-confirmacion" id="modalConfirmacion" onclick="cerrarModalConfirmacion()">
             <div class="modal-container modal-confirmacion-container" onclick="event.stopPropagation()">
                 <div class="modal-confirmacion-content">
                     <div class="confirmacion-icono">✅</div>
                     <h2>¡Reserva Solicitada!</h2>
-                    <p>En breves momentos confirmaremos tu reserva en <strong>${sucursalNombre}</strong></p>
+                    
+                    <!-- 🔴 MENSAJE CORREGIDO -->
+                    <div class="confirmacion-mensaje">
+                        <p>Tu reserva en <strong>${sucursalNombre}</strong> ha sido registrada.</p>
+                        <div class="confirmacion-aviso">
+                            <span class="aviso-icono">⏰</span>
+                            <div>
+                                <strong>Recuerda llegar 10 minutos antes</strong>
+                                <small>Para una mejor experiencia, te esperamos puntual</small>
+                            </div>
+                        </div>
+                        <p class="confirmacion-whatsapp">
+                            💬 Recibirás la confirmación por <strong>WhatsApp</strong>
+                        </p>
+                    </div>
+                    
+                    <!-- Detalles de la reserva -->
                     <div class="confirmacion-detalles">
+                        ${numeroReserva ? `
+                        <div class="confirmacion-item" style="border-bottom: 1px dashed rgba(26,26,26,0.12); padding-bottom: 8px; margin-bottom: 8px;">
+                            <span class="confirmacion-label" style="font-weight: 700; color: #9e2a2b;">📋 Nº de Reserva:</span>
+                            <span class="confirmacion-valor" style="font-family: monospace; font-weight: 700; color: #9e2a2b; background: rgba(158,42,43,0.1); padding: 3px 10px; border-radius: 6px; font-size: 1.05rem;">
+                                ${numeroReserva}
+                            </span>
+                        </div>
+                        ` : ''}
                         <div class="confirmacion-item">
-                            <span class="confirmacion-label">Cliente:</span>
+                            <span class="confirmacion-label">👤 Cliente:</span>
                             <span class="confirmacion-valor">${nombreCliente}</span>
                         </div>
                         <div class="confirmacion-item">
-                            <span class="confirmacion-label">Fecha:</span>
-                            <span class="confirmacion-valor">${new Date(fecha + 'T00:00:00').toLocaleDateString('es-ES')}</span>
+                            <span class="confirmacion-label">📅 Fecha:</span>
+                            <span class="confirmacion-valor">${fechaFormateada}</span>
                         </div>
                         <div class="confirmacion-item">
-                            <span class="confirmacion-label">Hora:</span>
+                            <span class="confirmacion-label">🕐 Hora:</span>
                             <span class="confirmacion-valor">${hora}</span>
                         </div>
+                        <div class="confirmacion-item">
+                            <span class="confirmacion-label">👥 Total Personas:</span>
+                            <span class="confirmacion-valor">${totalPersonas}</span>
+                        </div>
+                        ${adultos > 0 ? `
+                        <div class="confirmacion-item">
+                            <span class="confirmacion-label">👤 Adultos:</span>
+                            <span class="confirmacion-valor">${adultos}</span>
+                        </div>
+                        ` : ''}
+                        ${ninos > 0 ? `
+                        <div class="confirmacion-item">
+                            <span class="confirmacion-label">👧 Niños:</span>
+                            <span class="confirmacion-valor">${ninos}</span>
+                        </div>
+                        ` : ''}
+                        ${necesitaSilla ? `
+                        <div class="confirmacion-item preparacion">
+                            <span class="confirmacion-label">📋 Preparación:</span>
+                            <span class="confirmacion-valor">
+                                🪑 Silla para niños
+                            </span>
+                        </div>
+                        ` : ''}
                     </div>
-                    <div class="confirmacion-whatsapp">
-                        <span class="whatsapp-icon">💬</span>
-                        <p>Espera tu mensaje de confirmación por <strong>WhatsApp</strong></p>
-                        <span class="whatsapp-sub">Revisa tu bandeja de mensajes en los próximos minutos</span>
-                    </div>
+                    
                     <button class="btn-confirmacion" onclick="cerrarModalConfirmacion()">
                         ¡Entendido!
                     </button>
@@ -446,10 +504,10 @@ window.mostrarModalConfirmacion = function(sucursalNombre, nombreCliente, fecha,
     document.body.insertAdjacentHTML('beforeend', modalHTML);
     document.body.classList.add('modal-open');
     
-    // Auto-cerrar después de 10 segundos
+    // Auto-cerrar después de 8 segundos
     setTimeout(() => {
         cerrarModalConfirmacion();
-    }, 10000);
+    }, 8000);
 }
 
 window.cerrarModalConfirmacion = function() {
@@ -478,6 +536,158 @@ document.addEventListener('keydown', function(e) {
 </script>
 
 <style is:global>
+/* ============================================
+   MODAL DE CONFIRMACIÓN - ESTILOS MEJORADOS
+   ============================================ */
+
+.modal-confirmacion-container {
+    max-width: 480px;
+    background: #fffaf0;
+    border-radius: 24px;
+    overflow: hidden;
+}
+
+.modal-confirmacion-content {
+    padding: 40px 36px 36px;
+    text-align: center;
+}
+
+.confirmacion-icono {
+    font-size: 4rem;
+    margin-bottom: 12px;
+    animation: bounceIn 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes bounceIn {
+    0% { transform: scale(0) rotate(-10deg); opacity: 0; }
+    50% { transform: scale(1.2) rotate(5deg); opacity: 1; }
+    70% { transform: scale(0.9) rotate(-3deg); }
+    100% { transform: scale(1) rotate(0); }
+}
+
+.modal-confirmacion-content h2 {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.6rem;
+    font-weight: 700;
+    color: #1a1a1a;
+    margin: 0 0 12px;
+}
+
+.confirmacion-mensaje p {
+    color: rgba(26, 26, 26, 0.6);
+    font-size: 0.95rem;
+    margin: 0 0 16px;
+    line-height: 1.6;
+}
+
+.confirmacion-mensaje p strong {
+    color: #1a1a1a;
+}
+
+/* 🔴 AVISO DE LLEGAR 10 MIN ANTES */
+.confirmacion-aviso {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    background: rgba(245, 158, 11, 0.06);
+    border: 1px solid rgba(245, 158, 11, 0.12);
+    border-radius: 12px;
+    padding: 14px 18px;
+    margin: 16px 0;
+    text-align: left;
+}
+
+.aviso-icono {
+    font-size: 2rem;
+}
+
+.confirmacion-aviso strong {
+    display: block;
+    font-weight: 600;
+    color: #1a1a1a;
+}
+
+.confirmacion-aviso small {
+    color: rgba(26, 26, 26, 0.4);
+    font-size: 0.8rem;
+}
+
+.confirmacion-whatsapp {
+    color: #25d366 !important;
+    font-weight: 500;
+}
+
+.confirmacion-whatsapp strong {
+    color: #25d366 !important;
+}
+
+.confirmacion-detalles {
+    background: rgba(255, 250, 240, 0.5);
+    border-radius: 12px;
+    padding: 14px 18px;
+    margin: 16px 0 24px;
+    text-align: left;
+}
+
+.confirmacion-item {
+    display: flex;
+    justify-content: space-between;
+    padding: 4px 0;
+    font-size: 0.9rem;
+}
+
+.confirmacion-label {
+    color: rgba(26, 26, 26, 0.4);
+}
+
+.confirmacion-valor {
+    color: #1a1a1a;
+    font-weight: 500;
+}
+
+.confirmacion-item.preparacion .confirmacion-valor {
+    color: #9e2a2b;
+    font-weight: 600;
+}
+
+.btn-confirmacion {
+    width: 100%;
+    padding: 14px;
+    background: linear-gradient(135deg, #9e2a2b, #7a2021);
+    color: #fffaf0;
+    border: none;
+    border-radius: 12px;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-family: 'Inter', sans-serif;
+}
+
+.btn-confirmacion:hover {
+    transform: scale(1.02);
+    box-shadow: 0 8px 30px rgba(158, 42, 43, 0.3);
+}
+
+@media (max-width: 480px) {
+    .modal-confirmacion-content {
+        padding: 28px 20px 24px;
+    }
+    
+    .confirmacion-icono {
+        font-size: 3rem;
+    }
+    
+    .modal-confirmacion-content h2 {
+        font-size: 1.3rem;
+    }
+    
+    .confirmacion-aviso {
+        flex-direction: column;
+        text-align: center;
+    }
+}
+
 /* ============================================
    TURNOS — LOADING / ERROR
    ============================================ */

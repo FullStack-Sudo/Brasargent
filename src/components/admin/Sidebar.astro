@@ -60,6 +60,9 @@ if (userRole === 'admin') {
         links.push({ href: '/admin/cocina', icon: '🔥', label: 'Cocina' });
     }
     
+    // Precios y Festivos siempre visible para Admin
+    links.push({ href: '/admin/precios', icon: '💰', label: 'Precios y Festivos' });
+    
     // Sucursales siempre visible
     links.push({ href: '/admin/sucursales', icon: '🏢', label: 'Sucursales' });
     

@@ -82,6 +82,8 @@ const { title, description } = Astro.props;
         .admin-main {
             flex: 1;
             margin-left: var(--sidebar-width);
+            width: calc(100% - var(--sidebar-width));
+            max-width: calc(100% - var(--sidebar-width));
             min-height: 100vh;
             background: #f8f5f0;
         }
@@ -171,6 +173,8 @@ const { title, description } = Astro.props;
         @media (max-width: 768px) {
             .admin-main {
                 margin-left: 60px;
+                width: calc(100% - 60px);
+                max-width: calc(100% - 60px);
             }
             
             .admin-content {
@@ -197,6 +201,8 @@ const { title, description } = Astro.props;
         @media (max-width: 480px) {
             .admin-main {
                 margin-left: 0;
+                width: 100%;
+                max-width: 100%;
             }
             
             .admin-content {

@@ -1,0 +1,511 @@
+---
+// src/components/TerminosModal.astro
+// Modal de Términos y Condiciones con visualización ampliada e invocación obligatoria en cada visita a /sucursales
+---
+
+<!-- 🔴 MODAL DE TÉRMINOS Y CONDICIONES (Se muestra siempre al ingresar a /sucursales) -->
+<div id="terminosModal" class="terminos-modal-overlay">
+    <div class="terminos-modal-container">
+        <!-- Botón de cerrar -->
+        <button class="terminos-modal-close" id="btnCerrarTerminos" aria-label="Cerrar" title="Volver al Inicio">
+            ✕
+        </button>
+
+        <!-- Encabezado del Modal -->
+        <div class="terminos-modal-header">
+            <div class="inline-flex items-center gap-2 px-3 py-1 bg-[#9e2a2b]/10 rounded-full">
+                <span class="w-2 h-2 rounded-full bg-[#9e2a2b] animate-ping"></span>
+                <span class="text-xs font-bold uppercase tracking-wider text-[#9e2a2b]">Obligatorio para Continuar</span>
+            </div>
+            <h2 class="text-xl md:text-2xl font-bold text-gray-900 mt-2 font-serif">Términos y Condiciones BRASARGENT</h2>
+            <p class="text-xs md:text-sm text-gray-600 mt-1">Por favor revisa y acepta los términos para reservar y ver nuestras sucursales.</p>
+        </div>
+
+        <!-- Contenedor de la Imagen (Amplia, nítida y con indicador de zoom) -->
+        <div class="terminos-modal-image-wrapper">
+            <div class="zoom-badge-hint" id="zoomBadgeHint">
+                🔍 Haz clic en la imagen para ver en pantalla completa
+            </div>
+            <div class="image-scroll-area">
+                <img 
+                    id="terminosImage"
+                    src="/img/terminosCond/terminosCondiciones.png" 
+                    alt="Términos y Condiciones BRASARGENT"
+                    loading="eager"
+                    title="Haz clic para ampliar"
+                />
+            </div>
+        </div>
+
+        <!-- Botones de Acción -->
+        <div class="terminos-modal-actions">
+            <button 
+                id="btnAceptarTerminos"
+                class="terminos-btn-terminos btn-aceptar"
+            >
+                ✅ Aceptar Términos y Continuar
+            </button>
+            <button 
+                id="btnVolverInicio"
+                class="terminos-btn-terminos btn-volver"
+            >
+                ⬅️ Volver al Inicio
+            </button>
+        </div>
+
+        <!-- Footer Informativo -->
+        <p class="terminos-modal-footer">
+            Al hacer clic en "Aceptar", declaras haber leído y aceptado todas las cláusulas de BRASARGENT.
+        </p>
+    </div>
+</div>
+
+<!-- 🔴 LIGHTBOX (ZOOM EN PANTALLA COMPLETA) PARA LECTURA PERFECTA -->
+<div id="lightboxModal" class="lightbox-overlay hidden">
+    <div class="lightbox-topbar">
+        <span class="text-white text-sm font-semibold">🔎 Vista Ampliada de Términos</span>
+        <button id="btnCloseLightbox" class="lightbox-close-btn">
+            ✕ Cerrar Zoom
+        </button>
+    </div>
+    <div class="lightbox-body">
+        <img 
+            src="/img/terminosCond/terminosCondiciones.png" 
+            alt="Términos Ampliados BRASARGENT" 
+            class="lightbox-img" 
+        />
+    </div>
+</div>
+
+<!-- ============================================
+🔴 SCRIPT DEL MODAL
+============================================ -->
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const modal = document.getElementById('terminosModal');
+        const content = document.getElementById('sucursalesContent');
+        const btnAceptar = document.getElementById('btnAceptarTerminos');
+        const btnVolver = document.getElementById('btnVolverInicio');
+        const btnCerrar = document.getElementById('btnCerrarTerminos');
+        
+        // Elementos de Zoom / Lightbox
+        const terminosImage = document.getElementById('terminosImage');
+        const zoomBadgeHint = document.getElementById('zoomBadgeHint');
+        const lightboxModal = document.getElementById('lightboxModal');
+        const btnCloseLightbox = document.getElementById('btnCloseLightbox');
+
+        // 🔴 TAREA 1: El modal siempre se muestra al ingresar a /sucursales
+        if (modal) {
+            modal.style.display = 'flex';
+        }
+        if (content) {
+            content.classList.add('blocked');
+        }
+
+        // 🔴 Aceptar Términos: cierra el modal y desbloquea el contenido
+        function aceptarTerminos() {
+            if (modal) {
+                modal.classList.add('terminos-modal-fade-out');
+                setTimeout(() => {
+                    modal.style.display = 'none';
+                    modal.classList.remove('terminos-modal-fade-out');
+                }, 350);
+            }
+            if (content) {
+                content.classList.remove('blocked');
+            }
+        }
+
+        // 🔴 Redirigir al inicio
+        function volverInicio() {
+            window.location.href = '/';
+        }
+
+        // Event listeners
+        if (btnAceptar) btnAceptar.addEventListener('click', aceptarTerminos);
+        if (btnVolver) btnVolver.addEventListener('click', volverInicio);
+        if (btnCerrar) btnCerrar.addEventListener('click', volverInicio);
+
+        // 🔴 TAREA 2: Abrir Zoom / Lightbox al hacer clic en la imagen
+        function abrirZoom() {
+            if (lightboxModal) {
+                lightboxModal.classList.remove('hidden');
+                document.body.style.overflow = 'hidden';
+            }
+        }
+
+        function cerrarZoom() {
+            if (lightboxModal) {
+                lightboxModal.classList.add('hidden');
+                document.body.style.overflow = '';
+            }
+        }
+
+        if (terminosImage) terminosImage.addEventListener('click', abrirZoom);
+        if (zoomBadgeHint) zoomBadgeHint.addEventListener('click', abrirZoom);
+        if (btnCloseLightbox) btnCloseLightbox.addEventListener('click', cerrarZoom);
+
+        if (lightboxModal) {
+            lightboxModal.addEventListener('click', (e) => {
+                if (e.target === lightboxModal) {
+                    cerrarZoom();
+                }
+            });
+        }
+
+        // Tecla ESC: Si lightbox está abierto lo cierra, sino redirige a inicio
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                if (lightboxModal && !lightboxModal.classList.contains('hidden')) {
+                    cerrarZoom();
+                } else if (modal && modal.style.display !== 'none') {
+                    volverInicio();
+                }
+            }
+        });
+    });
+</script>
+
+<!-- ============================================
+🔴 ESTILOS DEL MODAL Y LIGHTBOX
+============================================ -->
+<style>
+    /* OVERLAY PRINCIPAL */
+    .terminos-modal-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.85);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 9999;
+        padding: 16px;
+        animation: terminosFadeIn 0.35s ease;
+    }
+
+    @keyframes terminosFadeIn {
+        from {
+            opacity: 0;
+            transform: scale(0.96);
+        }
+        to {
+            opacity: 1;
+            transform: scale(1);
+        }
+    }
+
+    .terminos-modal-fade-out {
+        animation: terminosFadeOut 0.35s ease forwards;
+    }
+
+    @keyframes terminosFadeOut {
+        from {
+            opacity: 1;
+            transform: scale(1);
+        }
+        to {
+            opacity: 0;
+            transform: scale(0.96);
+        }
+    }
+
+    /* CONTENEDOR DEL MODAL AMPLIADO (TAREA 2: max-width 920px) */
+    .terminos-modal-container {
+        position: relative;
+        max-width: 920px;
+        width: 100%;
+        max-height: 94vh;
+        background: #fffaf0;
+        border-radius: 24px;
+        overflow: hidden;
+        box-shadow: 0 30px 90px rgba(0, 0, 0, 0.7), 0 0 0 1px rgba(255, 255, 255, 0.15);
+        animation: terminosSlideUp 0.45s cubic-bezier(0.34, 1.56, 0.64, 1);
+        display: flex;
+        flex-direction: column;
+    }
+
+    @keyframes terminosSlideUp {
+        from {
+            opacity: 0;
+            transform: translateY(25px) scale(0.97);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+        }
+    }
+
+    /* BOTÓN CERRAR */
+    .terminos-modal-close {
+        position: absolute;
+        top: 16px;
+        right: 18px;
+        background: rgba(0, 0, 0, 0.08);
+        border: 1px solid rgba(0, 0, 0, 0.1);
+        color: #1a1a1a;
+        font-size: 1.2rem;
+        width: 38px;
+        height: 38px;
+        border-radius: 50%;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 20;
+        font-family: 'Inter', sans-serif;
+    }
+
+    .terminos-modal-close:hover {
+        background: rgba(158, 42, 43, 0.9);
+        color: #ffffff;
+        transform: rotate(90deg);
+    }
+
+    /* ENCABEZADO DEL MODAL */
+    .terminos-modal-header {
+        padding: 20px 24px 14px;
+        background: #fffaf0;
+        border-b: 1px solid rgba(26, 26, 26, 0.06);
+    }
+
+    /* ÁREA DE LA IMAGEN AMPLIADA */
+    .terminos-modal-image-wrapper {
+        position: relative;
+        width: 100%;
+        background: #ffffff;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 12px;
+        overflow: hidden;
+    }
+
+    .zoom-badge-hint {
+        position: absolute;
+        top: 18px;
+        right: 24px;
+        background: rgba(158, 42, 43, 0.9);
+        color: #ffffff;
+        font-size: 0.72rem;
+        font-weight: 700;
+        padding: 5px 12px;
+        border-radius: 20px;
+        cursor: pointer;
+        z-index: 10;
+        box-shadow: 0 4px 14px rgba(158, 42, 43, 0.4);
+        transition: all 0.3s ease;
+        user-select: none;
+    }
+
+    .zoom-badge-hint:hover {
+        background: #7a2021;
+        transform: scale(1.05);
+    }
+
+    .image-scroll-area {
+        width: 100%;
+        max-height: 65vh;
+        overflow-y: auto;
+        display: flex;
+        justify-content: center;
+        border-radius: 12px;
+        background: #ffffff;
+        scrollbar-width: thin;
+        scrollbar-color: #9e2a2b #f1f1f1;
+    }
+
+    .image-scroll-area img {
+        width: 100%;
+        height: auto;
+        object-fit: contain;
+        border-radius: 12px;
+        display: block;
+        cursor: zoom-in;
+        transition: transform 0.3s ease;
+    }
+
+    .image-scroll-area img:hover {
+        transform: scale(1.01);
+    }
+
+    /* BOTONES DE ACCIÓN */
+    .terminos-modal-actions {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 16px;
+        padding: 18px 24px 14px;
+        background: #fffaf0;
+        border-top: 1px solid rgba(26, 26, 26, 0.08);
+    }
+
+    .terminos-btn-terminos {
+        padding: 16px 24px;
+        border: none;
+        border-radius: 14px;
+        font-size: 1rem;
+        font-weight: 700;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        font-family: 'Inter', sans-serif;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+    }
+
+    .btn-aceptar {
+        background: linear-gradient(135deg, #9e2a2b, #7a2021);
+        color: #fffaf0;
+        box-shadow: 0 6px 24px rgba(158, 42, 43, 0.35);
+        grid-column: 1 / 2;
+    }
+
+    .btn-aceptar:hover {
+        transform: translateY(-2px) scale(1.01);
+        box-shadow: 0 10px 32px rgba(158, 42, 43, 0.5);
+    }
+
+    .btn-aceptar:active {
+        transform: scale(0.98);
+    }
+
+    .btn-volver {
+        background: #ffffff;
+        color: #1a1a1a;
+        border: 1.5px solid rgba(26, 26, 26, 0.18);
+        grid-column: 2 / 3;
+    }
+
+    .btn-volver:hover {
+        background: rgba(26, 26, 26, 0.06);
+        transform: translateY(-2px) scale(1.01);
+    }
+
+    .btn-volver:active {
+        transform: scale(0.98);
+    }
+
+    /* FOOTER INFORMATIVO */
+    .terminos-modal-footer {
+        padding: 8px 24px 18px;
+        background: #fffaf0;
+        text-align: center;
+        font-size: 0.75rem;
+        color: rgba(26, 26, 26, 0.5);
+        border-top: 1px solid rgba(26, 26, 26, 0.04);
+        margin: 0;
+    }
+
+    /* LIGHTBOX FULLSCREEN ZOOM MODAL */
+    .lightbox-overlay {
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.95);
+        z-index: 10000;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: flex-start;
+        padding: 20px;
+        animation: terminosFadeIn 0.3s ease;
+    }
+
+    .lightbox-topbar {
+        width: 100%;
+        max-width: 1200px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 10px 20px;
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 12px;
+        margin-bottom: 16px;
+        backdrop-filter: blur(10px);
+    }
+
+    .lightbox-close-btn {
+        background: #9e2a2b;
+        color: #ffffff;
+        border: none;
+        padding: 8px 18px;
+        border-radius: 20px;
+        font-weight: 700;
+        font-size: 0.85rem;
+        cursor: pointer;
+        transition: all 0.3s ease;
+    }
+
+    .lightbox-close-btn:hover {
+        background: #dc2626;
+        transform: scale(1.05);
+    }
+
+    .lightbox-body {
+        width: 100%;
+        max-width: 1200px;
+        height: 85vh;
+        overflow: auto;
+        display: flex;
+        justify-content: center;
+        background: #ffffff;
+        border-radius: 16px;
+        padding: 16px;
+    }
+
+    .lightbox-img {
+        max-width: 100%;
+        height: auto;
+        object-fit: contain;
+        display: block;
+    }
+
+    .hidden {
+        display: none !important;
+    }
+
+    /* RESPONSIVE */
+    @media (max-width: 768px) {
+        .terminos-modal-container {
+            max-width: 100%;
+            border-radius: 20px;
+            max-height: 98vh;
+        }
+
+        .zoom-badge-hint {
+            top: 10px;
+            right: 12px;
+            font-size: 0.65rem;
+            padding: 4px 10px;
+        }
+
+        .image-scroll-area {
+            max-height: 55vh;
+        }
+
+        .terminos-modal-actions {
+            grid-template-columns: 1fr;
+            gap: 10px;
+            padding: 14px 16px 10px;
+        }
+
+        .btn-aceptar, .btn-volver {
+            grid-column: 1;
+        }
+
+        .terminos-btn-terminos {
+            padding: 14px 16px;
+            font-size: 0.9rem;
+        }
+
+        .terminos-modal-header {
+            padding: 16px 16px 10px;
+        }
+    }
+</style>

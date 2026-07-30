@@ -15,6 +15,7 @@ const fechaFin = url.searchParams.get('fecha_fin') || '';
 let sql = `
     SELECT 
         r.id,
+        r.numero_reserva,
         r.nombre_cliente,
         r.telefono,
         r.telefono_completo,
@@ -23,7 +24,6 @@ let sql = `
         r.hora,
         r.numero_personas,
         r.cantidad_ninos,
-        r.cantidad_bebes,
         r.necesita_silla_bebe,
         r.necesita_menu_infantil,
         r.estado,
@@ -204,15 +204,15 @@ const estadoTexto = (estado: string) => {
                     <table class="tabla-reservas">
                         <thead>
                             <tr>
+                                <th>Nº Reserva</th>
                                 <th>Cliente</th>
                                 <th>Teléfono</th>
                                 <th>Sucursal</th>
                                 <th>Fecha</th>
                                 <th>Turno</th>
                                 <th>Hora</th>
-                                <th>Personas</th>
-                                <th>👶 Niños</th>
-                                <th>👶 Bebés</th>
+                                <th>Adultos</th>
+                                <th>🧒 Niños</th>
                                 <th>Preparación</th>
                                 <th>Cubiertos</th>
                                 <th>Estado</th>
@@ -222,6 +222,11 @@ const estadoTexto = (estado: string) => {
                         <tbody>
                             {reservas.map((reserva: any) => (
                                 <tr class={`row-estado-${reserva.estado}`}>
+                                    <td>
+                                        <code class="px-2 py-1 bg-gray-100 rounded text-xs font-mono font-bold text-[#9e2a2b]">
+                                            {reserva.numero_reserva || 'BR-2026-0000'}
+                                        </code>
+                                    </td>
                                     <td>
                                         <strong>{reserva.nombre_cliente}</strong>
                                     </td>
@@ -244,7 +249,6 @@ const estadoTexto = (estado: string) => {
                                     <td>{reserva.hora}</td>
                                     <td>{reserva.numero_personas}</td>
                                     <td>{reserva.cantidad_ninos || 0}</td>
-                                    <td>{reserva.cantidad_bebes || 0}</td>
                                     <td>
                                         {reserva.necesita_silla_bebe ? <span class="badge-silla">🪑 Silla</span> : ''}
                                         {reserva.necesita_menu_infantil ? <span class="badge-menu">🍽️ Menu</span> : ''}
@@ -271,7 +275,8 @@ const estadoTexto = (estado: string) => {
                                                 </>
                                             )}
                                             <button class="btn-whatsapp" 
-                                                    onclick={`enviarWhatsAppAdmin('${reserva.telefono_completo || '591' + reserva.telefono}', '${reserva.nombre_cliente}', '${reserva.sucursal_nombre}', '${reserva.fecha}', '${reserva.hora}')`}>
+                                                    onclick={`enviarWhatsAppAdmin(${reserva.id})`}
+                                                    title="Enviar WhatsApp de confirmación">
                                                 💬
                                             </button>
                                             <button class="btn-detalle" 
@@ -355,23 +360,23 @@ window.rechazarReserva = async function(id) {
     }
 }
 
-window.enviarWhatsAppAdmin = function(telefono, nombre, sucursal, fecha, hora) {
-    let fechaObj = new Date(fecha);
-    
-    // Si por alguna razón viene en formato YYYY-MM-DD simple y da error por zona horaria (raro en este caso)
-    if (isNaN(fechaObj.getTime())) {
-        fechaObj = new Date(fecha + 'T00:00:00');
+window.enviarWhatsAppAdmin = async function(id) {
+    try {
+        const response = await fetch(`/api/reservas/${id}/confirmar`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' }
+        });
+        
+        const result = await response.json();
+        
+        if (result.success && result.url_whatsapp) {
+            window.open(result.url_whatsapp, '_blank');
+        } else {
+            alert('❌ Error al generar mensaje: ' + (result.error || 'Desconocido'));
+        }
+    } catch (error) {
+        alert('❌ Error de conexión al generar mensaje de WhatsApp');
     }
-    
-    const fechaFormateada = isNaN(fechaObj.getTime()) ? fecha : fechaObj.toLocaleDateString('es-ES', {
-        day: '2-digit',
-        month: '2-digit',
-        year: 'numeric'
-    });
-    
-    const mensaje = `BRASARGENT - Confirmación de Reserva\n\nHola ${nombre}!\n\nTu reserva en ${sucursal} está:\n- Fecha: ${fechaFormateada}\n- Hora: ${hora}\n\n¿Confirmas tu asistencia?\n¡Te esperamos!`;
-    
-    window.open(`https://wa.me/${telefono}?text=${encodeURIComponent(mensaje)}`, '_blank');
 }
 
 window.verDetalle = async function(id) {

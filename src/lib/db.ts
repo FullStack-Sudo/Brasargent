@@ -91,4 +91,9 @@ const pool = mysql.createPool({
     }
 })();
 
+export async function query(sql: string, params?: any[]) {
+    return pool.query(sql, params);
+}
+
 export default pool;
+

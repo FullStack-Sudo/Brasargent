@@ -1,7 +1,7 @@
 import type { APIRoute } from 'astro';
 import pool from '../../../lib/db';
 
-export const PUT: APIRoute = async ({ request, cookies }) => {
+export const POST: APIRoute = async ({ request, cookies }) => {
     try {
         // Verificar sesión admin
         const session = cookies.get('session');
@@ -14,7 +14,6 @@ export const PUT: APIRoute = async ({ request, cookies }) => {
         
         const data = await request.json();
         const { 
-            id,
             nombre,
             concepto,
             direccion,
@@ -26,56 +25,41 @@ export const PUT: APIRoute = async ({ request, cookies }) => {
         } = data;
         
         // Validar campos obligatorios
-        if (!id || !nombre || !direccion || !telefono) {
+        if (!nombre || !direccion || !telefono) {
             return new Response(JSON.stringify({
                 success: false,
-                error: 'Todos los campos obligatorios deben ser completados'
+                error: 'Los campos nombre, dirección y teléfono son obligatorios'
             }), { status: 400 });
         }
         
-        // Actualizar sucursal
-        await pool.query(
-            `UPDATE sucursales 
-             SET 
-                nombre = ?,
-                concepto = ?,
-                direccion = ?,
-                telefono = ?,
-                capacidad_total = ?,
-                permite_reservas = ?,
-                permite_cubiertos = ?,
-                horarios = ?,
-                updated_at = NOW()
-             WHERE id = ?`,
+        // Insertar sucursal
+        const [result] = await pool.query(
+            `INSERT INTO sucursales 
+             (nombre, concepto, direccion, telefono, capacidad_total, cubiertos_disponibles, permite_reservas, permite_cubiertos, horarios, activo) 
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 1)`,
             [
                 nombre,
-                concepto || null,
+                concepto || 'Restaurante',
                 direccion,
                 telefono,
                 capacidad_total || 120,
-                permite_reservas || 0,
-                permite_cubiertos || 0,
-                JSON.stringify(horarios),
-                id
+                capacidad_total || 120, // cubiertos_disponibles = capacidad_total inicialmente
+                permite_reservas !== undefined ? permite_reservas : 1,
+                permite_cubiertos !== undefined ? permite_cubiertos : 1,
+                JSON.stringify(horarios)
             ]
-        );
+        ) as any[];
         
-        // Actualizar cubiertos disponibles (si cambió capacidad)
-        await pool.query(
-            `UPDATE sucursales 
-             SET cubiertos_disponibles = GREATEST(capacidad_total - COALESCE(cubiertos_ocupados, 0), 0) 
-             WHERE id = ?`,
-            [id]
-        );
+        const nuevoId = result.insertId;
         
         // Registrar en logs
         await pool.query(
             `INSERT INTO logs_actividad 
              (usuario_id, accion, tabla_afectada, registro_id, detalles) 
-             VALUES (?, 'SUCURSAL_ACTUALIZADA', 'sucursales', ?, ?)`,
+             VALUES (?, 'SUCURSAL_CREADA', 'sucursales', ?, ?)`,
             [
                 1,
-                id,
+                nuevoId,
                 JSON.stringify({ 
                     nombre, 
                     capacidad_total,
@@ -87,14 +71,15 @@ export const PUT: APIRoute = async ({ request, cookies }) => {
         
         return new Response(JSON.stringify({
             success: true,
-            mensaje: 'Sucursal actualizada exitosamente'
-        }), { status: 200 });
+            mensaje: 'Sucursal creada exitosamente',
+            id: nuevoId
+        }), { status: 201 });
         
     } catch (error: any) {
-        console.error('Error al actualizar sucursal:', error);
+        console.error('Error al crear sucursal:', error);
         return new Response(JSON.stringify({
             success: false,
-            error: error.message || 'Error al actualizar sucursal'
+            error: error.message || 'Error al crear la sucursal'
         }), { status: 500 });
     }
 };

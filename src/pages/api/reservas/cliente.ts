@@ -15,9 +15,7 @@ export const POST: APIRoute = async ({ request }) => {
             turno,
             numero_personas,
             cantidad_ninos,
-            cantidad_bebes,
             necesita_silla_bebe,
-            necesita_menu_infantil,
             observaciones
         } = data;
         
@@ -53,11 +51,21 @@ export const POST: APIRoute = async ({ request }) => {
             }), { status: 404 });
         }
         
-        // 2. Verificar si permite reservas
+        // 2. Verificar si permite reservas generales
         if (!sucursal.permite_reservas) {
             return new Response(JSON.stringify({
                 success: false,
                 error: 'Esta sucursal no acepta reservas'
+            }), { status: 403 });
+        }
+
+        // 2b. 🔴 VERIFICAR DOMINGOS Y DÍAS FESTIVOS (SIN RESERVAS)
+        const { permiteReservas } = await import('../../../lib/precios');
+        const checkFestivo = await permiteReservas(sucursal_id, fecha);
+        if (!checkFestivo.permite) {
+            return new Response(JSON.stringify({
+                success: false,
+                error: checkFestivo.motivo || 'No se aceptan reservas en domingos, feriados o días festivos. Trabajamos por orden de llegada.'
             }), { status: 403 });
         }
         
@@ -109,8 +117,13 @@ export const POST: APIRoute = async ({ request }) => {
         }
         
         // 7. Validar capacidad disponible para esa hora
+        // Calcular cubiertos: Adultos + Niños (sin bebés)
+        const adultos = parseInt(numero_personas) || 0;
+        const ninos = parseInt(cantidad_ninos) || 0;
+        const cubiertos_necesarios = adultos + ninos;
+
         const [reservasEnHora] = await pool.query(
-            `SELECT COALESCE(SUM(numero_personas), 0) as total
+            `SELECT COALESCE(SUM(cubiertos_reservados), 0) as total
              FROM reservas 
              WHERE sucursal_id = ? 
              AND fecha = ? 
@@ -122,10 +135,10 @@ export const POST: APIRoute = async ({ request }) => {
         const ocupadosEnHora = (reservasEnHora as any[])[0]?.total || 0;
         const capacidadTotal = sucursal.capacidad_total || 120;
         
-        if (ocupadosEnHora + numero_personas > capacidadTotal) {
+        if (ocupadosEnHora + cubiertos_necesarios > capacidadTotal) {
             return new Response(JSON.stringify({
                 success: false,
-                error: `No hay capacidad suficiente para ${numero_personas} personas a las ${hora}. Disponibles: ${capacidadTotal - ocupadosEnHora} cubiertos.`
+                error: `No hay capacidad suficiente para ${cubiertos_necesarios} cubiertos a las ${hora}. Disponibles: ${capacidadTotal - ocupadosEnHora} cubiertos.`
             }), { status: 409 });
         }
         
@@ -137,8 +150,8 @@ export const POST: APIRoute = async ({ request }) => {
 
         const [result] = await pool.query(
             `INSERT INTO reservas 
-             (sucursal_id, nombre_cliente, telefono, codigo_pais, telefono_completo, fecha, hora, turno, numero_personas, cantidad_ninos, cantidad_bebes, necesita_silla_bebe, necesita_menu_infantil, observaciones, estado) 
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pendiente')`,
+             (sucursal_id, nombre_cliente, telefono, codigo_pais, telefono_completo, fecha, hora, turno, numero_personas, cantidad_ninos, necesita_silla_bebe, observaciones, cubiertos_reservados, estado) 
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pendiente')`,
             [
                 sucursal_id,
                 nombre_cliente,
@@ -150,10 +163,9 @@ export const POST: APIRoute = async ({ request }) => {
                 turno || null,
                 numero_personas,
                 cantidad_ninos || 0,
-                cantidad_bebes || 0,
                 necesita_silla_bebe ? 1 : 0,
-                necesita_menu_infantil ? 1 : 0,
-                observaciones || null
+                observaciones || null,
+                cubiertos_necesarios
             ]
         );
         
@@ -180,10 +192,27 @@ export const POST: APIRoute = async ({ request }) => {
             // Logs opcionales — no romper la reserva si falla
         }
         
+        const insertId = (result as any).insertId;
+
+        // Obtener el numero_reserva generado por el trigger
+        let numero_reserva = `BR-${new Date().getFullYear()}-0001`;
+        try {
+            const [createdRows] = await pool.query(
+                `SELECT numero_reserva FROM reservas WHERE id = ?`,
+                [insertId]
+            ) as any[];
+            if (createdRows && createdRows[0]?.numero_reserva) {
+                numero_reserva = createdRows[0].numero_reserva;
+            }
+        } catch {
+            // Fallback si no se consulta
+        }
+
         return new Response(JSON.stringify({
             success: true,
             mensaje: '¡Reserva solicitada! Espera confirmación por WhatsApp.',
-            reserva_id: (result as any).insertId
+            reserva_id: insertId,
+            numero_reserva: numero_reserva
         }), { status: 201 });
         
     } catch (error: any) {

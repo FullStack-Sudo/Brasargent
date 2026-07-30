@@ -1,0 +1,545 @@
+---
+// src/pages/admin/precios/index.astro
+// Gestión de Precios por Cubierto y Días Festivos / Sin Reservas
+import AdminLayout from '../../../layouts/AdminLayout.astro';
+import pool from '../../../lib/db';
+
+const [sucursalesRows] = await pool.query(
+    `SELECT id, nombre FROM sucursales WHERE activo = 1 ORDER BY id ASC`
+) as any[];
+const sucursales = sucursalesRows;
+---
+
+<AdminLayout title="Precios y Días Festivos" description="Configuración de precios por cubierto y gestión de días sin reservas">
+    <div class="precios-admin-wrapper">
+        <!-- Selector de Sucursal -->
+        <div class="sucursal-selector-card">
+            <label for="sucursalSelect">🏢 Selecciona la Sucursal:</label>
+            <select id="sucursalSelect" onchange="cargarDatosAdmin(this.value)">
+                {sucursales.map((s: any) => (
+                    <option value={s.id}>{s.nombre}</option>
+                ))}
+            </select>
+        </div>
+
+        <div class="grid-admin">
+            <!-- TABLA DE PRECIOS POR CUBIERTO -->
+            <div class="admin-card">
+                <div class="card-header">
+                    <h2>💰 Precios por Cubierto</h2>
+                    <span class="card-subtitle">Configura los precios de adultos y niños según día y horario</span>
+                </div>
+                
+                <div class="table-responsive">
+                    <table class="tabla-precios">
+                        <thead>
+                            <tr>
+                                <th>Día de la Semana</th>
+                                <th>Horario</th>
+                                <th>Precio Adultos</th>
+                                <th>Precio Niños (5-10)</th>
+                                <th>Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody id="preciosBody">
+                            <tr><td colspan="5" class="loading-td">Cargando precios...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- DÍAS FESTIVOS / SIN RESERVAS -->
+            <div class="admin-card">
+                <div class="card-header flex-between">
+                    <div>
+                        <h2>📆 Días Festivos / Sin Reservas</h2>
+                        <span class="card-subtitle">En estas fechas NO se permiten reservas (atención por orden de llegada)</span>
+                    </div>
+                    <button class="btn-primary" onclick="abrirModalNuevoFestivo()">
+                        ➕ Agregar Festivo
+                    </button>
+                </div>
+
+                <div class="table-responsive">
+                    <table class="tabla-festivos">
+                        <thead>
+                            <tr>
+                                <th>Fecha</th>
+                                <th>Descripción</th>
+                                <th>Sin Reservas</th>
+                                <th>Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody id="festivosBody">
+                            <tr><td colspan="4" class="loading-td">Cargando días festivos...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL AGREGAR DÍA FESTIVO -->
+    <div id="modalFestivo" class="modal-overlay hidden">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h3>➕ Agregar Día Festivo / Feriado</h3>
+                <button class="modal-close-btn" onclick="cerrarModalFestivo()">✕</button>
+            </div>
+            <form id="formFestivo" onsubmit="guardarFestivo(event)">
+                <div class="form-group">
+                    <label>Fecha <span class="req">*</span></label>
+                    <input type="date" id="festivoFecha" required />
+                </div>
+                <div class="form-group">
+                    <label>Descripción / Motivo <span class="req">*</span></label>
+                    <input type="text" id="festivoDesc" placeholder="Ej: Año Nuevo, Carnaval, etc." required />
+                </div>
+                <div class="form-group checkbox-row">
+                    <label>
+                        <input type="checkbox" id="festivoSinReservas" checked />
+                        <strong>Bloquear reservas en esta fecha (Atención por llegada)</strong>
+                    </label>
+                </div>
+                <div class="modal-actions">
+                    <button type="button" class="btn-sec" onclick="cerrarModalFestivo()">Cancelar</button>
+                    <button type="submit" class="btn-primary">Guardar Fecha</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</AdminLayout>
+
+<script>
+    let sucursalActualId = 1;
+
+    document.addEventListener('DOMContentLoaded', () => {
+        const select = document.getElementById('sucursalSelect') as HTMLSelectElement;
+        if (select) {
+            sucursalActualId = parseInt(select.value) || 1;
+            cargarDatosAdmin(sucursalActualId);
+        }
+    });
+
+    window.cargarDatosAdmin = function(sucursalId) {
+        sucursalActualId = parseInt(sucursalId);
+        cargarPrecios();
+        cargarFestivos();
+    };
+
+    async function cargarPrecios() {
+        const body = document.getElementById('preciosBody');
+        if (!body) return;
+
+        try {
+            const res = await fetch(`/api/admin/precios?sucursal_id=${sucursalActualId}`);
+            const data = await res.json();
+
+            if (!data.success || !data.data) {
+                body.innerHTML = `<tr><td colspan="5" class="empty-td">Error cargando precios</td></tr>`;
+                return;
+            }
+
+            const precios = data.data;
+            if (precios.length === 0) {
+                body.innerHTML = `<tr><td colspan="5" class="empty-td">No hay precios configurados</td></tr>`;
+                return;
+            }
+
+            let html = '';
+            precios.forEach(p => {
+                const diaCapitalized = p.dia_semana.charAt(0).toUpperCase() + p.dia_semana.slice(1);
+                const horarioCapitalized = p.horario.charAt(0).toUpperCase() + p.horario.slice(1);
+                html += `
+                    <tr>
+                        <td><strong>${diaCapitalized}</strong></td>
+                        <td><span class="badge-horario horario-${p.horario}">${horarioCapitalized}</span></td>
+                        <td>
+                            <input type="number" id="adulto_${p.id}" value="${p.precio_adulto}" step="0.5" class="input-precio" /> Bs
+                        </td>
+                        <td>
+                            <input type="number" id="nino_${p.id}" value="${p.precio_nino}" step="0.5" class="input-precio" /> Bs
+                        </td>
+                        <td>
+                            <button class="btn-save-sm" onclick="guardarPrecioItem(${p.id}, '${p.dia_semana}', '${p.horario}')">
+                                💾 Guardar
+                            </button>
+                        </td>
+                    </tr>
+                `;
+            });
+            body.innerHTML = html;
+        } catch (e) {
+            body.innerHTML = `<tr><td colspan="5" class="empty-td">Error de conexión</td></tr>`;
+        }
+    }
+
+    window.guardarPrecioItem = async function(id, dia, horario) {
+        const inpAdulto = document.getElementById(`adulto_${id}`) as HTMLInputElement;
+        const inpNino = document.getElementById(`nino_${id}`) as HTMLInputElement;
+
+        if (!inpAdulto || !inpNino) return;
+
+        try {
+            const res = await fetch('/api/admin/precios', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    sucursal_id: sucursalActualId,
+                    dia_semana: dia,
+                    horario: horario,
+                    precio_adulto: parseFloat(inpAdulto.value),
+                    precio_nino: parseFloat(inpNino.value)
+                })
+            });
+            const data = await res.json();
+            if (data.success) {
+                alert('✅ Precio actualizado correctamente.');
+                cargarPrecios();
+            } else {
+                alert('❌ Error: ' + data.error);
+            }
+        } catch (e) {
+            alert('❌ Error de conexión.');
+        }
+    };
+
+    async function cargarFestivos() {
+        const body = document.getElementById('festivosBody');
+        if (!body) return;
+
+        try {
+            const res = await fetch(`/api/admin/festivos?sucursal_id=${sucursalActualId}`);
+            const data = await res.json();
+
+            if (!data.success || !data.data) {
+                body.innerHTML = `<tr><td colspan="4" class="empty-td">Error cargando festivos</td></tr>`;
+                return;
+            }
+
+            const festivos = data.data;
+            if (festivos.length === 0) {
+                body.innerHTML = `<tr><td colspan="4" class="empty-td">No hay días festivos registrados</td></tr>`;
+                return;
+            }
+
+            let html = '';
+            festivos.forEach(f => {
+                const fechaFmt = new Date(f.fecha + 'T12:00:00').toLocaleDateString('es-ES', { weekday: 'short', year: 'numeric', month: 'long', day: 'numeric' });
+                html += `
+                    <tr>
+                        <td><strong>${fechaFmt}</strong></td>
+                        <td>${f.descripcion}</td>
+                        <td>
+                            <span class="badge-festivo">${f.sin_reservas ? '🚫 Sin Reservas' : '✅ Permitidas'}</span>
+                        </td>
+                        <td>
+                            <button class="btn-del-sm" onclick="eliminarFestivo(${f.id})">
+                                🗑️ Eliminar
+                            </button>
+                        </td>
+                    </tr>
+                `;
+            });
+            body.innerHTML = html;
+        } catch (e) {
+            body.innerHTML = `<tr><td colspan="4" class="empty-td">Error de conexión</td></tr>`;
+        }
+    }
+
+    window.abrirModalNuevoFestivo = function() {
+        const modal = document.getElementById('modalFestivo');
+        if (modal) modal.classList.remove('hidden');
+    };
+
+    window.cerrarModalFestivo = function() {
+        const modal = document.getElementById('modalFestivo');
+        if (modal) modal.classList.add('hidden');
+    };
+
+    window.guardarFestivo = async function(e) {
+        e.preventDefault();
+        const fecha = (document.getElementById('festivoFecha') as HTMLInputElement).value;
+        const desc = (document.getElementById('festivoDesc') as HTMLInputElement).value;
+        const sinRes = (document.getElementById('festivoSinReservas') as HTMLInputElement).checked;
+
+        if (!fecha || !desc) return;
+
+        try {
+            const res = await fetch('/api/admin/festivos', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    sucursal_id: sucursalActualId,
+                    fecha: fecha,
+                    descripcion: desc,
+                    sin_reservas: sinRes
+                })
+            });
+            const data = await res.json();
+            if (data.success) {
+                cerrarModalFestivo();
+                cargarFestivos();
+            } else {
+                alert('❌ Error: ' + data.error);
+            }
+        } catch (err) {
+            alert('❌ Error de conexión.');
+        }
+    };
+
+    window.eliminarFestivo = async function(id) {
+        if (!confirm('¿Deseas eliminar este día festivo?')) return;
+        try {
+            const res = await fetch(`/api/admin/festivos?id=${id}`, {
+                method: 'DELETE'
+            });
+            const data = await res.json();
+            if (data.success) {
+                cargarFestivos();
+            } else {
+                alert('❌ Error: ' + data.error);
+            }
+        } catch (err) {
+            alert('❌ Error de conexión.');
+        }
+    };
+</script>
+
+<style>
+    .precios-admin-wrapper {
+        display: flex;
+        flex-direction: column;
+        gap: 24px;
+    }
+
+    .sucursal-selector-card {
+        background: #ffffff;
+        padding: 16px 24px;
+        border-radius: 16px;
+        box-shadow: 0 4px 14px rgba(0,0,0,0.04);
+        display: flex;
+        align-items: center;
+        gap: 16px;
+    }
+
+    .sucursal-selector-card label {
+        font-weight: 700;
+        color: #1a1a1a;
+    }
+
+    .sucursal-selector-card select {
+        padding: 10px 16px;
+        border-radius: 10px;
+        border: 1.5px solid rgba(26,26,26,0.12);
+        font-weight: 600;
+        font-size: 0.95rem;
+        background: #fffaf0;
+        color: #9e2a2b;
+        cursor: pointer;
+    }
+
+    .grid-admin {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 24px;
+    }
+
+    .admin-card {
+        background: #ffffff;
+        border-radius: 20px;
+        padding: 24px;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.04);
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+    }
+
+    .card-header h2 {
+        font-size: 1.25rem;
+        font-weight: 800;
+        color: #1a1a1a;
+    }
+
+    .card-subtitle {
+        font-size: 0.82rem;
+        color: rgba(26,26,26,0.45);
+    }
+
+    .flex-between {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .table-responsive {
+        overflow-x: auto;
+    }
+
+    table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+
+    th, td {
+        padding: 12px 16px;
+        text-align: left;
+        border-bottom: 1px solid rgba(26,26,26,0.06);
+        font-size: 0.9rem;
+    }
+
+    th {
+        background: #f8f5f0;
+        font-weight: 700;
+        color: rgba(26,26,26,0.6);
+        text-transform: uppercase;
+        font-size: 0.75rem;
+        letter-spacing: 0.5px;
+    }
+
+    .input-precio {
+        width: 90px;
+        padding: 6px 10px;
+        border: 1.5px solid rgba(26,26,26,0.12);
+        border-radius: 8px;
+        font-weight: 700;
+        color: #9e2a2b;
+    }
+
+    .badge-horario {
+        padding: 4px 10px;
+        border-radius: 20px;
+        font-size: 0.75rem;
+        font-weight: 700;
+    }
+
+    .horario-mañana { background: rgba(251, 191, 36, 0.15); color: #d97706; }
+    .horario-tarde { background: rgba(249, 115, 22, 0.15); color: #ea580c; }
+    .horario-noche { background: rgba(99, 102, 241, 0.15); color: #4f46e5; }
+    .horario-todo { background: rgba(16, 185, 129, 0.15); color: #059669; }
+
+    .badge-festivo {
+        padding: 4px 10px;
+        background: rgba(239, 68, 68, 0.1);
+        color: #dc2626;
+        border-radius: 20px;
+        font-size: 0.78rem;
+        font-weight: 700;
+    }
+
+    .btn-primary {
+        background: #9e2a2b;
+        color: #ffffff;
+        padding: 10px 18px;
+        border-radius: 10px;
+        border: none;
+        font-weight: 700;
+        font-size: 0.88rem;
+        cursor: pointer;
+        transition: background 0.2s;
+    }
+
+    .btn-primary:hover { background: #7a2021; }
+
+    .btn-save-sm {
+        background: #10b981;
+        color: white;
+        border: none;
+        padding: 6px 12px;
+        border-radius: 8px;
+        font-weight: 700;
+        font-size: 0.8rem;
+        cursor: pointer;
+    }
+
+    .btn-del-sm {
+        background: rgba(239, 68, 68, 0.1);
+        color: #dc2626;
+        border: 1px solid rgba(239, 68, 68, 0.2);
+        padding: 6px 12px;
+        border-radius: 8px;
+        font-weight: 700;
+        font-size: 0.8rem;
+        cursor: pointer;
+    }
+
+    .btn-del-sm:hover { background: rgba(239, 68, 68, 0.2); }
+
+    .modal-overlay {
+        position: fixed;
+        inset: 0;
+        background: rgba(0,0,0,0.7);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 9999;
+    }
+
+    .modal-card {
+        background: #fffaf0;
+        width: 100%;
+        max-width: 480px;
+        border-radius: 20px;
+        padding: 24px;
+        box-shadow: 0 20px 60px rgba(0,0,0,0.4);
+    }
+
+    .modal-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 16px;
+    }
+
+    .modal-close-btn {
+        background: none;
+        border: none;
+        font-size: 1.2rem;
+        cursor: pointer;
+    }
+
+    .form-group {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        margin-bottom: 14px;
+    }
+
+    .form-group label {
+        font-size: 0.85rem;
+        font-weight: 700;
+    }
+
+    .form-group input[type="text"],
+    .form-group input[type="date"] {
+        padding: 10px 14px;
+        border: 1.5px solid rgba(26,26,26,0.12);
+        border-radius: 10px;
+        font-family: inherit;
+    }
+
+    .checkbox-row label {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 0.85rem;
+    }
+
+    .modal-actions {
+        display: flex;
+        justify-content: flex-end;
+        gap: 12px;
+        margin-top: 20px;
+    }
+
+    .btn-sec {
+        background: transparent;
+        border: 1.5px solid rgba(26,26,26,0.2);
+        padding: 10px 18px;
+        border-radius: 10px;
+        cursor: pointer;
+    }
+
+    .hidden { display: none !important; }
+    .loading-td, .empty-td { text-align: center; padding: 24px; color: rgba(26,26,26,0.4); }
+</style>

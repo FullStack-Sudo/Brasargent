@@ -1,22 +1,22 @@
 ---
 // src/pages/admin/dashboard.astro
-// Dashboard del administrador con layout unificado
+// Dashboard con registro de asistencia totalmente funcional
 
 import AdminLayout from '../../layouts/AdminLayout.astro';
-import pool from '../../lib/db';
+import pool, { query } from '../../lib/db';
+import { getEstadisticasCubiertos } from '../../lib/cubiertos';
 
-// Obtener estadísticas
-const [stats] = await pool.query(`
-    SELECT 
-        (SELECT COUNT(*) FROM reservas) AS total_reservas,
-        (SELECT COUNT(*) FROM reservas WHERE estado = 'pendiente') AS pendientes,
-        (SELECT COUNT(*) FROM reservas WHERE estado = 'confirmada') AS confirmadas,
-        (SELECT COUNT(*) FROM reservas WHERE estado = 'rechazada') AS rechazadas,
-        (SELECT COUNT(*) FROM clientes) AS total_clientes
-`) as any[];
+// ============================================
+// OBTENER DATOS DE CUBIERTOS EN TIEMPO REAL
+// ============================================
 
-// Obtener reservas recientes
-const [reservasRecientes] = await pool.query(`
+const cubiertos = await getEstadisticasCubiertos();
+
+// ============================================
+// OBTENER RESERVAS EN CURSO / CONFIRMADAS (MESAS OCUPADAS)
+// ============================================
+
+const [reservasEnCursoRows] = await pool.query(`
     SELECT 
         r.id,
         r.nombre_cliente,
@@ -26,192 +26,538 @@ const [reservasRecientes] = await pool.query(`
         r.fecha,
         r.hora,
         r.numero_personas,
+        r.cantidad_ninos,
+        r.cubiertos_reservados,
+        r.personas_asistentes,
+        r.estado,
+        r.hora_llegada,
+        s.nombre AS sucursal_nombre,
+        s.id AS sucursal_id
+    FROM reservas r
+    JOIN sucursales s ON r.sucursal_id = s.id
+    WHERE r.estado IN ('confirmada', 'en_curso')
+    ORDER BY r.fecha ASC, r.hora ASC
+`) as any[];
+const reservasEnCurso = reservasEnCursoRows || [];
+
+// ============================================
+// CALCULAR ESTADÍSTICAS GLOBALES
+// ============================================
+
+const totalCubiertosOcupados = cubiertos.reduce((acc: number, s: any) => acc + (parseInt(s.cubiertos_ocupados) || 0), 0);
+const totalCapacidad = cubiertos.reduce((acc: number, s: any) => acc + (parseInt(s.capacidad_total) || 0), 0);
+const porcentajeGlobal = totalCapacidad > 0 ? Math.round((totalCubiertosOcupados / totalCapacidad) * 100) : 0;
+
+// Obtener estadísticas generales
+const [stats] = await pool.query(`
+    SELECT 
+        (SELECT COUNT(*) FROM reservas) AS total_reservas,
+        (SELECT COUNT(*) FROM reservas WHERE estado = 'pendiente') AS pendientes,
+        (SELECT COUNT(*) FROM reservas WHERE estado = 'confirmada') AS confirmadas,
+        (SELECT COUNT(*) FROM reservas WHERE estado = 'rechazada') AS rechazadas,
+        (SELECT COUNT(*) FROM clientes) AS total_clientes
+`) as any[];
+
+// Obtener reservas de hoy
+const hoy = new Date().toLocaleDateString('en-CA', { timeZone: 'America/La_Paz' });
+const [reservasHoyRows] = await pool.query(`
+    SELECT 
+        r.id,
+        r.nombre_cliente,
+        r.telefono,
+        r.telefono_completo,
+        r.codigo_pais,
+        r.fecha,
+        r.hora,
+        r.numero_personas,
+        r.cantidad_ninos,
+        r.cubiertos_reservados,
         r.estado,
         s.nombre AS sucursal_nombre
     FROM reservas r
     JOIN sucursales s ON r.sucursal_id = s.id
-    ORDER BY r.created_at DESC
-    LIMIT 5
-`) as any[];
+    WHERE r.fecha = ?
+    ORDER BY r.hora ASC
+`, [hoy]) as any[];
+const reservasHoy = reservasHoyRows || [];
 
-// Obtener cubiertos por sucursal
-const [cubiertos] = await pool.query(`
-    SELECT 
-        id,
-        nombre,
-        capacidad_total,
-        cubiertos_disponibles,
-        cubiertos_ocupados
-    FROM sucursales
-    WHERE activo = 1
-`) as any[];
+// Obtener estado del reinicio
+const [controlRows] = await pool.query(
+    `SELECT * FROM control_reinicio_diario WHERE fecha = ?`,
+    [hoy]
+) as any[];
+const control = controlRows && controlRows.length > 0 ? controlRows[0] : null;
+
+// Obtener última semana de reinicios
+const [ultimaSemanaRows] = await pool.query(
+    `SELECT * FROM control_reinicio_diario 
+     ORDER BY fecha DESC 
+     LIMIT 7`
+) as any[];
+const ultimaSemana = ultimaSemanaRows || [];
 ---
 
 <AdminLayout title="Dashboard" description="Resumen de actividad y gestión de tu restaurante">
-    <!-- 🔴 BOTÓN REINICIAR RESERVAS -->
-    <div class="dashboard-header">
-        <div class="header-info">
-            <h1>📊 Dashboard</h1>
-            <p>Resumen de actividad y gestión de tu restaurante</p>
+    <div class="dashboard-content">
+        <!-- Header -->
+        <div class="dashboard-header">
+            <div>
+                <h1>📊 Dashboard</h1>
+                <p>Resumen de actividad y gestión de tu restaurante</p>
+            </div>
+            <div class="header-actions">
+                <button class="btn-reiniciar" onclick="reiniciarReservas()">
+                    🔄 Reiniciar Reservas
+                </button>
+            </div>
         </div>
-        <div class="header-actions">
-            <button class="btn-reiniciar" onclick="reiniciarReservas()">
-                🔄 Reiniciar Reservas
-            </button>
-        </div>
-    </div>
 
-    <!-- Tarjetas de estadísticas -->
-    <div class="stats-grid">
-        <div class="stat-card">
-            <div class="stat-icon" style="background: rgba(59, 130, 246, 0.1); color: #3b82f6;">📋</div>
-            <div class="stat-info">
-                <span class="stat-number">{stats[0]?.total_reservas || 0}</span>
-                <span class="stat-label">Total Reservas</span>
+        <!-- Tarjetas de estadísticas generales -->
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-icon" style="background: rgba(59, 130, 246, 0.1); color: #3b82f6;">📋</div>
+                <div class="stat-info">
+                    <span class="stat-number">{stats[0]?.total_reservas || 0}</span>
+                    <span class="stat-label">Total Reservas</span>
+                </div>
+            </div>
+            
+            <div class="stat-card">
+                <div class="stat-icon" style="background: rgba(245, 158, 11, 0.1); color: #f59e0b;">⏳</div>
+                <div class="stat-info">
+                    <span class="stat-number">{stats[0]?.pendientes || 0}</span>
+                    <span class="stat-label">Pendientes</span>
+                </div>
+            </div>
+            
+            <div class="stat-card">
+                <div class="stat-icon" style="background: rgba(16, 185, 129, 0.1); color: #10b981;">✅</div>
+                <div class="stat-info">
+                    <span class="stat-number">{stats[0]?.confirmadas || 0}</span>
+                    <span class="stat-label">Confirmadas</span>
+                </div>
+            </div>
+            
+            <div class="stat-card">
+                <div class="stat-icon" style="background: rgba(239, 68, 68, 0.1); color: #ef4444;">❌</div>
+                <div class="stat-info">
+                    <span class="stat-number">{stats[0]?.rechazadas || 0}</span>
+                    <span class="stat-label">Rechazadas</span>
+                </div>
+            </div>
+            
+            <div class="stat-card">
+                <div class="stat-icon" style="background: rgba(158, 42, 43, 0.1); color: #9e2a2b;">👥</div>
+                <div class="stat-info">
+                    <span class="stat-number">{stats[0]?.total_clientes || 0}</span>
+                    <span class="stat-label">Clientes Registrados</span>
+                </div>
             </div>
         </div>
-        
-        <div class="stat-card">
-            <div class="stat-icon" style="background: rgba(245, 158, 11, 0.1); color: #f59e0b;">⏳</div>
-            <div class="stat-info">
-                <span class="stat-number">{stats[0]?.pendientes || 0}</span>
-                <span class="stat-label">Pendientes</span>
+
+        <!-- 🔴 USO DE CUBIERTOS (RECUADRO PRINCIPAL) -->
+        <div class="section-card cubiertos-section">
+            <div class="section-header">
+                <h2>🪑 Uso de Cubiertos</h2>
+                <span class="badge-porcentaje" style={`background: ${porcentajeGlobal > 80 ? '#ef4444' : porcentajeGlobal > 60 ? '#f59e0b' : '#10b981'}20; color: ${porcentajeGlobal > 80 ? '#ef4444' : porcentajeGlobal > 60 ? '#f59e0b' : '#10b981'}`}>
+                    {porcentajeGlobal}% ocupado
+                </span>
             </div>
-        </div>
-        
-        <div class="stat-card">
-            <div class="stat-icon" style="background: rgba(16, 185, 129, 0.1); color: #10b981;">✅</div>
-            <div class="stat-info">
-                <span class="stat-number">{stats[0]?.confirmadas || 0}</span>
-                <span class="stat-label">Confirmadas</span>
-            </div>
-        </div>
-        
-        <div class="stat-card">
-            <div class="stat-icon" style="background: rgba(239, 68, 68, 0.1); color: #ef4444;">❌</div>
-            <div class="stat-info">
-                <span class="stat-number">{stats[0]?.rechazadas || 0}</span>
-                <span class="stat-label">Rechazadas</span>
-            </div>
-        </div>
-        
-        <div class="stat-card">
-            <div class="stat-icon" style="background: rgba(158, 42, 43, 0.1); color: #9e2a2b;">👥</div>
-            <div class="stat-info">
-                <span class="stat-number">{stats[0]?.total_clientes || 0}</span>
-                <span class="stat-label">Clientes Registrados</span>
-            </div>
-        </div>
-    </div>
-    
-    <!-- Cubiertos por Sucursal -->
-    <div class="section-card">
-        <div class="section-header">
-            <h2>🪑 Capacidad y Cubiertos</h2>
-        </div>
-        <div class="cubiertos-grid">
-            {cubiertos.map((sucursal: any) => {
-                const porcentaje = Math.round((sucursal.cubiertos_ocupados / sucursal.capacidad_total) * 100);
-                const color = porcentaje > 80 ? '#ef4444' : porcentaje > 60 ? '#f59e0b' : '#10b981';
-                return (
-                    <div class="cubiertos-card" style={`border-left-color: ${color}`}>
-                        <div class="cubiertos-header">
-                            <span class="cubiertos-icon">
-                                {sucursal.nombre === 'Churrasquería' ? '🔥' :
-                                 sucursal.nombre === 'Fast Grill' ? '⚡' : '🥩'}
-                            </span>
-                            <strong>{sucursal.nombre}</strong>
-                        </div>
-                        <div class="cubiertos-numeros">
-                            <div>
-                                <span class="cubiertos-label">TOTAL</span>
-                                <span class="cubiertos-valor">{sucursal.capacidad_total}</span>
-                            </div>
-                            <div>
-                                <span class="cubiertos-label">OCUPADOS</span>
-                                <span class="cubiertos-valor ocupado">{sucursal.cubiertos_ocupados}</span>
-                            </div>
-                            <div>
-                                <span class="cubiertos-label">DISPONIBLES</span>
-                                <span class="cubiertos-valor disponible" style={`color: ${color}`}>
-                                    {sucursal.cubiertos_disponibles}
+
+            <div class="cubiertos-grid">
+                {cubiertos.map((sucursal: any) => {
+                    const porcentaje = parseFloat(sucursal.porcentaje_ocupacion) || 0;
+                    const color = porcentaje > 80 ? '#ef4444' : 
+                                 porcentaje > 60 ? '#f59e0b' : '#10b981';
+                    
+                    return (
+                        <div class="cubiertos-card" style={`border-left: 4px solid ${color}`}>
+                            <div class="cubiertos-header">
+                                <span class="cubiertos-icon">
+                                    {sucursal.nombre === 'Churrasquería' ? '🔥' :
+                                     sucursal.nombre === 'Fast Grill' ? '⚡' : '🥩'}
                                 </span>
+                                <strong>{sucursal.nombre}</strong>
+                            </div>
+                            
+                            <div class="cubiertos-numeros">
+                                <div>
+                                    <span class="cubiertos-label">TOTAL</span>
+                                    <span class="cubiertos-valor">{sucursal.capacidad_total}</span>
+                                </div>
+                                <div>
+                                    <span class="cubiertos-label">OCUPADOS</span>
+                                    <span class="cubiertos-valor ocupado" style="color: #3b82f6;">
+                                        {sucursal.cubiertos_ocupados}
+                                    </span>
+                                </div>
+                                <div>
+                                    <span class="cubiertos-label">DISPONIBLES</span>
+                                    <span class="cubiertos-valor disponible" style={`color: ${color}`}>
+                                        {sucursal.cubiertos_disponibles}
+                                    </span>
+                                </div>
+                            </div>
+                            
+                            <div class="cubiertos-bar">
+                                <div class="cubiertos-progreso" style={`width: ${porcentaje}%; background: ${color}`}></div>
+                            </div>
+                            
+                            <div class="cubiertos-footer">
+                                <span style={`color: ${color}`}>{porcentaje}% ocupado</span>
+                                <span class="cubiertos-libres">{sucursal.cubiertos_disponibles} cubiertos libres</span>
                             </div>
                         </div>
-                        <div class="cubiertos-bar">
-                            <div class="cubiertos-progreso" style={`width: ${porcentaje}%; background: ${color}`}></div>
-                        </div>
-                        <div class="cubiertos-footer">
-                            <span style={`color: ${color}`}>{porcentaje}% ocupado</span>
-                            <span class="cubiertos-libres">{sucursal.cubiertos_disponibles} cubiertos libres</span>
-                        </div>
-                    </div>
-                );
-            })}
-        </div>
-    </div>
-    
-    <!-- Reservas Recientes -->
-    <div class="section-card">
-        <div class="section-header">
-            <h2>📋 Reservas Recientes</h2>
-            <a href="/admin/reservas" class="btn-ver-todas">Ver todas →</a>
-        </div>
-        
-        {reservasRecientes.length === 0 ? (
-            <div class="empty-state">
-                <span class="empty-icon">📭</span>
-                <p>No hay reservas recientes</p>
+                    );
+                })}
             </div>
-        ) : (
-            <div class="table-wrapper">
-                <table class="tabla-reservas">
-                    <thead>
-                        <tr>
-                            <th>Cliente</th>
-                            <th>Teléfono</th>
-                            <th>Sucursal</th>
-                            <th>Fecha</th>
-                            <th>Hora</th>
-                            <th>Personas</th>
-                            <th>Estado</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {reservasRecientes.map((reserva: any) => (
-                            <tr>
-                                <td><strong>{reserva.nombre_cliente}</strong></td>
-                                <td>
-                                    <a href={`https://wa.me/${reserva.telefono_completo || '591' + reserva.telefono}`} 
-                                       target="_blank" class="whatsapp-link">
-                                        💬 {reserva.codigo_pais || '591'} {reserva.telefono}
-                                    </a>
-                                </td>
-                                <td>{reserva.sucursal_nombre}</td>
-                                <td>{new Date(reserva.fecha).toLocaleDateString('es-ES')}</td>
-                                <td>{reserva.hora}</td>
-                                <td>{reserva.numero_personas}</td>
-                                <td>
-                                    <span class={`badge badge-${reserva.estado}`}>
-                                        {reserva.estado === 'pendiente' ? '⏳ Pendiente' :
-                                         reserva.estado === 'confirmada' ? '✅ Confirmada' :
-                                         reserva.estado === 'rechazada' ? '❌ Rechazada' :
-                                         '⏰ Cancelada'}
+        </div>
+
+        <!-- 🔴 MESAS OCUPADAS (CON CONTROL DE ASISTENCIA FUNCIONAL) -->
+        <div class="section-card mesas-section">
+            <div class="section-header">
+                <h2>🪑 Mesas Ocupadas ({reservasEnCurso.length})</h2>
+                <span class="badge-total">🔴 {totalCubiertosOcupados} cubiertos ocupados</span>
+            </div>
+
+            {reservasEnCurso.length === 0 ? (
+                <div class="empty-state">
+                    <span class="empty-icon">🍽️</span>
+                    <p>No hay mesas ocupadas actualmente</p>
+                    <span class="empty-sub">Todas las mesas están disponibles</span>
+                </div>
+            ) : (
+                <div class="mesas-grid">
+                    {reservasEnCurso.map((reserva: any) => {
+                        const maxAsistentes = reserva.cubiertos_reservados || 0;
+                        const yaRegistrado = reserva.estado === 'en_curso';
+                        
+                        return (
+                            <div class="mesa-card" id={`mesa-${reserva.id}`}>
+                                <div class="mesa-header">
+                                    <div class="mesa-info">
+                                        <span class="mesa-icon">🪑</span>
+                                        <div>
+                                            <span class="mesa-cliente">{reserva.nombre_cliente}</span>
+                                            <span class="mesa-sucursal">📍 {reserva.sucursal_nombre}</span>
+                                        </div>
+                                    </div>
+                                    <span class="mesa-estado" style={`color: ${yaRegistrado ? '#10b981' : '#f59e0b'}`}>
+                                        {yaRegistrado ? '🟢 En curso' : '⏳ Esperando'}
                                     </span>
-                                </td>
-                            </tr>
-                        ))}
-                    </tbody>
-                </table>
+                                </div>
+
+                                <div class="mesa-detalles">
+                                    <span>🕐 {reserva.hora} ({new Date(reserva.fecha).toLocaleDateString('es-ES')})</span>
+                                    <span>👥 {reserva.numero_personas + (reserva.cantidad_ninos || 0)} reservados</span>
+                                    <span>📞 {reserva.telefono}</span>
+                                </div>
+
+                                <div class="mesa-asistencia">
+                                    <div class="asistencia-info">
+                                        <span class="asistencia-label">Reservados:</span>
+                                        <span class="asistencia-valor">{reserva.cubiertos_reservados || 0}</span>
+                                        <span class="asistencia-label">Asistentes:</span>
+                                        <span class="asistencia-valor" id={`asistentes-label-${reserva.id}`}>
+                                            {reserva.personas_asistentes ? `${reserva.personas_asistentes}` : '--'}
+                                        </span>
+                                    </div>
+
+                                    <div class="asistencia-control">
+                                        <input 
+                                            type="number" 
+                                            id={`input-asistentes-${reserva.id}`}
+                                            class="input-asistentes"
+                                            placeholder="Cantidad"
+                                            min="1"
+                                            max={maxAsistentes}
+                                            value={reserva.personas_asistentes || ''}
+                                            disabled={yaRegistrado}
+                                            onkeypress="return event.keyCode >= 48 && event.keyCode <= 57"
+                                            oninput={`validarAsistentes(this, ${maxAsistentes})`}
+                                            onclick="this.select()"
+                                        />
+                                        <button 
+                                            class="btn-registrar-asistencia" 
+                                            onclick={`registrarAsistencia(${reserva.id}, ${maxAsistentes})`}
+                                            data-reserva-id={reserva.id}
+                                            disabled={yaRegistrado}
+                                        >
+                                            {yaRegistrado ? '✅ Registrado' : '📋 Registrar'}
+                                        </button>
+                                        <button 
+                                            class="btn-liberar-mesa" 
+                                            onclick={`liberarMesa(${reserva.id})`}
+                                            data-reserva-id={reserva.id}
+                                        >
+                                            ✅ Liberar
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        );
+                    })}
+                </div>
+            )}
+        </div>
+
+        <!-- 🔴 RESERVAS DE HOY -->
+        <div class="section-card">
+            <div class="section-header">
+                <h2>📋 Reservas de Hoy</h2>
+                <span class="badge-total">{reservasHoy.length} reservas</span>
             </div>
-        )}
+            
+            {reservasHoy.length === 0 ? (
+                <div class="empty-state">
+                    <span class="empty-icon">📭</span>
+                    <p>No hay reservas de hoy</p>
+                </div>
+            ) : (
+                <div class="table-wrapper">
+                    <table class="tabla-reservas">
+                        <thead>
+                            <tr>
+                                <th>Cliente</th>
+                                <th>Teléfono</th>
+                                <th>Sucursal</th>
+                                <th>Fecha</th>
+                                <th>Hora</th>
+                                <th>Personas</th>
+                                <th>Cubiertos</th>
+                                <th>Estado</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {reservasHoy.map((reserva: any) => (
+                                <tr class={`row-${reserva.estado}`}>
+                                    <td><strong>{reserva.nombre_cliente}</strong></td>
+                                    <td>
+                                        <a href={`https://wa.me/${reserva.telefono_completo || '591' + reserva.telefono}`} target="_blank" class="whatsapp-link">
+                                            💬 {reserva.codigo_pais || '591'} {reserva.telefono}
+                                        </a>
+                                    </td>
+                                    <td>{reserva.sucursal_nombre}</td>
+                                    <td>{new Date(reserva.fecha).toLocaleDateString('es-ES')}</td>
+                                    <td>{reserva.hora}</td>
+                                    <td>{reserva.numero_personas}</td>
+                                    <td>{reserva.cubiertos_reservados || '-'}</td>
+                                    <td>
+                                        <span class={`badge badge-${reserva.estado}`}>
+                                            {reserva.estado === 'confirmada' ? '✅ Confirmada' :
+                                             reserva.estado === 'en_curso' ? '🟢 En curso' :
+                                             reserva.estado === 'completada' ? '🏁 Completada' :
+                                             reserva.estado === 'pendiente' ? '⏳ Pendiente' :
+                                             reserva.estado === 'rechazada' ? '❌ Rechazada' : '⏰ Cancelada'}
+                                        </span>
+                                    </td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                </div>
+            )}
+        </div>
     </div>
 </AdminLayout>
 
+<script is:inline>
+// ============================================
+// VALIDACIÓN DE ASISTENTES EN TIEMPO REAL
+// ============================================
+
+window.validarAsistentes = function(input, max) {
+    const valor = parseInt(input.value);
+    
+    if (input.value === '') {
+        return;
+    }
+    
+    if (valor < 1) {
+        input.value = 1;
+    }
+    
+    if (valor > max) {
+        input.value = max;
+        alert(`⚠️ Solo hay ${max} cubiertos reservados`);
+    }
+};
+
+// ============================================
+// REGISTRAR ASISTENCIA
+// ============================================
+
+window.registrarAsistencia = async function(reservaId, maxAsistentes) {
+    const input = document.getElementById(`input-asistentes-${reservaId}`);
+    const personas = parseInt(input.value);
+    
+    // Validar entrada
+    if (!personas || personas < 1) {
+        alert('⚠️ Ingresa el número de personas que asistieron');
+        if (input) input.focus();
+        return;
+    }
+    
+    if (personas > maxAsistentes) {
+        alert(`⚠️ Solo hay ${maxAsistentes} cubiertos reservados`);
+        if (input) input.value = maxAsistentes;
+        return;
+    }
+    
+    if (!confirm(`¿Registrar ${personas} asistentes para esta reserva?`)) return;
+
+    const btn = document.querySelector(`.btn-registrar-asistencia[data-reserva-id="${reservaId}"]`);
+    const originalText = btn ? btn.textContent : '📋 Registrar';
+    if (btn) {
+        btn.textContent = '⏳ Procesando...';
+        btn.disabled = true;
+    }
+
+    try {
+        const response = await fetch(`/api/reservas/${reservaId}/asistencia`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ personas_asistentes: personas })
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+            // Actualizar UI inmediatamente
+            const label = document.getElementById(`asistentes-label-${reservaId}`);
+            if (label) label.textContent = `${personas}`;
+            
+            if (input) input.disabled = true;
+            if (btn) {
+                btn.textContent = '✅ Registrado';
+                btn.disabled = true;
+            }
+            
+            const card = document.getElementById(`mesa-${reservaId}`);
+            if (card) {
+                const estado = card.querySelector('.mesa-estado');
+                if (estado) {
+                    estado.textContent = '🟢 En curso';
+                    estado.style.color = '#10b981';
+                }
+            }
+            
+            alert(`✅ ${result.mensaje}`);
+            setTimeout(() => location.reload(), 1500);
+        } else {
+            alert('❌ Error: ' + result.error);
+            if (btn) {
+                btn.textContent = originalText;
+                btn.disabled = false;
+            }
+        }
+    } catch (error) {
+        alert('❌ Error de conexión');
+        if (btn) {
+            btn.textContent = originalText;
+            btn.disabled = false;
+        }
+    }
+};
+
+// ============================================
+// LIBERAR MESA
+// ============================================
+
+window.liberarMesa = async function(reservaId) {
+    if (!confirm('¿Estás seguro de liberar esta mesa?')) return;
+    if (!confirm('⚠️ El cliente ya terminó su comida y se retiró.')) return;
+
+    const btn = document.querySelector(`.btn-liberar-mesa[data-reserva-id="${reservaId}"]`);
+    const originalText = btn ? btn.textContent : '✅ Liberar';
+    if (btn) {
+        btn.textContent = '⏳ Liberando...';
+        btn.disabled = true;
+    }
+
+    try {
+        const response = await fetch(`/api/reservas/${reservaId}/liberar`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+            alert(`✅ ${result.mensaje}`);
+            location.reload();
+        } else {
+            alert('❌ Error: ' + result.error);
+            if (btn) {
+                btn.textContent = originalText;
+                btn.disabled = false;
+            }
+        }
+    } catch (error) {
+        alert('❌ Error de conexión');
+        if (btn) {
+            btn.textContent = originalText;
+            btn.disabled = false;
+        }
+    }
+};
+
+// ============================================
+// REINICIAR RESERVAS
+// ============================================
+
+window.reiniciarReservas = function() {
+    if (!confirm('⚠️ ¿Estás seguro de reiniciar todas las reservas?\n\nSe eliminarán todas las reservas del día actual y se liberarán todos los cubiertos.')) {
+        return;
+    }
+    
+    if (!confirm('🔴 Esta acción NO se puede deshacer. ¿Continuar?')) {
+        return;
+    }
+    
+    const btn = document.querySelector('.btn-reiniciar');
+    btn.textContent = '⏳ Procesando...';
+    btn.disabled = true;
+    
+    fetch('/api/reservas/reiniciar', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        }
+    })
+    .then(response => response.json())
+    .then(result => {
+        if (result.success) {
+            alert(`✅ Reservas reiniciadas exitosamente\n\n📋 ${result.reservas_eliminadas} reservas eliminadas\n🪑 ${result.cubiertos_liberados} cubiertos liberados`);
+            location.reload();
+        } else {
+            alert('❌ Error: ' + result.error);
+            btn.textContent = '🔄 Reiniciar Reservas';
+            btn.disabled = false;
+        }
+    })
+    .catch(() => {
+        alert('❌ Error de conexión. Intenta de nuevo.');
+        btn.textContent = '🔄 Reiniciar Reservas';
+        btn.disabled = false;
+    });
+};
+</script>
+
 <style is:global>
 /* ============================================
-   BOTÓN REINICIAR RESERVAS
+   ESTILOS DEL DASHBOARD
    ============================================ */
+
+.dashboard-content {
+    max-width: 1400px;
+    margin: 0 auto;
+}
+
 .dashboard-header {
     display: flex;
     justify-content: space-between;
@@ -219,14 +565,14 @@ const [cubiertos] = await pool.query(`
     margin-bottom: 24px;
 }
 
-.header-info h1 {
+.dashboard-header h1 {
     font-family: 'Playfair Display', serif;
     font-size: 1.8rem;
     color: #1a1a1a;
     margin: 0;
 }
 
-.header-info p {
+.dashboard-header p {
     color: rgba(26, 26, 26, 0.5);
     margin: 4px 0 0;
 }
@@ -250,20 +596,48 @@ const [cubiertos] = await pool.query(`
 .btn-reiniciar:hover {
     background: #dc2626;
     transform: scale(1.02);
-    box-shadow: 0 4px 16px rgba(239, 68, 68, 0.3);
 }
 
-.btn-reiniciar:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-    transform: none !important;
+.section-card {
+    background: white;
+    border-radius: 16px;
+    padding: 24px;
+    margin-bottom: 24px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+
+.section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+}
+
+.section-header h2 {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: #1a1a1a;
+}
+
+.badge-porcentaje {
+    padding: 4px 16px;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    font-weight: 600;
+}
+
+.badge-total {
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: #3b82f6;
+    background: rgba(59, 130, 246, 0.1);
+    padding: 4px 12px;
+    border-radius: 20px;
 }
 
 /* ============================================
-   ESTILOS DEL DASHBOARD
+   STATS GRID
    ============================================ */
-
-/* Stats Grid */
 .stats-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
@@ -313,51 +687,18 @@ const [cubiertos] = await pool.query(`
     color: rgba(26, 26, 26, 0.4);
 }
 
-/* Section Cards */
-.section-card {
-    background: white;
-    border-radius: 12px;
-    padding: 20px 24px;
-    margin-bottom: 24px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
-}
-
-.section-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 16px;
-}
-
-.section-header h2 {
-    font-size: 1.1rem;
-    font-weight: 600;
-    color: #1a1a1a;
-}
-
-.btn-ver-todas {
-    font-size: 0.85rem;
-    color: #9e2a2b;
-    text-decoration: none;
-    font-weight: 500;
-    transition: all 0.3s ease;
-}
-
-.btn-ver-todas:hover {
-    color: #7a2021;
-    text-decoration: underline;
-}
-
-/* Cubiertos */
+/* ============================================
+   CUBIERTOS GRID
+   ============================================ */
 .cubiertos-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
     gap: 16px;
 }
 
 .cubiertos-card {
-    background: rgba(255, 250, 240, 0.5);
-    border-radius: 10px;
+    background: rgba(255, 250, 240, 0.3);
+    border-radius: 12px;
     padding: 16px 20px;
     border-left: 4px solid #10b981;
     transition: all 0.3s ease;
@@ -409,14 +750,6 @@ const [cubiertos] = await pool.query(`
     color: #1a1a1a;
 }
 
-.cubiertos-valor.ocupado {
-    color: #3b82f6;
-}
-
-.cubiertos-valor.disponible {
-    color: #10b981;
-}
-
 .cubiertos-bar {
     width: 100%;
     height: 4px;
@@ -442,7 +775,167 @@ const [cubiertos] = await pool.query(`
     color: rgba(26, 26, 26, 0.3);
 }
 
-/* Tabla */
+/* ============================================
+   MESAS GRID
+   ============================================ */
+.mesas-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 16px;
+}
+
+.mesa-card {
+    background: white;
+    border-radius: 12px;
+    padding: 16px 20px;
+    border: 1px solid rgba(26, 26, 26, 0.06);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+    transition: all 0.3s ease;
+}
+
+.mesa-card:hover {
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+}
+
+.mesa-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+}
+
+.mesa-info {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.mesa-icon {
+    font-size: 1.5rem;
+}
+
+.mesa-cliente {
+    font-weight: 600;
+    color: #1a1a1a;
+}
+
+.mesa-sucursal {
+    display: block;
+    font-size: 0.75rem;
+    color: rgba(26, 26, 26, 0.4);
+}
+
+.mesa-estado {
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+
+.mesa-detalles {
+    display: flex;
+    gap: 16px;
+    font-size: 0.8rem;
+    color: rgba(26, 26, 26, 0.5);
+    margin: 8px 0 12px;
+    flex-wrap: wrap;
+}
+
+.mesa-asistencia {
+    border-top: 1px solid rgba(26, 26, 26, 0.04);
+    padding-top: 12px;
+}
+
+.asistencia-info {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    font-size: 0.85rem;
+    margin-bottom: 8px;
+}
+
+.asistencia-label {
+    color: rgba(26, 26, 26, 0.3);
+}
+
+.asistencia-valor {
+    font-weight: 600;
+    color: #1a1a1a;
+}
+
+.asistencia-control {
+    display: flex;
+    gap: 8px;
+}
+
+.input-asistentes {
+    width: 100px;
+    padding: 8px 12px;
+    border: 1.5px solid rgba(26, 26, 26, 0.08);
+    border-radius: 8px;
+    font-size: 0.85rem;
+    font-family: 'Inter', sans-serif;
+    transition: all 0.3s ease;
+    background: #fff;
+    color: #1a1a1a;
+}
+
+.input-asistentes:focus {
+    outline: none;
+    border-color: #9e2a2b;
+    box-shadow: 0 0 0 3px rgba(158, 42, 43, 0.08);
+}
+
+.input-asistentes:disabled {
+    background: #f3f4f6;
+    color: #9ca3af;
+    cursor: not-allowed;
+}
+
+.btn-registrar-asistencia {
+    flex: 1;
+    padding: 8px 16px;
+    background: #3b82f6;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-size: 0.8rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-family: 'Inter', sans-serif;
+}
+
+.btn-registrar-asistencia:hover:not(:disabled) {
+    background: #2563eb;
+    transform: scale(1.02);
+}
+
+.btn-registrar-asistencia:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.btn-liberar-mesa {
+    flex: 1;
+    padding: 8px 16px;
+    background: #10b981;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-size: 0.8rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-family: 'Inter', sans-serif;
+}
+
+.btn-liberar-mesa:hover {
+    background: #059669;
+    transform: scale(1.02);
+}
+
+/* ============================================
+   TABLA DE RESERVAS DE HOY
+   ============================================ */
 .table-wrapper {
     overflow-x: auto;
 }
@@ -479,7 +972,6 @@ const [cubiertos] = await pool.query(`
     background: rgba(255, 250, 240, 0.3);
 }
 
-/* Badges */
 .badge {
     display: inline-block;
     padding: 3px 12px;
@@ -490,23 +982,18 @@ const [cubiertos] = await pool.query(`
 
 .badge-pendiente { background: rgba(245, 158, 11, 0.1); color: #f59e0b; }
 .badge-confirmada { background: rgba(16, 185, 129, 0.1); color: #10b981; }
+.badge-en_curso { background: rgba(16, 185, 129, 0.2); color: #059669; }
+.badge-completada { background: rgba(59, 130, 246, 0.1); color: #3b82f6; }
 .badge-rechazada { background: rgba(239, 68, 68, 0.1); color: #ef4444; }
 .badge-cancelada { background: rgba(107, 114, 128, 0.1); color: #6b7280; }
 
-/* WhatsApp Link */
 .whatsapp-link {
     color: #25d366;
     text-decoration: none;
     font-weight: 500;
-    transition: all 0.3s ease;
 }
 
-.whatsapp-link:hover {
-    color: #1da851;
-    text-decoration: underline;
-}
-
-/* Empty State */
+/* EMPTY STATE */
 .empty-state {
     text-align: center;
     padding: 32px 24px;
@@ -525,82 +1012,41 @@ const [cubiertos] = await pool.query(`
     margin: 0;
 }
 
-/* Responsive */
-@media (max-width: 768px) {
-    .dashboard-header {
-        flex-direction: column;
-        align-items: stretch;
-        gap: 12px;
-    }
-    
-    .btn-reiniciar {
-        justify-content: center;
-    }
+.empty-sub {
+    color: rgba(26, 26, 26, 0.3);
+    font-size: 0.85rem;
+}
 
-    .stats-grid {
-        grid-template-columns: 1fr 1fr;
-    }
-    
-    .cubiertos-grid {
+/* RESPONSIVE */
+@media (max-width: 768px) {
+    .cubiertos-grid,
+    .mesas-grid {
         grid-template-columns: 1fr;
     }
     
-    .section-card {
-        padding: 16px;
+    .dashboard-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 8px;
+    }
+    
+    .asistencia-control {
+        flex-direction: column;
+    }
+    
+    .input-asistentes {
+        width: 100%;
     }
 }
 
 @media (max-width: 480px) {
-    .stats-grid {
-        grid-template-columns: 1fr;
+    .section-card {
+        padding: 16px;
     }
     
-    .cubiertos-numeros {
-        flex-wrap: wrap;
-        gap: 8px;
+    .mesa-detalles {
+        flex-direction: column;
+        gap: 4px;
     }
 }
 </style>
-
-<script is:inline>
-// ============================================
-// REINICIAR RESERVAS
-// ============================================
-
-function reiniciarReservas() {
-    if (!confirm('⚠️ ¿Estás seguro de reiniciar todas las reservas?\\n\\nSe eliminarán todas las reservas del día actual y se liberarán todos los cubiertos.')) {
-        return;
-    }
-    
-    if (!confirm('🔴 Esta acción NO se puede deshacer. ¿Continuar?')) {
-        return;
-    }
-    
-    const btn = document.querySelector('.btn-reiniciar');
-    btn.textContent = '⏳ Procesando...';
-    btn.disabled = true;
-    
-    fetch('/api/reservas/reiniciar', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json'
-        }
-    })
-    .then(response => response.json())
-    .then(result => {
-        if (result.success) {
-            alert(`✅ Reservas reiniciadas exitosamente\\n\\n📋 ${result.reservas_eliminadas} reservas eliminadas\\n🪑 ${result.cubiertos_liberados} cubiertos liberados`);
-            location.reload();
-        } else {
-            alert('❌ Error: ' + result.error);
-            btn.textContent = '🔄 Reiniciar Reservas';
-            btn.disabled = false;
-        }
-    })
-    .catch(() => {
-        alert('❌ Error de conexión. Intenta de nuevo.');
-        btn.textContent = '🔄 Reiniciar Reservas';
-        btn.disabled = false;
-    });
-}
-</script>

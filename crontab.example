@@ -1,0 +1,6 @@
+# ============================================
+# CRON JOB PARA REINICIO DIARIO A LAS 01:00 AM
+# ============================================
+
+# Cambia /ruta/a/tu/proyecto por la ruta real donde está el proyecto (ej. /var/www/brasargent)
+0 1 * * * cd /ruta/a/tu/proyecto && npm run reset-daily >> logs/cron-reset.log 2>&1

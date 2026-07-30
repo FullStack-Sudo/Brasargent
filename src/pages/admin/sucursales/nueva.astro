@@ -1,23 +1,8 @@
 ---
-// src/pages/admin/sucursales/editar/[id].astro
-// Edición completa de sucursal
+// src/pages/admin/sucursales/nueva.astro
+// Creación de nueva sucursal
 
-import AdminLayout from '../../../../layouts/AdminLayout.astro';
-import pool from '../../../../lib/db';
-
-// Obtener ID
-const { id } = Astro.params;
-
-// Obtener datos de la sucursal
-const [sucursalRows] = await pool.query(
-    `SELECT * FROM sucursales WHERE id = ?`,
-    [id]
-) as any[];
-const sucursal = sucursalRows[0];
-
-if (!sucursal) {
-    return Astro.redirect('/admin/sucursales');
-}
+import AdminLayout from '../../../layouts/AdminLayout.astro';
 
 // Días de la semana
 const diasSemana = [
@@ -30,16 +15,6 @@ const diasSemana = [
     { id: 'domingo', label: 'Domingo' }
 ];
 
-// Parsear horarios
-let horarios: any = {};
-try {
-    horarios = typeof sucursal.horarios === 'string' 
-        ? JSON.parse(sucursal.horarios) 
-        : sucursal.horarios || {};
-} catch {
-    horarios = {};
-}
-
 // Conceptos
 const conceptos = [
     { value: 'Churrasquería', label: '🔥 Churrasquería' },
@@ -50,19 +25,19 @@ const conceptos = [
 ];
 ---
 
-<AdminLayout title={`Editar ${sucursal.nombre}`} description="Modifica los datos de la sucursal">
+<AdminLayout title="Nueva Sucursal" description="Agrega una nueva sucursal al sistema">
     <div class="editar-sucursal">
         <!-- Header -->
         <div class="page-header">
             <div>
-                <h1>✏️ Editar {sucursal.nombre}</h1>
-                <p>Modifica los datos, horarios y capacidad de la sucursal</p>
+                <h1>➕ Nueva Sucursal</h1>
+                <p>Configura los datos, horarios y capacidad de la nueva sucursal</p>
             </div>
             <a href="/admin/sucursales" class="btn-volver">← Volver</a>
         </div>
 
         <!-- Formulario -->
-        <form id="formEditarSucursal" class="form-sucursal">
+        <form id="formNuevaSucursal" class="form-sucursal">
             <!-- Información General -->
             <div class="form-section">
                 <h3>📋 Información General</h3>
@@ -70,15 +45,13 @@ const conceptos = [
                 <div class="form-row">
                     <div class="form-group">
                         <label>Nombre *</label>
-                        <input type="text" id="nombre" value={sucursal.nombre} required />
+                        <input type="text" id="nombre" placeholder="Ej. Los Pinos" required />
                     </div>
                     <div class="form-group">
                         <label>Concepto</label>
                         <select id="concepto">
                             {conceptos.map(c => (
-                                <option value={c.value} selected={c.value === sucursal.concepto}>
-                                    {c.label}
-                                </option>
+                                <option value={c.value}>{c.label}</option>
                             ))}
                         </select>
                     </div>
@@ -86,23 +59,23 @@ const conceptos = [
 
                 <div class="form-group">
                     <label>Dirección *</label>
-                    <input type="text" id="direccion" value={sucursal.direccion} required />
+                    <input type="text" id="direccion" placeholder="Ej. Av. Principal 123" required />
                 </div>
 
                 <div class="form-row">
                     <div class="form-group">
                         <label>Teléfono *</label>
-                        <input type="tel" id="telefono" value={sucursal.telefono} required />
+                        <input type="tel" id="telefono" placeholder="Ej. 70000000" required />
                     </div>
                     <div class="form-group">
                         <label>Capacidad Total (Cubiertos)</label>
-                        <input type="number" id="capacidad" value={sucursal.capacidad_total || 120} min="1" max="500" />
+                        <input type="number" id="capacidad" value="120" min="1" max="500" />
                     </div>
                 </div>
 
                 <div class="form-group checkbox-group">
                     <label class="checkbox-label">
-                        <input type="checkbox" id="permiteReservas" checked={sucursal.permite_reservas === 1} />
+                        <input type="checkbox" id="permiteReservas" checked />
                         <span class="custom-checkbox"></span>
                         <div>
                             <strong>📅 Permite Reservas</strong>
@@ -113,7 +86,7 @@ const conceptos = [
 
                 <div class="form-group checkbox-group">
                     <label class="checkbox-label">
-                        <input type="checkbox" id="permiteCubiertos" checked={sucursal.permite_cubiertos === 1} />
+                        <input type="checkbox" id="permiteCubiertos" checked />
                         <span class="custom-checkbox"></span>
                         <div>
                             <strong>🪑 Permite Cubiertos</strong>
@@ -128,30 +101,25 @@ const conceptos = [
                 <h3>🕐 Horarios de Atención</h3>
                 <div class="horarios-container">
                     {diasSemana.map((dia) => {
-                        const horarioDia = horarios[dia.id] || { activo: true, bloques: [{ inicio: '11:30', fin: '15:00' }] };
-                        const bloques = horarioDia.bloques || [{ inicio: '11:30', fin: '15:00' }];
-                        
                         return (
                             <div class="horario-dia" data-dia={dia.id}>
                                 <div class="dia-header">
                                     <span class="dia-nombre">{dia.label}</span>
                                     <div class="dia-controls">
                                         <label class="switch-small">
-                                            <input type="checkbox" class="dia-activo" checked={horarioDia.activo !== false} />
+                                            <input type="checkbox" class="dia-activo" checked />
                                             <span class="slider-small"></span>
                                         </label>
                                         <button type="button" class="btn-agregar-bloque" onclick="agregarBloque(this)">➕</button>
                                     </div>
                                 </div>
                                 <div class="dia-bloques">
-                                    {bloques.map((bloque: any) => (
-                                        <div class="bloque-horario">
-                                            <input type="time" class="bloque-inicio" value={bloque.inicio || '11:30'} />
-                                            <span>a</span>
-                                            <input type="time" class="bloque-fin" value={bloque.fin || '15:00'} />
-                                            <button type="button" class="btn-eliminar-bloque" onclick="eliminarBloque(this)">✕</button>
-                                        </div>
-                                    ))}
+                                    <div class="bloque-horario">
+                                        <input type="time" class="bloque-inicio" value="11:30" />
+                                        <span>a</span>
+                                        <input type="time" class="bloque-fin" value="15:00" />
+                                        <button type="button" class="btn-eliminar-bloque" onclick="eliminarBloque(this)">✕</button>
+                                    </div>
                                 </div>
                             </div>
                         );
@@ -162,13 +130,13 @@ const conceptos = [
             <!-- Botones -->
             <div class="form-actions">
                 <a href="/admin/sucursales" class="btn-cancelar">Cancelar</a>
-                <button type="submit" class="btn-guardar">💾 Guardar Cambios</button>
+                <button type="submit" class="btn-guardar">➕ Crear Sucursal</button>
             </div>
         </form>
     </div>
 </AdminLayout>
 
-<script is:inline define:vars={{ sucursalId: id }}>
+<script is:inline>
 // ============================================
 // MANEJO DE HORARIOS
 // ============================================
@@ -208,16 +176,15 @@ function eliminarBloque(btn) {
 // ENVÍO DEL FORMULARIO
 // ============================================
 
-document.getElementById('formEditarSucursal').addEventListener('submit', async function(e) {
+document.getElementById('formNuevaSucursal').addEventListener('submit', async function(e) {
     e.preventDefault();
     
     const btn = document.querySelector('.btn-guardar');
-    btn.textContent = '⏳ Guardando...';
+    btn.textContent = '⏳ Creando...';
     btn.disabled = true;
     
     // Recolectar datos
     const data = {
-        id: sucursalId,
         nombre: document.getElementById('nombre').value.trim(),
         concepto: document.getElementById('concepto').value,
         direccion: document.getElementById('direccion').value.trim(),
@@ -251,8 +218,8 @@ document.getElementById('formEditarSucursal').addEventListener('submit', async f
     });
     
     try {
-        const response = await fetch('/api/sucursales/editar', {
-            method: 'PUT',
+        const response = await fetch('/api/sucursales/crear', {
+            method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(data)
         });
@@ -260,16 +227,16 @@ document.getElementById('formEditarSucursal').addEventListener('submit', async f
         const result = await response.json();
         
         if (result.success) {
-            alert('✅ Sucursal actualizada exitosamente');
+            alert('✅ Sucursal creada exitosamente');
             window.location.href = '/admin/sucursales';
         } else {
             alert('❌ Error: ' + result.error);
-            btn.textContent = '💾 Guardar Cambios';
+            btn.textContent = '➕ Crear Sucursal';
             btn.disabled = false;
         }
     } catch (error) {
         alert('❌ Error de conexión');
-        btn.textContent = '💾 Guardar Cambios';
+        btn.textContent = '➕ Crear Sucursal';
         btn.disabled = false;
     }
 });
@@ -277,7 +244,7 @@ document.getElementById('formEditarSucursal').addEventListener('submit', async f
 
 <style is:global>
 /* ============================================
-   EDICIÓN DE SUCURSAL - ESTILOS
+   CREACIÓN DE SUCURSAL - ESTILOS
    ============================================ */
 .editar-sucursal {
     max-width: 800px;

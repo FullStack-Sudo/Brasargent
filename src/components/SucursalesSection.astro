@@ -1,53 +1,79 @@
 ---
 // Componente de Sucursales con diseño futurista
-const sucursales = [
-  //nueva sucursal
-  {
-    name: "Churrasqueria",
-    rating: 4.3,
-    reviews: "1.2K",
-    address: "Sucursal Beni, Av. casi - 5to anillo ",
-    days: "",
-    hours:
-      "Lunes a Sabado 11:30 am - 15:00 pm / 18:30 pm - 22:00 pm / Domingo 11:30 am - 15:00 pm",
-    image: "/img/sucursales/beni.jpeg",
-    whatsapp: "59178007700", // Reemplazar con el número real
-    mapUrl: "https://maps.app.goo.gl/Ee8GbY1Ufdon1KC88",
-    type: "Churrasquería",
-    status: "",
-    footerLogo: "/img/logo/LOGO1SF.png",
-  },
-  {
-    name: "Fast Grill",
-    rating: 4.5,
-    reviews: "1.3K",
-    price: "",
-    address: "C. 12 Oeste",
-    hours: "Abierto al publico desde las 12:00 PM, hasta las 22:00 PM",
-    image: "/img/logo/Sucursal2.jpeg",
-    featured: true,
-    whatsapp: "59178557004", // Reemplazar con el número real
-    type: "Rodizio Tradicional",
-    status: "",
-    mapUrl: "https://maps.app.goo.gl/JCHxQszooKH5mJ9S8?g_st=aw",
-    footerLogo: "/img/logo/LOGO2SF.png",
-  },
-  {
-    name: "Rodizio",
-    rating: 3.9,
-    reviews: "100",
-    address: "Las Brisas",
-    hours:
-      "Lunes a Sabado 11:30 am - 15:30 pm / 18:30 pm - 22:00 pm / Domingo 11:30 am - 15:30 pm",
-    image: "/img/sucursales/RODIZIO.webp",
-    whatsapp: "59178555509", // Reemplazar con el número real
-    type: "Restaurante",
-    status: "",
-    testimonial: "",
-    mapUrl: "https://maps.app.goo.gl/xs1BckNvmFdErVG2A",
-    footerLogo: "/img/logo/LOGO3SF.png",
-  },
-];
+import pool from '../lib/db';
+
+let sucursales = [];
+try {
+  const [rows] = await pool.query(`
+      SELECT 
+          id,
+          nombre as name,
+          concepto as type,
+          rating,
+          resenas as reviews,
+          direccion as address,
+          horarios,
+          telefono as whatsapp,
+          capacidad_total,
+          COALESCE(cubiertos_disponibles, capacidad_total) AS cubiertos_disponibles,
+          COALESCE(cubiertos_ocupados, 0) AS cubiertos_ocupados,
+          permite_reservas,
+          permite_cubiertos
+      FROM sucursales
+      WHERE activo = 1
+      ORDER BY nombre
+  `) as any[];
+
+  sucursales = rows.map((s: any) => {
+    let image = "/img/sucursales/beni.jpeg";
+    let footerLogo = "/img/logo/LOGO1SF.png";
+    let featured = false;
+    let mapUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(s.name + " " + s.address)}`;
+
+    if (s.name.includes("Churrasqueria") || s.name.includes("Churrasquería") || s.type.includes("Churrasquería")) {
+        image = "/img/sucursales/beni.jpeg";
+        footerLogo = "/img/logo/LOGO1SF.png";
+    } else if (s.name.includes("Fast Grill") || s.type.includes("Fast Grill")) {
+        image = "/img/sucursales/fassGrill.jpeg";
+        featured = true;
+        footerLogo = "/img/logo/LOGO2SF.png";
+    } else if (s.name.includes("Rodizio")) {
+        image = "/img/sucursales/RODIZIO.webp";
+        footerLogo = "/img/logo/LOGO3SF.png";
+    }
+
+    let hours: string[] | string = ["Horario no configurado"];
+    let status = "";
+    try {
+        if (s.horarios) {
+            const h = typeof s.horarios === 'string' ? JSON.parse(s.horarios) : s.horarios;
+            const diaMap: Record<string, string> = { 'lunes': 'Lunes', 'martes': 'Martes', 'miercoles': 'Mié', 'jueves': 'Jueves', 'viernes': 'Viernes', 'sabado': 'Sábado', 'domingo': 'Domingo' };
+            const partes = [];
+            for (const [dia, info] of Object.entries(h) as any) {
+                if (info.activo && info.bloques && info.bloques.length > 0) {
+                    const blq = info.bloques.map((b: any) => `${b.inicio} - ${b.fin}`).join(' y ');
+                    partes.push(`${diaMap[dia]}: ${blq}`);
+                }
+            }
+            if (partes.length > 0) hours = partes;
+        }
+    } catch(e) {}
+
+    return {
+        ...s,
+        image,
+        mapUrl,
+        footerLogo,
+        featured,
+        hours,
+        status,
+        rating: s.rating || 4.5,
+        reviews: s.reviews ? s.reviews.toString() : "0"
+    };
+  });
+} catch (error) {
+  console.error("Error al cargar sucursales en SucursalesSection:", error);
+}
 ---
 
 <section
@@ -198,9 +224,15 @@ const sucursales = [
                           {sucursal.status}
                         </span>
                       )}
-                      <span class="text-gray-500 leading-relaxed italic">
-                        {sucursal.hours}
-                      </span>
+                      <div class="text-gray-500 leading-relaxed italic text-xs space-y-1">
+                        {Array.isArray(sucursal.hours) ? (
+                          sucursal.hours.map((line: string) => (
+                            <div class="block">{line}</div>
+                          ))
+                        ) : (
+                          <span>{sucursal.hours}</span>
+                        )}
+                      </div>
                     </div>
                   </div>
                 )}
@@ -298,11 +330,11 @@ const sucursales = [
                   </a>
 
                   <!-- Botón Reservar - Dorado (Circular/Pill) -->
-                  {sucursal.name !== "Fast Grill" && (
+                  {sucursal.permite_reservas === 1 && (
                     <button 
                         class="btn-reservar w-16 h-16 flex items-center justify-center bg-[#d4af37] text-white rounded-full hover:bg-[#b8941f] hover:shadow-2xl hover:shadow-[#d4af37]/60 transition-all duration-300 hover:scale-110 group" 
-                        onclick={`abrirModalReserva(${index + 1}, '${sucursal.name}')`}
-                        data-sucursal-id={index + 1}
+                        onclick={`abrirModalReserva(${sucursal.id}, '${sucursal.name}')`}
+                        data-sucursal-id={sucursal.id}
                         title="Reservar mesa"
                     >
                         <svg class="w-7 h-7 group-hover:scale-110 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -532,6 +564,28 @@ window.abrirModalReserva = function(sucursalId, sucursalNombre) {
                         <input type="hidden" id="turnoReserva" />
                         <input type="hidden" id="horaReserva" required />
                     </div>
+
+                    <!-- 🔴 CONTENEDOR DE PRECIOS Y AVISO DE FERIADO/FESTIVO -->
+                    <div id="festivoAviso" class="festivo-aviso hidden">
+                        <span class="festivo-icon">⚠️</span>
+                        <div class="festivo-texto">
+                            <strong>Día Sin Reservas</strong>
+                            <p id="festivoMotivo">Domingos, días festivos y feriados trabajamos sin reservas (por orden de llegada).</p>
+                        </div>
+                    </div>
+
+                    <div id="precioContainer" class="precio-container hidden">
+                        <div class="precio-info">
+                            <span class="precio-icon">🏷️</span>
+                            <div class="precio-detalles">
+                                <span class="precio-label">Precio por cubierto en la fecha seleccionada:</span>
+                                <div class="precio-valores">
+                                    <span class="precio-adulto" id="precioAdulto">-- Bs Adultos</span>
+                                    <span class="precio-nino" id="precioNino">-- Bs Niños (5-10 años)</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                     
                     <!-- Personas (adultos) -->
                     <div class="form-group personas-section">
@@ -559,39 +613,6 @@ window.abrirModalReserva = function(sucursalId, sucursalNombre) {
                             </div>
                         </div>
                         
-                        <!-- Bebés -->
-                        <div class="form-group">
-                            <label>👶 Bebés (0-2 años)</label>
-                            <div class="cantidad-wrapper">
-                                <button type="button" class="btn-cantidad btn-menos" onclick="window._cambiarCantidad('cantidadBebes', -1)">−</button>
-                                <input type="number" id="cantidadBebes" value="0" min="0" max="10" oninput="this.value = Math.max(0, Math.min(10, parseInt(this.value) || 0))" />
-                                <button type="button" class="btn-cantidad btn-mas" onclick="window._cambiarCantidad('cantidadBebes', 1)">+</button>
-                                <span class="cantidad-label">bebés</span>
-                            </div>
-                        </div>
-                        
-                        <!-- Opciones adicionales -->
-                        <div class="checkbox-group">
-                            <label class="checkbox-label">
-                                <input type="checkbox" id="necesitaSilla" />
-                                <span class="custom-checkbox"></span>
-                                <div>
-                                    <strong>🪑 Necesita silla para bebé</strong>
-                                    <small>Prepararemos una silla alta</small>
-                                </div>
-                            </label>
-                        </div>
-                        
-                        <div class="checkbox-group">
-                            <label class="checkbox-label">
-                                <input type="checkbox" id="necesitaMenuInfantil" />
-                                <span class="custom-checkbox"></span>
-                                <div>
-                                    <strong>🍽️ Necesita menú infantil</strong>
-                                    <small>Opciones especiales para niños</small>
-                                </div>
-                            </label>
-                        </div>
                     </div>
                     
                     <!-- Comentarios -->
@@ -644,11 +665,15 @@ window.abrirModalReserva = function(sucursalId, sucursalNombre) {
 }
 
 window._cargarTurnosModal = async function(sucursalId, fecha) {
-    const containerEl = document.getElementById('turnosContainer');
-    const gridEl      = document.getElementById('turnosGrid');
-    const horasWrap   = document.getElementById('horasWrapper');
-    const turnoInput  = document.getElementById('turnoReserva');
-    const horaInput   = document.getElementById('horaReserva');
+    const containerEl  = document.getElementById('turnosContainer');
+    const gridEl       = document.getElementById('turnosGrid');
+    const horasWrap    = document.getElementById('horasWrapper');
+    const turnoInput   = document.getElementById('turnoReserva');
+    const horaInput    = document.getElementById('horaReserva');
+    const festivoAviso = document.getElementById('festivoAviso');
+    const festivoMotivo= document.getElementById('festivoMotivo');
+    const precioContainer = document.getElementById('precioContainer');
+    const btnEnviar    = document.getElementById('btnEnviarReserva');
 
     // Reset estado
     if (containerEl) containerEl.classList.remove('hidden');
@@ -662,6 +687,41 @@ window._cargarTurnosModal = async function(sucursalId, fecha) {
     
     if (turnoInput) turnoInput.value = '';
     if (horaInput) horaInput.value = '';
+
+    // 🔴 1. Validar si la fecha permite reservas (Domingos/Festivos)
+    try {
+        const valRes = await fetch(`/api/precios/validar-reserva?sucursal_id=${sucursalId}&fecha=${fecha}`);
+        const valData = await valRes.json();
+
+        if (valData.success && !valData.permite_reservas) {
+            if (festivoAviso) festivoAviso.classList.remove('hidden');
+            if (festivoMotivo) festivoMotivo.textContent = valData.motivo || 'Domingos, días festivos y feriados trabajamos sin reservas (por orden de llegada).';
+            if (containerEl) containerEl.classList.add('hidden');
+            if (precioContainer) precioContainer.classList.add('hidden');
+            if (btnEnviar) btnEnviar.disabled = true;
+            return;
+        } else {
+            if (festivoAviso) festivoAviso.classList.add('hidden');
+            if (btnEnviar) btnEnviar.disabled = false;
+        }
+    } catch (err) {
+        console.error('Error validando feriado:', err);
+    }
+
+    // 🔴 2. Obtener Precios por cubierto para esta fecha
+    try {
+        const pRes = await fetch(`/api/precios?sucursal_id=${sucursalId}&fecha=${fecha}&hora=12:00`);
+        const pData = await pRes.json();
+        if (pData.success && precioContainer) {
+            precioContainer.classList.remove('hidden');
+            const elAdulto = document.getElementById('precioAdulto');
+            const elNino = document.getElementById('precioNino');
+            if (elAdulto) elAdulto.textContent = `${pData.precio_adulto} Bs Adultos`;
+            if (elNino) elNino.textContent = `${pData.precio_nino} Bs Niños (${pData.edad_minima || 5}-${pData.edad_maxima || 10} años)`;
+        }
+    } catch (err) {
+        console.error('Error cargando precio:', err);
+    }
 
     try {
         const response = await fetch(`/api/reservas/horas-disponibles?sucursal_id=${sucursalId}&fecha=${fecha}`);
@@ -855,9 +915,7 @@ window.enviarReserva = async function(sucursalId, sucursalNombre) {
     
     // 👶 Campos de niños
     const cantidadNinos = parseInt(document.getElementById('cantidadNinos')?.value) || 0;
-    const cantidadBebes = parseInt(document.getElementById('cantidadBebes')?.value) || 0;
     const necesitaSilla = document.getElementById('necesitaSilla')?.checked || false;
-    const necesitaMenuInfantil = document.getElementById('necesitaMenuInfantil')?.checked || false;
     
     // Validaciones en cliente
     if (!nombre || nombre.length < 3) {
@@ -879,7 +937,7 @@ window.enviarReserva = async function(sucursalId, sucursalNombre) {
     }
 
     if (!turno) {
-        alert('❌ Por favor selecciona un turno (Mañana/Tarde/Noche)');
+        alert('❌ Por favor selecciona un turno (Mañana/Noche)');
         btn.classList.remove('loading'); btn.disabled = false;
         return;
     }
@@ -907,9 +965,7 @@ window.enviarReserva = async function(sucursalId, sucursalNombre) {
         hora: hora,
         numero_personas: personas,
         cantidad_ninos: cantidadNinos,
-        cantidad_bebes: cantidadBebes,
         necesita_silla_bebe: necesitaSilla,
-        necesita_menu_infantil: necesitaMenuInfantil,
         observaciones: observaciones || null
     };
     
@@ -924,7 +980,7 @@ window.enviarReserva = async function(sucursalId, sucursalNombre) {
         
         if (result.success) {
             window.cerrarModalReserva();
-            window.mostrarModalConfirmacion(sucursalNombre, nombre, fecha, hora, personas, cantidadNinos, cantidadBebes, necesitaSilla, necesitaMenuInfantil);
+            window.mostrarModalConfirmacion(sucursalNombre, nombre, fecha, hora, personas, cantidadNinos, necesitaSilla, result.numero_reserva);
         } else {
             alert('❌ ' + (result.error || 'Error al solicitar la reserva'));
             btn.classList.remove('loading');
@@ -956,21 +1012,15 @@ window.cerrarModalReserva = function() {
 // MODAL DE CONFIRMACIÓN
 // ============================================
 
-window.mostrarModalConfirmacion = function(sucursalNombre, nombreCliente, fecha, hora, personas, ninos, bebes, silla, menuInf) {
+window.mostrarModalConfirmacion = function(sucursalNombre, nombreCliente, fecha, hora, personas, ninos, silla, numeroReserva) {
     // Construir HTML de niños si aplica
     let ninosHTML = '';
     if (ninos > 0) {
         ninosHTML += `<div class="confirmacion-item"><span class="confirmacion-label">👧 Niños:</span><span class="confirmacion-valor">${ninos}</span></div>`;
     }
-    if (bebes > 0) {
-        ninosHTML += `<div class="confirmacion-item"><span class="confirmacion-label">👶 Bebés:</span><span class="confirmacion-valor">${bebes}</span></div>`;
-    }
     let prepHTML = '';
-    if (silla || menuInf) {
-        let prep = [];
-        if (silla) prep.push('🪑 Silla bebé');
-        if (menuInf) prep.push('🍽️ Menú infantil');
-        prepHTML = `<div class="confirmacion-item"><span class="confirmacion-label">📋 Preparación:</span><span class="confirmacion-valor">${prep.join(', ')}</span></div>`;
+    if (silla) {
+        prepHTML = `<div class="confirmacion-item"><span class="confirmacion-label">📋 Preparación:</span><span class="confirmacion-valor">🪑 Silla para niños</span></div>`;
     }
 
     const modalHTML = `
@@ -984,6 +1034,14 @@ window.mostrarModalConfirmacion = function(sucursalNombre, nombreCliente, fecha,
                         💬 Espera tu mensaje de confirmación por <strong>WhatsApp</strong>
                     </p>
                     <div class="confirmacion-detalles">
+                        ${numeroReserva ? `
+                        <div class="confirmacion-item" style="border-bottom: 1px dashed rgba(26,26,26,0.12); padding-bottom: 8px; margin-bottom: 8px;">
+                            <span class="confirmacion-label" style="font-weight: 700; color: #9e2a2b;">📋 Nº de Reserva:</span>
+                            <span class="confirmacion-valor" style="font-family: monospace; font-weight: 700; color: #9e2a2b; background: rgba(158,42,43,0.1); padding: 3px 10px; border-radius: 6px; font-size: 1.05rem;">
+                                ${numeroReserva}
+                            </span>
+                        </div>
+                        ` : ''}
                         <div class="confirmacion-item">
                             <span class="confirmacion-label">Cliente:</span>
                             <span class="confirmacion-valor">${nombreCliente}</span>
@@ -2260,6 +2318,90 @@ document.addEventListener('keydown', function(e) {
     height: 2px;
     background: currentColor;
     transform: scaleX(0);
+  }
+
+  /* ============================================
+     ESTILOS DE PRECIO Y DÍAS FESTIVOS
+     ============================================ */
+  .precio-container {
+    background: rgba(255, 250, 240, 0.85);
+    border: 1px solid rgba(158, 42, 43, 0.2);
+    border-left: 4px solid #9e2a2b;
+    border-radius: 12px;
+    padding: 12px 16px;
+    margin: 14px 0;
+  }
+
+  .precio-info {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .precio-icon {
+    font-size: 1.5rem;
+  }
+
+  .precio-detalles {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .precio-label {
+    font-size: 0.78rem;
+    color: rgba(26, 26, 26, 0.6);
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  .precio-valores {
+    display: flex;
+    gap: 12px;
+    font-size: 0.95rem;
+    font-weight: 700;
+  }
+
+  .precio-adulto {
+    color: #9e2a2b;
+  }
+
+  .precio-nino {
+    color: #d4a574;
+  }
+
+  .festivo-aviso {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    background: rgba(239, 68, 68, 0.08);
+    border: 1.5px solid rgba(239, 68, 68, 0.25);
+    border-radius: 14px;
+    padding: 14px 16px;
+    margin: 14px 0;
+    color: #991b1b;
+  }
+
+  .festivo-icon {
+    font-size: 1.6rem;
+    flex-shrink: 0;
+  }
+
+  .festivo-texto strong {
+    display: block;
+    font-size: 0.95rem;
+    font-weight: 700;
+    margin-bottom: 2px;
+  }
+
+  .festivo-texto p {
+    font-size: 0.85rem;
+    margin: 0;
+    color: rgba(153, 27, 27, 0.85);
+  }
+
+  .menu-nav-btn::after {
     transition: transform 0.3s ease;
   }
 

@@ -20,25 +20,21 @@ export const onRequest: MiddlewareHandler = async ({ request, cookies, redirect 
     const url = new URL(request.url);
     const path = url.pathname;
 
-    // Rutas públicas y de API (algunas APIs manejan su propia autenticación)
+    // Rutas públicas y de API
     if (path === '/admin/login' || path === '/admin/logout' || path.startsWith('/api/auth/')) {
         return next();
     }
 
-    // Proteger las rutas que empiezan con /admin o APIs (si es necesario)
+    // Proteger las rutas que empiezan con /admin
     if (path.startsWith('/admin')) {
-        // Verificar autenticación
         const session = cookies.get('session');
         if (!session || session.value !== 'authenticated') {
             return redirect('/admin/login');
         }
 
-        // Obtener rol del usuario
         const userRole = cookies.get('user_role')?.value || 'mesero';
 
-        // Mesero y Cocinero tienen acceso limitado
         if (userRole !== 'admin' && !rutaPermitida(userRole, path)) {
-            // Redirigir según rol
             if (userRole === 'mesero') {
                 return redirect('/admin/reservas');
             } else if (userRole === 'cocinero') {
@@ -47,7 +43,6 @@ export const onRequest: MiddlewareHandler = async ({ request, cookies, redirect 
             return redirect('/admin/login');
         }
         
-        // Verificar feature toggles (excepto API de configuración)
         if (!path.startsWith('/api/configuracion') && !path.startsWith('/api/auth')) {
             const { allowed, redirectTo } = await checkFeatureToggle(path);
             if (!allowed && redirectTo) {

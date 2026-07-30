@@ -1,280 +1,474 @@
 ---
 // src/pages/admin/sucursales/index.astro
-// Gestión de sucursales y cubiertos
+// Lista de sucursales con opciones de edición
 
 import AdminLayout from '../../../layouts/AdminLayout.astro';
 import pool from '../../../lib/db';
 
 // Obtener todas las sucursales
-const sucursalesData = await pool.query(`
+const [sucursalesRows] = await pool.query(`
     SELECT 
         s.id,
         s.nombre,
         s.concepto,
         s.direccion,
-        s.horario,
         s.telefono,
-        s.capacidad,
         s.capacidad_total,
-        s.cubiertos_disponibles,
-        s.cubiertos_ocupados,
+        COALESCE(
+            (SELECT SUM(cubiertos_reservados) 
+             FROM reservas 
+             WHERE sucursal_id = s.id AND estado = 'confirmada' AND fecha = CURRENT_DATE()), 
+            0
+        ) AS cubiertos_ocupados,
+        s.rating,
+        s.resenas,
+        s.permite_reservas,
+        s.permite_cubiertos,
         s.activo,
         COUNT(DISTINCT ms.plato_id) AS total_platos
     FROM sucursales s
     LEFT JOIN menu_sucursal ms ON s.id = ms.sucursal_id
-    WHERE s.activo = 1
     GROUP BY s.id
     ORDER BY s.nombre
 `) as any[];
 
-const sucursales = sucursalesData[0] || [];
+const sucursales = sucursalesRows.map((s: any) => ({
+    ...s,
+    cubiertos_ocupados: Number(s.cubiertos_ocupados) || 0,
+    cubiertos_disponibles: (s.capacidad_total || 120) - (Number(s.cubiertos_ocupados) || 0)
+}));
+
+// Estadísticas
+const totalActivas = sucursales.filter((s: any) => s.activo === 1).length;
+const totalCubiertos = sucursales.reduce((acc: number, s: any) => acc + (s.capacidad_total || 120), 0);
+const totalOcupados = sucursales.reduce((acc: number, s: any) => acc + (s.cubiertos_ocupados || 0), 0);
+const totalDisponibles = totalCubiertos - totalOcupados;
+
+// Función para formatear porcentaje
+const getPorcentaje = (ocupados: number, total: number) => {
+    if (total === 0) return 0;
+    return Math.round((ocupados / total) * 100);
+};
 ---
 
-<AdminLayout title="Sucursales" description="Controla la capacidad y cubiertos de cada local">
-    <div class="sucursales-grid">
-        {sucursales.map((sucursal: any) => {
-            const color = sucursal.nombre === 'Churrasquería' ? '#9e2a2b' :
-                         sucursal.nombre === 'Fast Grill' ? '#d4af37' : '#d4a574';
-            const icono = sucursal.nombre === 'Churrasquería' ? '🔥' :
-                         sucursal.nombre === 'Fast Grill' ? '⚡' : '🥩';
-            
-            const porcentaje = sucursal.cubiertos_ocupados > 0 
-                ? Math.round((sucursal.cubiertos_ocupados / sucursal.capacidad_total) * 100) 
-                : 0;
-            
-            return (
-                <div class="sucursal-card" style={`border-top: 4px solid ${color}`}>
-                    <div class="sucursal-header">
-                        <div class="sucursal-info">
-                            <span class="sucursal-icon" style={`color: ${color}`}>{icono}</span>
-                            <div>
-                                <h3>{sucursal.nombre}</h3>
-                                <span class="sucursal-concepto">{sucursal.concepto || 'Restaurante'}</span>
-                            </div>
-                        </div>
-                        <span class="sucursal-estado">
-                            {sucursal.activo ? '✅ Activo' : '❌ Inactivo'}
-                        </span>
-                    </div>
-                    
-                    <div class="sucursal-detalles">
-                        <p>📍 {sucursal.direccion}</p>
-                        <p>🕐 {sucursal.horario}</p>
-                        <p>📞 <a href={`https://wa.me/${sucursal.telefono}`} target="_blank">{sucursal.telefono}</a></p>
-                    </div>
-                    
-                    <!-- Control de Cubiertos -->
-                    <div class="cubiertos-control">
-                        <div class="cubiertos-header">
-                            <span>🪑 Cubiertos</span>
-                            <div class="cubiertos-numeros">
-                                <span class="cubiertos-total">Total: {sucursal.capacidad_total || 120}</span>
-                                <span class="cubiertos-ocupados">Ocupados: {sucursal.cubiertos_ocupados || 0}</span>
-                                <span class="cubiertos-disponibles">Disponibles: {sucursal.cubiertos_disponibles || 120}</span>
-                            </div>
-                        </div>
-                        <div class="cubiertos-bar">
-                            <div class="cubiertos-progreso" style={`width: ${porcentaje}%; background: ${porcentaje > 80 ? '#ef4444' : porcentaje > 60 ? '#f59e0b' : '#10b981'}`}></div>
-                        </div>
-                        <div class="cubiertos-porcentaje">
-                            <span>{porcentaje}% ocupado</span>
-                            <span class="cubiertos-libres">{sucursal.cubiertos_disponibles} cubiertos libres</span>
-                        </div>
-                    </div>
-                    
-                    <div class="sucursal-actions">
-                        <a href={`/admin/sucursales/editar/${sucursal.id}`} class="btn-editar">
-                            ✏️ Editar
-                        </a>
-                        <a href={`/admin/sucursales/cubiertos/${sucursal.id}`} class="btn-ajustar">
-                            ⚙️ Ajustar Cubiertos
-                        </a>
-                    </div>
+<AdminLayout title="Sucursales" description="Gestión de sucursales y cubiertos">
+    <div class="sucursales-admin">
+        <!-- Header -->
+        <div class="admin-header">
+            <div>
+                <h1>🏢 Sucursales</h1>
+                <p>Gestión de todas las sucursales del restaurante</p>
+            </div>
+            <a href="/admin/sucursales/nueva" class="btn-nueva">
+                ➕ Nueva Sucursal
+            </a>
+        </div>
+
+        <!-- Estadísticas -->
+        <div class="stats-grid">
+            <div class="stat-card">
+                <span class="stat-icon">🏢</span>
+                <div>
+                    <span class="stat-number">{sucursales.length}</span>
+                    <span class="stat-label">Total Sucursales</span>
                 </div>
-            );
-        })}
+            </div>
+            <div class="stat-card">
+                <span class="stat-icon">✅</span>
+                <div>
+                    <span class="stat-number">{totalActivas}</span>
+                    <span class="stat-label">Activas</span>
+                </div>
+            </div>
+            <div class="stat-card">
+                <span class="stat-icon">🪑</span>
+                <div>
+                    <span class="stat-number">{totalCubiertos}</span>
+                    <span class="stat-label">Cubiertos Totales</span>
+                </div>
+            </div>
+            <div class="stat-card">
+                <span class="stat-icon">🔴</span>
+                <div>
+                    <span class="stat-number">{totalOcupados}</span>
+                    <span class="stat-label">Ocupados</span>
+                </div>
+            </div>
+            <div class="stat-card">
+                <span class="stat-icon">🟢</span>
+                <div>
+                    <span class="stat-number">{totalDisponibles}</span>
+                    <span class="stat-label">Disponibles</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tabla de Sucursales -->
+        <div class="table-container">
+            <table class="tabla-sucursales">
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>Sucursal</th>
+                        <th>Dirección</th>
+                        <th>Teléfono</th>
+                        <th>Cubiertos</th>
+                        <th>Ocupación</th>
+                        <th>Reservas</th>
+                        <th>Estado</th>
+                        <th>Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {sucursales.map((sucursal: any, index: number) => {
+                        const porcentaje = getPorcentaje(sucursal.cubiertos_ocupados || 0, sucursal.capacidad_total || 120);
+                        const colorBarra = porcentaje > 80 ? '#ef4444' : porcentaje > 60 ? '#f59e0b' : '#10b981';
+                        
+                        return (
+                            <tr>
+                                <td>{index + 1}</td>
+                                <td>
+                                    <strong>{sucursal.nombre}</strong>
+                                    <span class="concepto-badge">{sucursal.concepto || 'Restaurante'}</span>
+                                </td>
+                                <td>{sucursal.direccion}</td>
+                                <td>{sucursal.telefono}</td>
+                                <td>
+                                    <div class="cubiertos-info">
+                                        <span class="cubiertos-total">{sucursal.capacidad_total || 120}</span>
+                                        <span class="cubiertos-disponibles">({sucursal.cubiertos_disponibles || 0} disp.)</span>
+                                    </div>
+                                </td>
+                                <td>
+                                    <div class="ocupacion-container">
+                                        <div class="barra-ocupacion" style="width: 100px; height: 6px; background: #eee; border-radius: 3px; overflow: hidden;">
+                                            <div class="barra-fill" style={`width: ${porcentaje}%; background: ${colorBarra}; height: 100%; transition: width 0.5s ease;`}></div>
+                                        </div>
+                                        <span class="porcentaje" style={`color: ${colorBarra}; font-weight: 500;`}>{porcentaje}%</span>
+                                    </div>
+                                </td>
+                                <td>
+                                    <span class={`badge ${sucursal.permite_reservas ? 'badge-si' : 'badge-no'}`}>
+                                        {sucursal.permite_reservas ? '✅ Sí' : '❌ No'}
+                                    </span>
+                                </td>
+                                <td>
+                                    <span class={`badge ${sucursal.activo ? 'badge-activo' : 'badge-inactivo'}`}>
+                                        {sucursal.activo ? '✅ Activa' : '❌ Inactiva'}
+                                    </span>
+                                </td>
+                                <td>
+                                    <div class="acciones">
+                                        <a href={`/admin/sucursales/editar/${sucursal.id}`} class="btn-editar" title="Editar">
+                                            ✏️
+                                        </a>
+                                        <button class="btn-toggle" onclick={`toggleSucursal(${sucursal.id}, ${sucursal.activo})`} title="Activar/Desactivar">
+                                            🔄
+                                        </button>
+                                        <a href={`/sucursales?id=${sucursal.id}`} class="btn-ver" title="Ver en página principal">
+                                            👁️
+                                        </a>
+                                    </div>
+                                </td>
+                            </tr>
+                        );
+                    })}
+                </tbody>
+            </table>
+        </div>
     </div>
 </AdminLayout>
 
 <style is:global>
 /* ============================================
-   ESTILOS DE SUCURSALES
+   SUCURSALES ADMIN - ESTILOS
    ============================================ */
-.sucursales-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
-    gap: 24px;
-    margin-top: 24px;
+.sucursales-admin {
+    padding: 20px;
+    max-width: 1400px;
+    margin: 0 auto;
 }
 
-.sucursal-card {
-    background: white;
-    border-radius: 16px;
-    padding: 24px;
-    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
-    transition: all 0.3s ease;
-}
-
-.sucursal-card:hover {
-    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.1);
-    transform: translateY(-4px);
-}
-
-.sucursal-header {
+.admin-header {
     display: flex;
     justify-content: space-between;
-    align-items: flex-start;
-    margin-bottom: 12px;
-}
-
-.sucursal-info {
-    display: flex;
     align-items: center;
-    gap: 12px;
+    margin-bottom: 24px;
 }
 
-.sucursal-icon {
-    font-size: 2rem;
-}
-
-.sucursal-info h3 {
-    font-size: 1.1rem;
-    font-weight: 700;
+.admin-header h1 {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.8rem;
     color: #1a1a1a;
     margin: 0;
 }
 
-.sucursal-concepto {
-    font-size: 0.75rem;
-    color: rgba(26, 26, 26, 0.4);
-    font-weight: 500;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
+.admin-header p {
+    color: rgba(26, 26, 26, 0.5);
+    margin: 4px 0 0;
 }
 
-.sucursal-estado {
-    font-size: 0.85rem;
-    font-weight: 500;
-}
-
-.sucursal-detalles {
-    background: rgba(255, 250, 240, 0.5);
-    border-radius: 10px;
-    padding: 12px 16px;
-    margin: 12px 0 16px;
-}
-
-.sucursal-detalles p {
-    margin: 4px 0;
-    font-size: 0.85rem;
-    color: #1a1a1a;
-}
-
-.sucursal-detalles a {
-    color: #25d366;
-    text-decoration: none;
-}
-
-.cubiertos-control {
-    background: rgba(255, 250, 240, 0.5);
-    border-radius: 10px;
-    padding: 14px 16px;
-    margin: 12px 0 16px;
-}
-
-.cubiertos-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 8px;
-}
-
-.cubiertos-header span {
-    font-weight: 600;
-    font-size: 0.9rem;
-    color: #1a1a1a;
-}
-
-.cubiertos-numeros {
-    display: flex;
-    gap: 12px;
-    font-size: 0.75rem;
-    font-weight: 500;
-}
-
-.cubiertos-total { color: #3b82f6; }
-.cubiertos-ocupados { color: #ef4444; }
-.cubiertos-disponibles { color: #10b981; }
-
-.cubiertos-bar {
-    width: 100%;
-    height: 6px;
-    background: rgba(26, 26, 26, 0.06);
-    border-radius: 3px;
-    overflow: hidden;
-    margin-bottom: 6px;
-}
-
-.cubiertos-progreso {
-    height: 100%;
-    border-radius: 3px;
-    transition: width 0.8s ease;
-}
-
-.cubiertos-porcentaje {
-    display: flex;
-    justify-content: space-between;
-    font-size: 0.75rem;
-    color: rgba(26, 26, 26, 0.4);
-}
-
-.cubiertos-libres {
-    font-weight: 500;
-}
-
-.sucursal-actions {
-    display: flex;
-    gap: 10px;
-}
-
-.btn-editar,
-.btn-ajustar {
-    flex: 1;
-    padding: 10px 16px;
+.btn-nueva {
+    padding: 10px 24px;
+    background: #9e2a2b;
+    color: #fffaf0;
     border: none;
     border-radius: 10px;
-    font-size: 0.85rem;
+    font-size: 0.9rem;
     font-weight: 500;
     cursor: pointer;
     transition: all 0.3s ease;
-    text-align: center;
     text-decoration: none;
     font-family: 'Inter', sans-serif;
 }
 
-.btn-editar {
-    background: rgba(59, 130, 246, 0.08);
-    color: #3b82f6;
+.btn-nueva:hover {
+    background: #7a2021;
+    transform: scale(1.02);
+}
+
+/* Estadísticas */
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 16px;
+    margin-bottom: 24px;
+}
+
+.stat-card {
+    background: white;
+    border-radius: 12px;
+    padding: 16px 20px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+
+.stat-icon {
+    font-size: 1.8rem;
+}
+
+.stat-number {
+    display: block;
+    font-size: 1.4rem;
+    font-weight: 700;
+    color: #1a1a1a;
+}
+
+.stat-label {
+    font-size: 0.75rem;
+    color: rgba(26, 26, 26, 0.4);
+}
+
+/* Tabla */
+.table-container {
+    background: white;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+
+.tabla-sucursales {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.tabla-sucursales thead {
+    background: #f8f5f0;
+}
+
+.tabla-sucursales th {
+    padding: 12px 16px;
+    text-align: left;
+    font-size: 0.7rem;
+    font-weight: 600;
+    color: rgba(26, 26, 26, 0.4);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    border-bottom: 1px solid rgba(26, 26, 26, 0.06);
+}
+
+.tabla-sucursales td {
+    padding: 12px 16px;
+    font-size: 0.85rem;
+    color: #1a1a1a;
+    border-bottom: 1px solid rgba(26, 26, 26, 0.04);
+    vertical-align: middle;
+}
+
+.tabla-sucursales tr:hover td {
+    background: rgba(255, 250, 240, 0.3);
+}
+
+.concepto-badge {
+    display: block;
+    font-size: 0.6rem;
+    color: rgba(26, 26, 26, 0.3);
+    font-weight: 400;
+}
+
+.cubiertos-info {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.cubiertos-total {
+    font-weight: 600;
+}
+
+.cubiertos-disponibles {
+    font-size: 0.75rem;
+    color: #10b981;
+}
+
+.ocupacion-container {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.porcentaje {
+    font-size: 0.75rem;
+    min-width: 36px;
+}
+
+.badge {
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 0.7rem;
+    font-weight: 500;
+}
+
+.badge-si {
+    background: rgba(16, 185, 129, 0.1);
+    color: #10b981;
+}
+
+.badge-no {
+    background: rgba(239, 68, 68, 0.1);
+    color: #ef4444;
+}
+
+.badge-activo {
+    background: rgba(16, 185, 129, 0.1);
+    color: #10b981;
+}
+
+.badge-inactivo {
+    background: rgba(107, 114, 128, 0.1);
+    color: #6b7280;
+}
+
+.acciones {
+    display: flex;
+    gap: 8px;
+}
+
+.btn-editar,
+.btn-toggle,
+.btn-ver {
+    width: 32px;
+    height: 32px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-decoration: none;
+    background: rgba(26, 26, 26, 0.04);
+    color: #1a1a1a;
 }
 
 .btn-editar:hover {
-    background: rgba(59, 130, 246, 0.15);
-    transform: scale(1.02);
+    background: rgba(59, 130, 246, 0.1);
+    color: #3b82f6;
 }
 
-.btn-ajustar {
-    background: rgba(158, 42, 43, 0.08);
+.btn-toggle:hover {
+    background: rgba(245, 158, 11, 0.1);
+    color: #f59e0b;
+}
+
+.btn-ver:hover {
+    background: rgba(158, 42, 43, 0.1);
     color: #9e2a2b;
 }
 
-.btn-ajustar:hover {
-    background: rgba(158, 42, 43, 0.15);
-    transform: scale(1.02);
+/* Responsive */
+@media (max-width: 1200px) {
+    .stats-grid {
+        grid-template-columns: repeat(3, 1fr);
+    }
 }
 
 @media (max-width: 768px) {
-    .sucursales-grid {
+    .stats-grid {
+        grid-template-columns: 1fr 1fr;
+    }
+    
+    .admin-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 12px;
+    }
+    
+    .btn-nueva {
+        width: 100%;
+        text-align: center;
+    }
+    
+    .tabla-sucursales {
+        font-size: 0.75rem;
+    }
+    
+    .tabla-sucursales th,
+    .tabla-sucursales td {
+        padding: 8px 10px;
+    }
+}
+
+@media (max-width: 480px) {
+    .stats-grid {
         grid-template-columns: 1fr;
     }
 }
 </style>
+
+<script is:inline>
+// ============================================
+// TOGGLE SUCURSAL
+// ============================================
+
+async function toggleSucursal(id, activo) {
+    const nuevoEstado = activo === 1 ? 0 : 1;
+    const mensaje = activo === 1 ? 'desactivar' : 'activar';
+    
+    if (!confirm(`¿Estás seguro de ${mensaje} esta sucursal?`)) return;
+    
+    try {
+        const response = await fetch(`/api/sucursales/${id}/toggle`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ activo: nuevoEstado })
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            alert(`✅ Sucursal ${mensaje}da exitosamente`);
+            location.reload();
+        } else {
+            alert(`❌ Error: ${result.error}`);
+        }
+    } catch (error) {
+        alert('❌ Error de conexión');
+    }
+}
+</script>
