@@ -63,6 +63,7 @@ const hoy = new Date().toLocaleDateString('en-CA', { timeZone: 'America/La_Paz' 
 const [reservasHoyRows] = await pool.query(`
     SELECT 
         r.id,
+        r.numero_reserva,
         r.nombre_cliente,
         r.telefono,
         r.telefono_completo,
@@ -80,6 +81,31 @@ const [reservasHoyRows] = await pool.query(`
     ORDER BY r.hora ASC
 `, [hoy]) as any[];
 const reservasHoy = reservasHoyRows || [];
+
+// Calcular ventas estimadas del día (Precio base: 190 Bs Adultos, 80 Bs Niños)
+const PRECIO_ADULTO_STD = 190;
+const PRECIO_NINO_STD = 80;
+
+let ventasTotalesHoy = 0;
+let totalAdultosHoy = 0;
+let totalNinosHoy = 0;
+let reservasEfectivasHoy = 0;
+
+reservasHoy.forEach((r: any) => {
+    const adultos = parseInt(r.numero_personas) || 0;
+    const ninos = parseInt(r.cantidad_ninos) || 0;
+    const esValida = ['confirmada', 'en_curso', 'completada'].includes(r.estado);
+    
+    if (esValida) {
+        totalAdultosHoy += adultos;
+        totalNinosHoy += ninos;
+        reservasEfectivasHoy += 1;
+        r.monto_estimado = (adultos * PRECIO_ADULTO_STD) + (ninos * PRECIO_NINO_STD);
+        ventasTotalesHoy += r.monto_estimado;
+    } else {
+        r.monto_estimado = 0;
+    }
+});
 
 // Obtener estado del reinicio
 const [controlRows] = await pool.query(
@@ -102,10 +128,16 @@ const ultimaSemana = ultimaSemanaRows || [];
         <!-- Header -->
         <div class="dashboard-header">
             <div>
-                <h1>📊 Dashboard</h1>
-                <p>Resumen de actividad y gestión de tu restaurante</p>
+                <h1>📊 Dashboard y Reportes</h1>
+                <p>Resumen de actividad, ventas e ingresos del día</p>
             </div>
             <div class="header-actions">
+                <button class="btn-reporte btn-imprimir" onclick="window.imprimirReporte()">
+                    🖨️ Imprimir Reporte
+                </button>
+                <button class="btn-reporte btn-pdf" onclick="window.descargarPDF()">
+                    📥 Descargar PDF
+                </button>
                 <button class="btn-reiniciar" onclick="reiniciarReservas()">
                     🔄 Reiniciar Reservas
                 </button>
@@ -358,10 +390,172 @@ const ultimaSemana = ultimaSemanaRows || [];
                 </div>
             )}
         </div>
+
+        <!-- 📄 PLANTILLA OFICIAL DE REPORTE DE VENTAS (VISUAL Y PARA IMPRESIÓN/PDF) -->
+        <div id="reporteImprimible" class="section-card reporte-imprimible-container">
+            <div class="reporte-header-print">
+                <div class="reporte-logo-title">
+                    <span class="reporte-logo">🥩</span>
+                    <div>
+                        <h2>BRASARGENT - CHURRASQUERÍA & RODIZIO</h2>
+                        <h3>Reporte Oficial de Ventas y Reservas Diarias</h3>
+                    </div>
+                </div>
+                <div class="reporte-meta">
+                    <p><strong>Fecha de Operaciones:</strong> {hoy}</p>
+                    <p><strong>Total Venta Estimada:</strong> <span style="color: #10b981; font-weight: 700;">{ventasTotalesHoy.toLocaleString('es-BO')} Bs.</span></p>
+                </div>
+            </div>
+
+            <!-- Resumen Estadístico de Ventas -->
+            <div class="reporte-cards-grid">
+                <div class="reporte-card-stat">
+                    <span class="reporte-card-label">💰 Ingreso Total Estimado</span>
+                    <span class="reporte-card-value" style="color: #10b981;">{ventasTotalesHoy.toLocaleString('es-BO')} Bs.</span>
+                </div>
+                <div class="reporte-card-stat">
+                    <span class="reporte-card-label">✅ Reservas Efectivas</span>
+                    <span class="reporte-card-value">{reservasEfectivasHoy}</span>
+                </div>
+                <div class="reporte-card-stat">
+                    <span class="reporte-card-label">👥 Adultos Atendidos</span>
+                    <span class="reporte-card-value">{totalAdultosHoy}</span>
+                </div>
+                <div class="reporte-card-stat">
+                    <span class="reporte-card-label">👧 Niños Atendidos</span>
+                    <span class="reporte-card-value">{totalNinosHoy}</span>
+                </div>
+            </div>
+
+            <!-- Tabla Resumen por Sucursal -->
+            <div class="reporte-tabla-section">
+                <h4>🪑 Resumen de Ocupación por Sucursal</h4>
+                <table class="reporte-tabla">
+                    <thead>
+                        <tr>
+                            <th>Sucursal</th>
+                            <th>Capacidad Total</th>
+                            <th>Cubiertos Ocupados</th>
+                            <th>Cubiertos Libres</th>
+                            <th>% Ocupación</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {cubiertos.map((s: any) => (
+                            <tr>
+                                <td><strong>{s.nombre}</strong></td>
+                                <td>{s.capacidad_total}</td>
+                                <td>{s.cubiertos_ocupados}</td>
+                                <td>{s.cubiertos_disponibles}</td>
+                                <td><strong>{s.porcentaje_ocupacion}%</strong></td>
+                            </tr>
+                        ))}
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Detalle de Transacciones del Día -->
+            <div class="reporte-tabla-section">
+                <h4>📋 Detalle de Reservas y Ventas del Día ({reservasHoy.length})</h4>
+                <table class="reporte-tabla">
+                    <thead>
+                        <tr>
+                            <th>Nº Reserva</th>
+                            <th>Cliente</th>
+                            <th>Teléfono</th>
+                            <th>Sucursal</th>
+                            <th>Hora</th>
+                            <th>Adultos</th>
+                            <th>Niños</th>
+                            <th>Estado</th>
+                            <th>Monto Estimado</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {reservasHoy.length === 0 ? (
+                            <tr><td colspan="9" style="text-align: center; color: #64748b; padding: 20px;">No hay reservas o ventas registradas para el día de hoy.</td></tr>
+                        ) : (
+                            reservasHoy.map((r: any) => (
+                                <tr>
+                                    <td><code style="font-family: monospace; font-weight: bold; color: #9e2a2b;">{r.numero_reserva || `BR-${r.id}`}</code></td>
+                                    <td><strong>{r.nombre_cliente}</strong></td>
+                                    <td>{r.codigo_pais || '591'} {r.telefono}</td>
+                                    <td>{r.sucursal_nombre}</td>
+                                    <td>{r.hora}</td>
+                                    <td>{r.numero_personas}</td>
+                                    <td>{r.cantidad_ninos || 0}</td>
+                                    <td>
+                                        <span class={`badge badge-${r.estado}`}>
+                                            {r.estado === 'confirmada' ? 'Confirmada' :
+                                             r.estado === 'en_curso' ? 'En Curso' :
+                                             r.estado === 'completada' ? 'Completada' :
+                                             r.estado === 'pendiente' ? 'Pendiente' :
+                                             r.estado === 'rechazada' ? 'Rechazada' : 'Cancelada'}
+                                        </span>
+                                    </td>
+                                    <td><strong>{r.monto_estimado > 0 ? `${r.monto_estimado.toLocaleString('es-BO')} Bs.` : '0 Bs.'}</strong></td>
+                                </tr>
+                            ))
+                        )}
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="reporte-footer-print">
+                <p>Brasargent Churrasquería - Documento de Control Interno de Ventas y Reservas</p>
+            </div>
+        </div>
     </div>
 </AdminLayout>
 
 <script is:inline>
+// ============================================
+// FUNCIONES DE IMPRESIÓN Y DESCARGA DE PDF
+// ============================================
+
+window.imprimirReporte = function() {
+    window.print();
+};
+
+window.descargarPDF = function() {
+    if (typeof window.html2pdf === 'undefined') {
+        const script = document.createElement('script');
+        script.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js';
+        script.onload = () => window._ejecutarDescargaPDF();
+        script.onerror = () => {
+            alert('💡 Abriendo vista previa para guardar como PDF...');
+            window.print();
+        };
+        document.head.appendChild(script);
+    } else {
+        window._ejecutarDescargaPDF();
+    }
+};
+
+window._ejecutarDescargaPDF = function() {
+    const element = document.getElementById('reporteImprimible');
+    if (!element) return;
+
+    const btnImprimir = document.querySelector('.btn-imprimir');
+    const btnPdf = document.querySelector('.btn-pdf');
+    if (btnPdf) btnPdf.textContent = '⏳ Generando PDF...';
+
+    const opt = {
+        margin:       [10, 10, 10, 10],
+        filename:     `Reporte_Ventas_Brasargent_${new Date().toISOString().split('T')[0]}.pdf`,
+        image:        { type: 'jpeg', quality: 0.98 },
+        html2canvas:  { scale: 2, useCORS: true },
+        jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
+    };
+
+    window.html2pdf().set(opt).from(element).save().then(() => {
+        if (btnPdf) btnPdf.textContent = '📥 Descargar PDF';
+    }).catch((err) => {
+        console.error('Error creando PDF:', err);
+        if (btnPdf) btnPdf.textContent = '📥 Descargar PDF';
+        window.print();
+    });
+};
 // ============================================
 // VALIDACIÓN DE ASISTENTES EN TIEMPO REAL
 // ============================================
@@ -549,6 +743,233 @@ window.reiniciarReservas = function() {
 </script>
 
 <style is:global>
+/* ============================================
+   ESTILOS DE BOTONES DE REPORTE E IMPRESIÓN
+   ============================================ */
+.header-actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.btn-reporte {
+    padding: 10px 18px;
+    border: none;
+    border-radius: 10px;
+    font-size: 0.88rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-family: 'Inter', sans-serif;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+}
+
+.btn-imprimir {
+    background: #2563eb;
+    color: white;
+}
+
+.btn-imprimir:hover {
+    background: #1d4ed8;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(37, 99, 235, 0.25);
+}
+
+.btn-pdf {
+    background: #059669;
+    color: white;
+}
+
+.btn-pdf:hover {
+    background: #047857;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(5, 150, 105, 0.25);
+}
+
+/* ============================================
+   ESTILOS DEL REPORTE IMPRIMIBLE
+   ============================================ */
+.reporte-imprimible-container {
+    background: white;
+    border-radius: 16px;
+    padding: 28px;
+    margin-top: 24px;
+    border: 1px solid rgba(26, 26, 26, 0.08);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.04);
+}
+
+.reporte-header-print {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    border-bottom: 2px solid #9e2a2b;
+    padding-bottom: 16px;
+    margin-bottom: 24px;
+}
+
+.reporte-logo-title {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+}
+
+.reporte-logo {
+    font-size: 2.8rem;
+}
+
+.reporte-logo-title h2 {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.4rem;
+    color: #9e2a2b;
+    margin: 0;
+    font-weight: 700;
+}
+
+.reporte-logo-title h3 {
+    font-size: 1rem;
+    color: #1a1a1a;
+    margin: 4px 0 0;
+    font-weight: 600;
+}
+
+.reporte-meta {
+    font-size: 0.85rem;
+    color: #4b5563;
+    text-align: right;
+    line-height: 1.5;
+}
+
+.reporte-meta p {
+    margin: 2px 0;
+}
+
+.reporte-cards-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 14px;
+    margin-bottom: 24px;
+}
+
+.reporte-card-stat {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 14px 16px;
+    text-align: center;
+}
+
+.reporte-card-label {
+    display: block;
+    font-size: 0.75rem;
+    color: #64748b;
+    text-transform: uppercase;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+}
+
+.reporte-card-value {
+    display: block;
+    font-size: 1.4rem;
+    font-weight: 700;
+    color: #0f172a;
+    margin-top: 4px;
+}
+
+.reporte-tabla-section {
+    margin-bottom: 24px;
+}
+
+.reporte-tabla-section h4 {
+    font-size: 1rem;
+    font-weight: 700;
+    color: #1e293b;
+    margin-bottom: 12px;
+}
+
+.reporte-tabla {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.85rem;
+}
+
+.reporte-tabla th {
+    background: #f1f5f9;
+    color: #334155;
+    padding: 10px 12px;
+    text-align: left;
+    font-weight: 600;
+    border-bottom: 2px solid #cbd5e1;
+}
+
+.reporte-tabla td {
+    padding: 10px 12px;
+    border-bottom: 1px solid #e2e8f0;
+    color: #1e293b;
+}
+
+.reporte-footer-print {
+    text-align: center;
+    border-top: 1px solid #e2e8f0;
+    padding-top: 14px;
+    margin-top: 20px;
+    font-size: 0.8rem;
+    color: #94a3b8;
+}
+
+/* ============================================
+   ESTILOS EXCLUSIVOS PARA IMPRESIÓN (@media print)
+   ============================================ */
+@media print {
+    /* Ocultar elementos de la interfaz de administración que no son del reporte */
+    aside, 
+    nav, 
+    header, 
+    .header-actions,
+    .btn-reiniciar,
+    .btn-reporte,
+    .stats-grid,
+    .cubiertos-section,
+    .mesas-section {
+        display: none !important;
+    }
+
+    body {
+        background: white !important;
+        color: black !important;
+    }
+
+    .dashboard-content {
+        max-width: 100% !important;
+        margin: 0 !important;
+        padding: 0 !important;
+    }
+
+    .reporte-imprimible-container {
+        border: none !important;
+        box-shadow: none !important;
+        padding: 0 !important;
+        margin: 0 !important;
+    }
+
+    .reporte-card-stat {
+        border: 1px solid #cbd5e1 !important;
+        background: #fff !important;
+    }
+
+    .reporte-tabla th {
+        background: #e2e8f0 !important;
+        color: #000 !important;
+    }
+
+    .reporte-tabla td {
+        border-bottom: 1px solid #cbd5e1 !important;
+    }
+}
+
 /* ============================================
    ESTILOS DEL DASHBOARD
    ============================================ */

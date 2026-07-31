@@ -565,12 +565,13 @@ window.abrirModalReserva = function(sucursalId, sucursalNombre) {
                         <input type="hidden" id="horaReserva" required />
                     </div>
 
-                    <!-- 🔴 CONTENEDOR DE PRECIOS Y AVISO DE FERIADO/FESTIVO -->
-                    <div id="festivoAviso" class="festivo-aviso hidden">
-                        <span class="festivo-icon">⚠️</span>
-                        <div class="festivo-texto">
+                    <!-- 🔴 ALERTA DE DÍA SIN RESERVAS (DOMINGOS Y FERIADOS) -->
+                    <div id="festivoAviso" class="alerta-sin-reservas hidden">
+                        <div class="alerta-icono">📋</div>
+                        <div class="alerta-contenido">
                             <strong>Día Sin Reservas</strong>
-                            <p id="festivoMotivo">Domingos, días festivos y feriados trabajamos sin reservas (por orden de llegada).</p>
+                            <p id="festivoMotivo">Los domingos, días feriados y fechas cívicas trabajamos por orden de llegada (SIN reservas).</p>
+                            <p class="alerta-mensaje">Te esperamos con la mejor atención.</p>
                         </div>
                     </div>
 
@@ -589,11 +590,14 @@ window.abrirModalReserva = function(sucursalId, sucursalNombre) {
                     
                     <!-- Personas (adultos) -->
                     <div class="form-group personas-section">
-                        <label>👥 Número de Adultos <span class="required">*</span></label>
+                        <div class="label-with-badge">
+                            <label>👥 Número de Adultos <span class="required">*</span></label>
+                            <span class="badge-grupo">Sin límite de personas</span>
+                        </div>
                         <div class="cantidad-wrapper">
-                            <button type="button" class="btn-cantidad btn-menos" onclick="window._cambiarCantidad('personasReserva', -1, 1, 20)">−</button>
-                            <input type="number" id="personasReserva" value="2" min="1" max="20" oninput="this.value = Math.max(1, Math.min(20, parseInt(this.value) || 2))" required />
-                            <button type="button" class="btn-cantidad btn-mas" onclick="window._cambiarCantidad('personasReserva', 1, 1, 20)">+</button>
+                            <button type="button" class="btn-cantidad btn-menos" onclick="window._cambiarCantidad('personasReserva', -1, 1, 500)">−</button>
+                            <input type="number" id="personasReserva" value="2" min="1" max="500" oninput="this.value = Math.max(1, Math.min(500, parseInt(this.value) || 1))" required />
+                            <button type="button" class="btn-cantidad btn-mas" onclick="window._cambiarCantidad('personasReserva', 1, 1, 500)">+</button>
                             <span class="cantidad-label">adultos</span>
                         </div>
                     </div>
@@ -606,19 +610,29 @@ window.abrirModalReserva = function(sucursalId, sucursalNombre) {
                         <div class="form-group">
                             <label>👧 Niños (2-12 años)</label>
                             <div class="cantidad-wrapper">
-                                <button type="button" class="btn-cantidad btn-menos" onclick="window._cambiarCantidad('cantidadNinos', -1)">−</button>
-                                <input type="number" id="cantidadNinos" value="0" min="0" max="10" oninput="this.value = Math.max(0, Math.min(10, parseInt(this.value) || 0))" />
-                                <button type="button" class="btn-cantidad btn-mas" onclick="window._cambiarCantidad('cantidadNinos', 1)">+</button>
+                                <button type="button" class="btn-cantidad btn-menos" onclick="window._cambiarCantidad('cantidadNinos', -1, 0, 200)">−</button>
+                                <input type="number" id="cantidadNinos" value="0" min="0" max="200" oninput="this.value = Math.max(0, Math.min(200, parseInt(this.value) || 0))" />
+                                <button type="button" class="btn-cantidad btn-mas" onclick="window._cambiarCantidad('cantidadNinos', 1, 0, 200)">+</button>
                                 <span class="cantidad-label">niños</span>
                             </div>
                         </div>
-                        
+                    </div>
+
+                    <!-- 🎉 BANNER GRUPOS GRANDES & EVENTOS -->
+                    <div class="grupo-grande-banner">
+                        <div class="grupo-banner-header">
+                            <span class="banner-icon">🎉</span>
+                            <div>
+                                <strong>Reserva para Grupos Grandes / Eventos (+20 personas)</strong>
+                                <p>Puedes ingresar la cantidad exacta de adultos y niños arriba para reservar para tu grupo o evento.</p>
+                            </div>
+                        </div>
                     </div>
                     
                     <!-- Comentarios -->
-                    <div class="form-group">
+                    <div class="form-group comentarios-section">
                         <label>📝 Comentarios <span class="optional">(Opcional)</span></label>
-                        <textarea id="observacionesReserva" rows="2" placeholder="Ej: Prefiero mesa cerca de la ventana"></textarea>
+                        <textarea id="observacionesReserva" rows="2" placeholder="Ej: Prefiero mesa cerca de la ventana o requerimiento especial para evento"></textarea>
                     </div>
                 </form>
                 
@@ -693,16 +707,44 @@ window._cargarTurnosModal = async function(sucursalId, fecha) {
         const valRes = await fetch(`/api/precios/validar-reserva?sucursal_id=${sucursalId}&fecha=${fecha}`);
         const valData = await valRes.json();
 
+        const personasSections = document.querySelectorAll('.personas-section');
+        const grupoBadges = document.querySelectorAll('.badge-grupo');
+        const grupoBanner = document.querySelector('.grupo-grande-banner');
+        const comentariosSection = document.querySelector('.comentarios-section');
+
         if (valData.success && !valData.permite_reservas) {
             if (festivoAviso) festivoAviso.classList.remove('hidden');
-            if (festivoMotivo) festivoMotivo.textContent = valData.motivo || 'Domingos, días festivos y feriados trabajamos sin reservas (por orden de llegada).';
             if (containerEl) containerEl.classList.add('hidden');
+            if (horasWrap) horasWrap.classList.add('hidden');
             if (precioContainer) precioContainer.classList.add('hidden');
-            if (btnEnviar) btnEnviar.disabled = true;
+            
+            // Ocultar sección de Adultos y Niños
+            personasSections.forEach(sec => (sec as HTMLElement).style.display = 'none');
+            // Ocultar badge de personas
+            grupoBadges.forEach(b => (b as HTMLElement).style.display = 'none');
+            // Ocultar banner de grupos grandes
+            if (grupoBanner) (grupoBanner as HTMLElement).style.display = 'none';
+            // Ocultar caja de comentarios
+            if (comentariosSection) (comentariosSection as HTMLElement).style.display = 'none';
+
+            if (btnEnviar) {
+                (btnEnviar as HTMLButtonElement).disabled = true;
+                (btnEnviar as HTMLElement).style.display = 'none';
+            }
             return;
         } else {
             if (festivoAviso) festivoAviso.classList.add('hidden');
-            if (btnEnviar) btnEnviar.disabled = false;
+            
+            // Restaurar visualización en días normales
+            personasSections.forEach(sec => (sec as HTMLElement).style.display = '');
+            grupoBadges.forEach(b => (b as HTMLElement).style.display = '');
+            if (grupoBanner) (grupoBanner as HTMLElement).style.display = '';
+            if (comentariosSection) (comentariosSection as HTMLElement).style.display = '';
+
+            if (btnEnviar) {
+                (btnEnviar as HTMLButtonElement).disabled = false;
+                (btnEnviar as HTMLElement).style.display = '';
+            }
         }
     } catch (err) {
         console.error('Error validando feriado:', err);
@@ -735,14 +777,15 @@ window._cargarTurnosModal = async function(sucursalId, fecha) {
         const data = result.data;
         window._turnoData = data;
 
-        const iconos = { manana: '☀️', tarde: '🌅', noche: '🌙', continuo: '🔁' };
+        const iconos = { manana: '☀️', tarde: '🌙', noche: '🌙', continuo: '🔁' };
         let html = '';
         
         if (data.turnos.length === 0) {
             html = '<span style="color: #666; font-size: 0.9rem; grid-column: 1 / -1; text-align: center; padding: 1rem;">No hay atención configurada en esta fecha.</span>';
         } else {
             data.turnos.forEach(turno => {
-                const icono = iconos[turno.tipo] || '⏰';
+                const icono = iconos[turno.tipo] || '🌙';
+                const labelTurno = (turno.label || '').replace('Turno Tarde', 'Turno Noche');
                 
                 // Renderizamos la tarjeta limpia, sin bloqueos ni barras de capacidad
                 html += `
@@ -754,7 +797,7 @@ window._cargarTurnosModal = async function(sucursalId, fecha) {
                     >
                         <span class="turno-icono">${icono}</span>
                         <div class="turno-info">
-                            <span class="turno-nombre">${turno.label}</span>
+                            <span class="turno-nombre">${labelTurno}</span>
                             <span class="turno-horario">${turno.inicio} – ${turno.fin}</span>
                         </div>
                     </button>
@@ -819,7 +862,15 @@ window._seleccionarTurnoModal = function(element) {
     // Función para actualizar minutos según la hora seleccionada
     function actualizarMinutos() {
         const horaSel = selectHora.value;
-        const minutos = Array.from({length: 60}, (_, i) => String(i).padStart(2, '0'));
+        const horasDelTurno = turno.horas.filter(h => h.hora.startsWith(horaSel + ':'));
+        
+        let minutos = Array.from({length: 60}, (_, i) => String(i).padStart(2, '0'));
+        if (horasDelTurno.length > 0) {
+            const minsSlot = [...new Set(horasDelTurno.map(h => h.hora.split(':')[1]))].sort();
+            if (minsSlot.length > 0) {
+                minutos = minsSlot;
+            }
+        }
 
         selectMin.innerHTML = minutos.map(min => {
             return `<option value="${min}">${min}</option>`;
@@ -841,8 +892,46 @@ window._seleccionarTurnoModal = function(element) {
         const horaCompleta = `${horaSel}:${minSel}`;
         horaInput.value = horaCompleta;
 
-        if (relojInfo) {
-            relojInfo.innerHTML = '';
+        const hObj = turno.horas.find(h => h.hora === horaCompleta) || (data.horas || []).find(h => h.hora === horaCompleta);
+
+        let capInfo = horasWrap.querySelector('.capacidad-info');
+        if (!capInfo) {
+            capInfo = document.createElement('div');
+            capInfo.className = 'capacidad-info';
+            horasWrap.appendChild(capInfo);
+        }
+
+        if (hObj) {
+            if (hObj.disponibles <= 0) {
+                if (relojInfo) {
+                    relojInfo.style.display = 'block';
+                    relojInfo.style.color = '#ef4444';
+                    relojInfo.style.padding = '8px 12px';
+                    relojInfo.style.borderRadius = '8px';
+                    relojInfo.style.background = '#fef2f2';
+                    relojInfo.style.border = '1px solid #fca5a5';
+                    relojInfo.innerHTML = `⚠️ <strong>Agotado:</strong> No hay cubiertos disponibles a las <strong>${horaCompleta}</strong>. Elige otro horario.`;
+                }
+                capInfo.innerHTML = `
+                    <span class="info-disponibles" style="color: #ef4444; font-weight: 700;">⚠️ 0 cubiertos disponibles a las ${horaCompleta}</span>
+                    <span class="info-total">📋 Capacidad total: ${data.capacidad_total}</span>
+                `;
+            } else {
+                if (relojInfo) {
+                    relojInfo.style.display = 'none';
+                    relojInfo.innerHTML = '';
+                }
+                capInfo.innerHTML = `
+                    <span class="info-disponibles" style="color: #16a34a; font-weight: 600;">🪑 ${hObj.disponibles} cubiertos disponibles a las ${horaCompleta}</span>
+                    <span class="info-total">📋 Capacidad total: ${data.capacidad_total}</span>
+                `;
+            }
+        } else {
+            if (relojInfo) relojInfo.style.display = 'none';
+            capInfo.innerHTML = `
+                <span class="info-disponibles">🪑 ${data.disponibles_hoy} cubiertos disponibles hoy</span>
+                <span class="info-total">📋 Capacidad total: ${data.capacidad_total}</span>
+            `;
         }
 
         // Limpiar error de hora
@@ -856,18 +945,6 @@ window._seleccionarTurnoModal = function(element) {
 
     // Inicializar minutos e info
     actualizarMinutos();
-
-    // Renderizar Info de capacidad general (fuera del grid de horas)
-    let capInfo = horasWrap.querySelector('.capacidad-info');
-    if (!capInfo) {
-        capInfo = document.createElement('div');
-        capInfo.className = 'capacidad-info';
-        horasWrap.appendChild(capInfo);
-    }
-    capInfo.innerHTML = `
-        <span class="info-disponibles">🪑 ${data.disponibles_hoy} cubiertos disponibles hoy</span>
-        <span class="info-total">📋 Capacidad total: ${data.capacidad_total}</span>
-    `;
 
     // Mostrar sección con animación
     horasWrap.classList.remove('hidden');
@@ -887,10 +964,10 @@ window._seleccionarHoraModal = function(element) {
 // CAMBIAR CANTIDAD ADULTOS/NIÑOS/BEBÉS
 // ============================================
 
-window._cambiarCantidad = function(inputId, delta, min = 0, max = 10) {
+window._cambiarCantidad = function(inputId, delta, min = 0, max = 500) {
     const input = document.getElementById(inputId);
     if (!input) return;
-    let valor = parseInt(input.value) + delta;
+    let valor = (parseInt(input.value) || 0) + delta;
     valor = Math.max(min, Math.min(max, valor));
     input.value = valor;
 }
@@ -1098,6 +1175,58 @@ document.addEventListener('keydown', function(e) {
 </script>
 
 <style is:global>
+/* ============================================
+   ESTILOS DE GRUPOS GRANDES Y AVISOS DE DISPONIBILIDAD
+   ============================================ */
+.label-with-badge {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 4px;
+}
+
+.badge-grupo {
+    font-size: 0.72rem;
+    font-weight: 600;
+    color: #15803d;
+    background: #dcfce7;
+    padding: 2px 8px;
+    border-radius: 12px;
+}
+
+.grupo-grande-banner {
+    background: linear-gradient(135deg, rgba(158, 42, 43, 0.05), rgba(158, 42, 43, 0.1));
+    border: 1px dashed rgba(158, 42, 43, 0.3);
+    border-radius: 12px;
+    padding: 12px 14px;
+    margin: 12px 0 16px;
+}
+
+.grupo-banner-header {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+}
+
+.grupo-banner-header .banner-icon {
+    font-size: 1.4rem;
+    line-height: 1;
+}
+
+.grupo-banner-header strong {
+    font-size: 0.85rem;
+    color: #9e2a2b;
+    display: block;
+    margin-bottom: 2px;
+}
+
+.grupo-banner-header p {
+    font-size: 0.78rem;
+    color: #4b5563;
+    margin: 0;
+    line-height: 1.3;
+}
+
 /* ============================================
    ESTILOS DEL MODAL (PÚBLICO)
    ============================================ */

@@ -1,7 +1,7 @@
 import type { APIRoute } from 'astro';
 import { query } from '../../../../lib/db';
 import { actualizarCubiertosAlAprobar } from '../../../../lib/cubiertos';
-import { PLANTILLAS } from '../../../../lib/mensajes';
+import { enviarWhatsApp, generarMensajeConfirmacion } from '../../../../lib/whatsapp';
 
 export const POST: APIRoute = async ({ params, request, cookies }) => {
     try {
@@ -17,11 +17,25 @@ export const POST: APIRoute = async ({ params, request, cookies }) => {
             }), { status: 401 });
         }
 
-        // Obtener datos de la reserva
+        // Obtener datos completos de la reserva
         const [reservas] = await query(
             `SELECT 
-                r.*,
+                r.id,
+                r.numero_reserva,
+                r.sucursal_id,
+                r.nombre_cliente,
+                r.telefono,
+                r.telefono_completo,
+                r.codigo_pais,
+                r.fecha,
+                r.hora,
+                r.numero_personas,
+                r.cantidad_ninos,
+                r.cubiertos_reservados,
+                r.estado,
                 s.nombre AS sucursal_nombre,
+                s.direccion,
+                s.telefono AS telefono_sucursal,
                 s.cubiertos_disponibles
              FROM reservas r
              JOIN sucursales s ON r.sucursal_id = s.id
@@ -47,16 +61,16 @@ export const POST: APIRoute = async ({ params, request, cookies }) => {
         }
 
         // Calcular cubiertos necesarios (Adultos + Niños)
-        const personas = parseInt(reserva.numero_personas) || 0;
+        const adultos = parseInt(reserva.numero_personas) || 0;
         const ninos = parseInt(reserva.cantidad_ninos) || 0;
-        const cubiertosNecesarios = reserva.cubiertos_reservados || (personas + ninos);
+        const cubiertosNecesarios = reserva.cubiertos_reservados || (adultos + ninos);
 
         // Obtener ID de usuario (admin)
         const userIdCookie = cookies.get('user_id');
         const adminId = userIdCookie ? parseInt(userIdCookie.value) : 1;
 
         if (accion === 'aprobar') {
-            // 🔴 ACTUALIZAR CUBIERTOS
+            // Actualizar cubiertos en sucursal
             const resultCubiertos = await actualizarCubiertosAlAprobar(
                 reserva.sucursal_id,
                 cubiertosNecesarios
@@ -69,7 +83,7 @@ export const POST: APIRoute = async ({ params, request, cookies }) => {
                 }), { status: 409 });
             }
 
-            // Actualizar reserva
+            // Actualizar reserva a confirmada
             await query(
                 `UPDATE reservas 
                  SET estado = 'confirmada',
@@ -81,14 +95,44 @@ export const POST: APIRoute = async ({ params, request, cookies }) => {
                 [cubiertosNecesarios, mensaje || 'Reserva confirmada', adminId, id]
             );
 
-            // Enviar mensaje de confirmación
-            await enviarWhatsApp(reserva.telefono, 'confirmada', reserva, personas);
+            // 🔴 ENVIAR MENSAJE DE WHATSAPP AL CLIENTE
+            const mensajeWhatsApp = generarMensajeConfirmacion(reserva, cubiertosNecesarios);
+            const telefonoCliente = reserva.telefono_completo || `${reserva.codigo_pais || '591'}${reserva.telefono}`;
+            
+            // Enviar WhatsApp
+            const whatsappResult = await enviarWhatsApp(telefonoCliente, mensajeWhatsApp);
+
+            // Registrar en logs de actividad
+            try {
+                await query(
+                    `INSERT INTO logs_actividad 
+                     (usuario_id, accion, tabla_afectada, registro_id, detalles) 
+                     VALUES (?, 'RESERVA_APROBADA_Y_NOTIFICADA', 'reservas', ?, ?)`,
+                    [
+                        adminId,
+                        reserva.id,
+                        JSON.stringify({
+                            cliente: reserva.nombre_cliente,
+                            telefono: telefonoCliente,
+                            cubiertos: cubiertosNecesarios,
+                            whatsapp_enviado: whatsappResult.success,
+                            fecha: reserva.fecha,
+                            hora: reserva.hora
+                        })
+                    ]
+                );
+            } catch (errLog) {
+                console.error('Error al registrar log de aprobación:', errLog);
+            }
 
             return new Response(JSON.stringify({
                 success: true,
                 mensaje: 'Reserva aprobada exitosamente',
                 cubiertos_ocupados: cubiertosNecesarios,
-                cubiertos_disponibles: reserva.cubiertos_disponibles - cubiertosNecesarios
+                cubiertos_disponibles: reserva.cubiertos_disponibles - cubiertosNecesarios,
+                whatsapp: whatsappResult,
+                whatsapp_enviado: whatsappResult.success,
+                url_whatsapp: whatsappResult.url || whatsappResult.url_whatsapp
             }));
 
         } else if (accion === 'rechazar') {
@@ -102,9 +146,6 @@ export const POST: APIRoute = async ({ params, request, cookies }) => {
                  WHERE id = ?`,
                 [mensaje || 'No hay disponibilidad', adminId, id]
             );
-
-            // Enviar mensaje de rechazo
-            await enviarWhatsApp(reserva.telefono, 'rechazada', reserva, personas);
 
             return new Response(JSON.stringify({
                 success: true,
@@ -125,46 +166,3 @@ export const POST: APIRoute = async ({ params, request, cookies }) => {
         }), { status: 500 });
     }
 };
-
-// Función para enviar WhatsApp
-async function enviarWhatsApp(telefono: string, estado: string, reserva: any, personas: number) {
-    let mensajeStr = '';
-    
-    if (reserva.hora && typeof reserva.hora === 'string') {
-        reserva.hora = reserva.hora.substring(0, 5);
-    }
-    
-    if (estado === 'confirmada') {
-        mensajeStr = PLANTILLAS.confirmacion.formal(reserva, personas);
-    } else if (estado === 'rechazada') {
-        mensajeStr = PLANTILLAS.rechazo(reserva);
-    }
-
-    const telFinal = reserva.telefono_completo || `591${telefono}`;
-    
-    console.log(`📱 Mensaje de ${estado} preparado para: ${telFinal}`);
-    
-    try {
-        await query(
-            `INSERT INTO logs_actividad 
-             (usuario_id, accion, tabla_afectada, registro_id, detalles) 
-             VALUES (?, ?, 'reservas', ?, ?)`,
-            [
-                reserva.confirmado_por || 1, 
-                estado === 'confirmada' ? 'MENSAJE_CONFIRMACION_ENVIADO' : 'MENSAJE_RECHAZO_ENVIADO',
-                reserva.id,
-                JSON.stringify({
-                    telefono: telFinal,
-                    fecha: reserva.fecha,
-                    hora: reserva.hora,
-                    sucursal: reserva.sucursal_nombre,
-                    personas: personas
-                })
-            ]
-        );
-    } catch (err) {
-        console.error('Error guardando log de mensaje:', err);
-    }
-    
-    return true;
-}

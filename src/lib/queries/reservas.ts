@@ -49,18 +49,18 @@ export async function verificarDisponibilidad(sucursalId: number, fecha: string,
         // En lugar del procedimiento, hacemos la consulta manualmente como fallback
         const [sucRows] = await pool.query<RowDataPacket[]>(`SELECT capacidad_total FROM sucursales WHERE id = ?`, [sucursalId]);
         if (sucRows.length === 0) return { disponible: false, actual: 0, maxima: 0 };
-        const maxima = sucRows[0].capacidad_total;
+        const maxima = Number(sucRows[0].capacidad_total) || 120;
 
         const [resRows] = await pool.query<RowDataPacket[]>(`
-            SELECT COALESCE(SUM(numero_personas), 0) as actual
+            SELECT COALESCE(SUM(COALESCE(cubiertos_reservados, numero_personas)), 0) as actual
             FROM reservas
             WHERE sucursal_id = ? AND fecha = ? 
             AND hora BETWEEN ADDTIME(?, '-01:00:00') AND ADDTIME(?, '01:00:00')
-            AND estado = 'confirmada'
+            AND estado IN ('pendiente', 'confirmada')
         `, [sucursalId, fecha, hora, hora]);
         
-        const actual = resRows[0].actual;
-        const disponible = (actual + personas) <= maxima;
+        const actual = Number(resRows[0]?.actual) || 0;
+        const disponible = (actual + Number(personas)) <= maxima;
 
         return { disponible, actual, maxima };
     } catch (error) {

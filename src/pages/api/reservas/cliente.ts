@@ -123,7 +123,7 @@ export const POST: APIRoute = async ({ request }) => {
         const cubiertos_necesarios = adultos + ninos;
 
         const [reservasEnHora] = await pool.query(
-            `SELECT COALESCE(SUM(cubiertos_reservados), 0) as total
+            `SELECT COALESCE(SUM(COALESCE(cubiertos_reservados, numero_personas)), 0) as total
              FROM reservas 
              WHERE sucursal_id = ? 
              AND fecha = ? 
@@ -132,8 +132,8 @@ export const POST: APIRoute = async ({ request }) => {
             [sucursal_id, fecha, hora]
         ) as any[];
         
-        const ocupadosEnHora = (reservasEnHora as any[])[0]?.total || 0;
-        const capacidadTotal = sucursal.capacidad_total || 120;
+        const ocupadosEnHora = Number((reservasEnHora as any[])[0]?.total) || 0;
+        const capacidadTotal = Number(sucursal.capacidad_total) || 120;
         
         if (ocupadosEnHora + cubiertos_necesarios > capacidadTotal) {
             return new Response(JSON.stringify({

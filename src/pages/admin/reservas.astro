@@ -308,35 +308,75 @@ window.aprobarReserva = async function(id, sucursalId, personas, disponibles) {
         alert(`❌ No hay suficientes cubiertos. Disponibles: ${disponibles}`);
         return;
     }
-    
-    if (!confirm(`¿Aprobar reserva de ${personas} personas?`)) return;
-    
+
+    if (!confirm(`¿Aprobar reserva de ${personas} personas?\nSe enviará confirmación por WhatsApp al cliente.`)) {
+        return;
+    }
+
+    const btn = document.querySelector(`.btn-aprobar[onclick*="${id}"]`);
+    const originalText = btn ? btn.textContent : '✅';
+    if (btn) {
+        btn.textContent = '⏳';
+        btn.disabled = true;
+    }
+
     try {
         const response = await fetch(`/api/reservas/${id}/aprobar`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ accion: 'aprobar' })
         });
-        
+
         const result = await response.json();
-        
+
         if (result.success) {
-            alert('✅ Reserva aprobada exitosamente');
+            let mensaje = '✅ Reserva aprobada exitosamente';
+            
+            const waUrl = result.whatsapp?.url || result.url_whatsapp || result.whatsapp?.url_whatsapp;
+            const waSuccess = result.whatsapp?.success || result.whatsapp_enviado;
+
+            if (waSuccess) {
+                mensaje += '\n📱 Mensaje de confirmación preparado/enviado por WhatsApp';
+                if (waUrl) {
+                    mensaje += '\n🔗 Se abrirá WhatsApp en una nueva ventana';
+                    window.open(waUrl, '_blank');
+                }
+            } else {
+                mensaje += `\n⚠️ No se pudo enviar WhatsApp: ${result.whatsapp?.error || 'Verifica el número del cliente'}`;
+                mensaje += '\n📋 La reserva está confirmada, pero el cliente no recibió la notificación.';
+            }
+            
+            alert(mensaje);
             location.reload();
         } else {
             alert('❌ Error: ' + result.error);
+            if (btn) {
+                btn.textContent = originalText;
+                btn.disabled = false;
+            }
         }
     } catch (error) {
-        alert('❌ Error de conexión');
+        alert('❌ Error de conexión. Intenta de nuevo.');
+        if (btn) {
+            btn.textContent = originalText;
+            btn.disabled = false;
+        }
     }
 }
 
 window.rechazarReserva = async function(id) {
     const motivo = prompt('Motivo del rechazo:', 'No hay disponibilidad');
     if (motivo === null) return;
-    
+
     if (!confirm('¿Rechazar esta reserva?')) return;
-    
+
+    const btn = document.querySelector(`.btn-rechazar[onclick*="${id}"]`);
+    const originalText = btn ? btn.textContent : '❌';
+    if (btn) {
+        btn.textContent = '⏳';
+        btn.disabled = true;
+    }
+
     try {
         const response = await fetch(`/api/reservas/${id}/aprobar`, {
             method: 'POST',
@@ -346,18 +386,33 @@ window.rechazarReserva = async function(id) {
                 mensaje: motivo
             })
         });
-        
+
         const result = await response.json();
-        
+
         if (result.success) {
             alert('❌ Reserva rechazada');
             location.reload();
         } else {
             alert('❌ Error: ' + result.error);
+            if (btn) {
+                btn.textContent = originalText;
+                btn.disabled = false;
+            }
         }
     } catch (error) {
         alert('❌ Error de conexión');
+        if (btn) {
+            btn.textContent = originalText;
+            btn.disabled = false;
+        }
     }
+}
+
+window.enviarWhatsAppManual = function(telefono, mensaje) {
+    const telefonoLimpio = String(telefono).replace(/\D/g, '');
+    const numeroFinal = telefonoLimpio.startsWith('591') ? telefonoLimpio : `591${telefonoLimpio}`;
+    const url = `https://wa.me/${numeroFinal}?text=${encodeURIComponent(mensaje)}`;
+    window.open(url, '_blank');
 }
 
 window.enviarWhatsAppAdmin = async function(id) {

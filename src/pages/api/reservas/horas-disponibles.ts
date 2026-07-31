@@ -5,7 +5,6 @@ import pool from '../../../lib/db';
 function clasificarTurno(horaInicio: string): { tipo: string; label: string } {
     const [h] = horaInicio.split(':').map(Number);
     if (h >= 6 && h < 17)  return { tipo: 'manana', label: 'Turno Mañana' };
-    if (h >= 17 && h < 20) return { tipo: 'tarde',  label: 'Turno Tarde'  };
     return                          { tipo: 'noche',  label: 'Turno Noche'  };
 }
 
@@ -198,8 +197,8 @@ export const GET: APIRoute = async ({ url }) => {
             }));
         }
 
-        const capacidadTotal = sucursal.capacidad_total || 120;
-        const ocupadosHoy    = sucursal.ocupados_hoy || 0;
+        const capacidadTotal = Number(sucursal.capacidad_total) || 120;
+        const ocupadosHoy    = Number(sucursal.ocupados_hoy) || 0;
 
         // Hora límite de hoy (hora actual + 30 min)
         const limitTimeStr = fecha === hoyBolivia 
@@ -252,7 +251,7 @@ export const GET: APIRoute = async ({ url }) => {
 
                 // Consulta de ocupación por hora específica
                 const [reservasEnHora] = await pool.query(
-                    `SELECT COALESCE(SUM(numero_personas), 0) as total
+                    `SELECT COALESCE(SUM(COALESCE(cubiertos_reservados, numero_personas)), 0) as total
                      FROM reservas
                      WHERE sucursal_id = ?
                      AND fecha = ?
@@ -261,7 +260,7 @@ export const GET: APIRoute = async ({ url }) => {
                     [sucursalId, fecha, horaStr]
                 ) as any[];
 
-                const ocupadosEnHora  = (reservasEnHora as any)[0]?.total || 0;
+                const ocupadosEnHora  = Number((reservasEnHora as any)[0]?.total) || 0;
                 const disponibleHora  = Math.max(0, capacidadTotal - ocupadosEnHora);
                 const isReservable    = disponibleHora > 0;
 
