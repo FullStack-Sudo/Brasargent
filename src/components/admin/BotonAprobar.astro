@@ -1,0 +1,60 @@
+---
+// src/components/admin/BotonAprobar.astro
+// Botón de aprobar con WhatsApp directo
+interface Props {
+    reserva: {
+        id: number;
+        sucursal_id: number;
+        numero_personas?: number;
+        cantidad_ninos?: number;
+        cubiertos_disponibles?: number;
+        [key: string]: any;
+    };
+}
+
+const { reserva } = Astro.props;
+const personas = (reserva.numero_personas || 0) + (reserva.cantidad_ninos || 0);
+const disponibles = reserva.cubiertos_disponibles || 0;
+---
+
+<button 
+    class="btn-aprobar" 
+    onclick={`aprobarReserva(${reserva.id}, ${reserva.sucursal_id}, ${personas}, ${disponibles})`}
+    data-reserva-id={reserva.id}
+    title="Aprobar reserva y enviar WhatsApp"
+>
+    <span class="icon">✅</span> Aprobar
+</button>
+
+<style>
+.btn-aprobar {
+    padding: 6px 14px;
+    background: #10b981;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    font-size: 0.8rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-family: 'Inter', sans-serif;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.btn-aprobar:hover {
+    background: #059669;
+    transform: scale(1.02);
+}
+
+.btn-aprobar:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none !important;
+}
+
+.btn-aprobar .icon {
+    font-size: 0.9rem;
+}
+</style>

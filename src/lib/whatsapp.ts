@@ -10,12 +10,42 @@ export interface enviarWhatsAppResult {
     mensaje?: string;
 }
 
+// ============================================
+// GENERAR URL DE WHATSAPP CON MENSAJE
+// ============================================
+
+export function generarURLWhatsApp(
+    telefono: string,
+    mensaje: string
+): string {
+    // Limpiar número (solo dígitos)
+    const telefonoLimpio = String(telefono || '').replace(/\D/g, '');
+    
+    // Si el número no tiene código de país, asumir Bolivia (+591)
+    let numeroFinal = telefonoLimpio;
+    if (!numeroFinal.startsWith('591') && numeroFinal.length <= 8) {
+        numeroFinal = `591${numeroFinal}`;
+    }
+
+    // Construir URL de WhatsApp
+    return `https://api.whatsapp.com/send/?phone=${numeroFinal}&text=${encodeURIComponent(mensaje)}&type=phone_number&app_absent=0`;
+}
+
+// ============================================
+// ABRIR WHATSAPP EN NUEVA VENTANA
+// ============================================
+
+export function abrirWhatsApp(url: string): void {
+    if (typeof window !== 'undefined') {
+        window.open(url, '_blank');
+    }
+}
+
 export async function enviarWhatsApp(
     telefono: string,
     mensaje: string
 ): Promise<enviarWhatsAppResult> {
     try {
-        // Validar número de teléfono
         if (!telefono || String(telefono).length < 7) {
             return { 
                 success: false, 
@@ -23,18 +53,10 @@ export async function enviarWhatsApp(
             };
         }
 
-        // Limpiar número (solo dígitos)
+        const url = generarURLWhatsApp(telefono, mensaje);
         const telefonoLimpio = String(telefono).replace(/\D/g, '');
-        
-        // Si el número no tiene código de país, asumir Bolivia (+591)
-        let numeroFinal = telefonoLimpio;
-        if (!numeroFinal.startsWith('591') && numeroFinal.length <= 8) {
-            numeroFinal = `591${numeroFinal}`;
-        }
+        const numeroFinal = telefonoLimpio.startsWith('591') || telefonoLimpio.length > 8 ? telefonoLimpio : `591${telefonoLimpio}`;
 
-        // Construir URL de WhatsApp
-        const url = `https://wa.me/${numeroFinal}?text=${encodeURIComponent(mensaje)}`;
-        
         console.log('----------------------------------------------------');
         console.log(`📱 [WHATSAPP OUTGOING] Destinatario: +${numeroFinal}`);
         console.log('📝 Contenido del mensaje:');
@@ -42,10 +64,7 @@ export async function enviarWhatsApp(
         console.log(`🔗 Link directo WhatsApp: ${url}`);
         console.log('----------------------------------------------------');
         
-        // Abrir WhatsApp en nueva ventana si se ejecuta en cliente
-        if (typeof window !== 'undefined') {
-            window.open(url, '_blank');
-        }
+        abrirWhatsApp(url);
 
         return { 
             success: true, 
@@ -67,7 +86,7 @@ export async function enviarWhatsApp(
 // GENERAR MENSAJE DE CONFIRMACIÓN DE RESERVA
 // ============================================
 
-export function generarMensajeConfirmacion(reserva: any, cubiertos: number): string {
+export function generarMensajeConfirmacion(reserva: any, cubiertos?: number): string {
     const rawFecha = reserva.fecha instanceof Date ? reserva.fecha.toISOString().split('T')[0] : String(reserva.fecha).split('T')[0];
     
     const fechaFormateada = new Date(rawFecha + 'T12:00:00').toLocaleDateString('es-ES', {
@@ -80,7 +99,13 @@ export function generarMensajeConfirmacion(reserva: any, cubiertos: number): str
     const horaLimpia = typeof reserva.hora === 'string' ? reserva.hora.substring(0, 5) : reserva.hora;
     const totalPersonas = (parseInt(reserva.numero_personas) || 0) + (parseInt(reserva.cantidad_ninos) || 0);
 
-    const numeroReserva = reserva.numero_reserva || `BR-${new Date().getFullYear()}-0001`;
+    let personasTexto = `${reserva.numero_personas || 0} Adultos`;
+    if (reserva.cantidad_ninos > 0) {
+        personasTexto += `\n${reserva.cantidad_ninos} Niños (2-12 años)`;
+    }
+    personasTexto += `\nTotal: ${totalPersonas} personas`;
+
+    const numeroReserva = reserva.numero_reserva || `BR-${new Date().getFullYear()}-${String(reserva.id || '0001').padStart(4, '0')}`;
 
     return `BRASARGENT - Tu Reserva fue Exitosa!
 
@@ -95,9 +120,7 @@ Hora: ${horaLimpia}
 Ubicacion: ${reserva.direccion || 'Sucursal Brasargent'}
 
 Detalle de Personas:
-${reserva.numero_personas || 0} Adultos
-${reserva.cantidad_ninos || 0} Niños (2-12 años)
-Total: ${totalPersonas} personas
+${personasTexto}
 
 Te recordamos que tienes que estar 10 minutos antes de la hora de tu reserva.
 
@@ -105,7 +128,7 @@ Te recordamos que tienes que estar 10 minutos antes de la hora de tu reserva.
 
 Si no vas a poder asistir, por favor notifica al restaurante.
 
-BRASARGENT - El verdadero sabor argentino`;
+BRASARGENT - El mejor churrasco de Santa Cruz, Bolivia`;
 }
 
 // ============================================

@@ -3,26 +3,37 @@
 ---
 
 <style>
-  @import url("https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&display=swap");
-
+  /* Tipografía de testimonios usa el sistema global */
   .testimonials-section * {
-    font-family: "Poppins", sans-serif;
+    font-family: 'Inter', sans-serif;
+  }
+  .testimonials-section h2 {
+    font-family: 'Playfair Display', serif;
   }
 </style>
 
 <section
   id="testimonios"
   class="testimonials-section py-20 px-4 sm:px-6 lg:px-8"
-  style="background-image: linear-gradient(135deg, rgba(244, 244, 244,0.07) 0%, rgba(244, 244, 244,0.07) 12.5%,rgba(211, 211, 211,0.07) 12.5%, rgba(211, 211, 211,0.07) 25%,rgba(178, 178, 178,0.07) 25%, rgba(178, 178, 178,0.07) 37.5%,rgba(145, 145, 145,0.07) 37.5%, rgba(145, 145, 145,0.07) 50%,rgba(113, 113, 113,0.07) 50%, rgba(113, 113, 113,0.07) 62.5%,rgba(80, 80, 80,0.07) 62.5%, rgba(80, 80, 80,0.07) 75%,rgba(47, 47, 47,0.07) 75%, rgba(47, 47, 47,0.07) 87.5%,rgba(14, 14, 14,0.07) 87.5%, rgba(14, 14, 14,0.07) 100%),linear-gradient(45deg, rgba(236, 236, 236,0.07) 0%, rgba(236, 236, 236,0.07) 12.5%,rgba(210, 210, 210,0.07) 12.5%, rgba(210, 210, 210,0.07) 25%,rgba(183, 183, 183,0.07) 25%, rgba(183, 183, 183,0.07) 37.5%,rgba(157, 157, 157,0.07) 37.5%, rgba(157, 157, 157,0.07) 50%,rgba(130, 130, 130,0.07) 50%, rgba(130, 130, 130,0.07) 62.5%,rgba(104, 104, 104,0.07) 62.5%, rgba(104, 104, 104,0.07) 75%,rgba(77, 77, 77,0.07) 75%, rgba(77, 77, 77,0.07) 87.5%,rgba(51, 51, 51,0.07) 87.5%, rgba(51, 51, 51,0.07) 100%),linear-gradient(90deg, #ffffff,#ffffff);"
+  style="background: #FFFFFF;"
 >
   <div class="text-center mb-12 sm:mb-16" data-aos="fade-up">
-    <h2 class="text-3xl sm:text-4xl lg:text-5xl font-bold text-[#1a1a1a] mb-4">
-      <span
-        class="bg-gradient-to-r from-[#9e2a2b] to-[#d4af37] bg-clip-text text-transparent"
-        >Nuestros Clientes</span
-      >
+    <!-- Badge -->
+    <div class="mb-3">
+      <span style="display:inline-block;font-family:'Montserrat',sans-serif;font-size:0.65rem;font-weight:500;text-transform:uppercase;letter-spacing:3px;color:#C9A87C;background:rgba(201,168,124,0.08);border:1px solid rgba(201,168,124,0.15);padding:6px 20px;border-radius:50px;">
+        Lo que dicen de nosotros
+      </span>
+    </div>
+    <!-- Título -->
+    <h2 style="font-family:'Playfair Display',serif;font-size:clamp(2rem,4vw,3rem);font-weight:700;color:#1A1A1A;letter-spacing:-0.02em;margin-bottom:14px;">
+      Nuestros <span style="color:#8B1A1A;font-style:italic;">Clientes</span>
     </h2>
-    <br />
+    <!-- Divider dorado -->
+    <div style="display:flex;align-items:center;justify-content:center;gap:14px;max-width:200px;margin:0 auto 4px;">
+      <div style="flex:1;height:1px;background:linear-gradient(90deg,transparent,rgba(201,168,124,0.5));"></div>
+      <span style="color:rgba(201,168,124,0.6);font-size:0.8rem">✦</span>
+      <div style="flex:1;height:1px;background:linear-gradient(90deg,rgba(201,168,124,0.5),transparent);"></div>
+    </div>
   </div>
 
   <div class="hidden md:flex justify-end gap-2 mt-4">

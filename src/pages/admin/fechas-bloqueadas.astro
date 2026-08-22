@@ -1,0 +1,477 @@
+---
+// src/pages/admin/fechas-bloqueadas.astro
+// Gestión de Fechas Bloqueadas / Días Sin Reserva
+import AdminLayout from '../../layouts/AdminLayout.astro';
+import pool from '../../lib/db';
+
+const [sucursalesRows] = await pool.query(
+    `SELECT id, nombre FROM sucursales WHERE activo = 1 ORDER BY id ASC`
+) as any[];
+const sucursales = sucursalesRows || [];
+---
+
+<AdminLayout title="Fechas Bloqueadas" description="Gestión de días sin reserva y fechas bloqueadas por el Administrador">
+    <div class="fechas-admin-wrapper">
+        <!-- Header con explicación -->
+        <div class="header-card">
+            <div>
+                <h1>🚫 Gestión de Fechas Bloqueadas (Días Sin Reserva)</h1>
+                <p class="subtitle">Configura los días en que NO se permiten reservas. Los comensales verán estas fechas inhabilitadas en gris en el modal de reservas.</p>
+            </div>
+        </div>
+
+        <!-- Regla Global Informativa -->
+        <div class="alerta-regla-global">
+            <span class="alerta-icono">📌</span>
+            <div>
+                <strong>Regla de Negocio Permanente:</strong>
+                <p>Todos los <strong>DOMINGOS</strong> están inhabilitados automáticamente para reservas en todas las sucursales (atención por orden de llegada).</p>
+            </div>
+        </div>
+
+        <!-- Filtros y Acciones -->
+        <div class="actions-bar">
+            <div class="sucursal-selector">
+                <label for="sucursalSelect">🏢 Sucursal:</label>
+                <select id="sucursalSelect" onchange="cargarFechasBloqueadas(this.value)">
+                    <option value="0">🌐 Todas las Sucursales</option>
+                    {sucursales.map((s: any) => (
+                        <option value={s.id}>{s.nombre}</option>
+                    ))}
+                </select>
+            </div>
+
+            <button class="btn-primary" onclick="abrirModalBloqueo()">
+                ➕ Bloquear Nueva Fecha
+            </button>
+        </div>
+
+        <!-- Tabla de Fechas Bloqueadas -->
+        <div class="admin-card">
+            <div class="card-header">
+                <h2>📆 Lista de Fechas Bloqueadas Registradas</h2>
+            </div>
+            
+            <div class="table-responsive">
+                <table class="tabla-fechas">
+                    <thead>
+                        <tr>
+                            <th>Fecha</th>
+                            <th>Día</th>
+                            <th>Sucursal</th>
+                            <th>Motivo / Descripción</th>
+                            <th>Estado</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody id="fechasBody">
+                        <tr><td colspan="6" class="loading-td">Cargando fechas bloqueadas...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL BLOQUEAR FECHA -->
+    <div id="modalBloqueo" class="modal-overlay hidden">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h3>🚫 Bloquear Fecha para Reservas</h3>
+                <button class="modal-close-btn" onclick="cerrarModalBloqueo()">✕</button>
+            </div>
+            <form id="formBloqueo" onsubmit="guardarBloqueo(event)">
+                <div class="form-group">
+                    <label for="bloqueoSucursal">Sucursal <span class="req">*</span></label>
+                    <select id="bloqueoSucursal" required>
+                        {sucursales.map((s: any) => (
+                            <option value={s.id}>{s.nombre}</option>
+                        ))}
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="bloqueoFecha">Fecha a Bloquear <span class="req">*</span></label>
+                    <input type="date" id="bloqueoFecha" required />
+                </div>
+                <div class="form-group">
+                    <label for="bloqueoDesc">Motivo / Descripción <span class="req">*</span></label>
+                    <input type="text" id="bloqueoDesc" placeholder="Ej: Feriado Nacional, Carnaval, Mantenimiento" required />
+                </div>
+                <div class="modal-actions">
+                    <button type="button" class="btn-sec" onclick="cerrarModalBloqueo()">Cancelar</button>
+                    <button type="submit" class="btn-primary">🚫 Bloquear Fecha</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</AdminLayout>
+
+<script>
+    let sucursalActualId = 0;
+
+    document.addEventListener('DOMContentLoaded', () => {
+        const hoy = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/La_Paz' }).format(new Date());
+        const inputFecha = document.getElementById('bloqueoFecha') as HTMLInputElement;
+        if (inputFecha) inputFecha.min = hoy;
+
+        cargarFechasBloqueadas(0);
+    });
+
+    window.cargarFechasBloqueadas = async function(sucursalId) {
+        sucursalActualId = parseInt(sucursalId) || 0;
+        const body = document.getElementById('fechasBody');
+        if (!body) return;
+
+        try {
+            const url = sucursalActualId > 0 
+                ? `/api/admin/festivos?sucursal_id=${sucursalActualId}`
+                : `/api/admin/festivos`;
+            const res = await fetch(url);
+            const data = await res.json();
+
+            if (!data.success || !data.data) {
+                body.innerHTML = `<tr><td colspan="6" class="empty-td">Error cargando fechas bloqueadas</td></tr>`;
+                return;
+            }
+
+            const fechas = data.data;
+            if (fechas.length === 0) {
+                body.innerHTML = `<tr><td colspan="6" class="empty-td">No hay fechas bloqueadas registradas</td></tr>`;
+                return;
+            }
+
+            let html = '';
+            fechas.forEach(f => {
+                const fechaObj = new Date(f.fecha + 'T12:00:00');
+                const fechaFmt = fechaObj.toLocaleDateString('es-ES', { year: 'numeric', month: 'long', day: 'numeric' });
+                const diaFmt = fechaObj.toLocaleDateString('es-ES', { weekday: 'long' });
+                const diaCap = diaFmt.charAt(0).toUpperCase() + diaFmt.slice(1);
+                const sucursalNombre = f.sucursal_nombre || (f.sucursal_id ? `Sucursal #${f.sucursal_id}` : 'Todas');
+
+                html += `
+                    <tr>
+                        <td><strong>${f.fecha}</strong></td>
+                        <td>${diaCap}</td>
+                        <td><span class="badge-sucursal">${sucursalNombre}</span></td>
+                        <td>${f.descripcion}</td>
+                        <td>
+                            <span class="badge-bloqueado">🚫 Sin Reservas</span>
+                        </td>
+                        <td>
+                            <button class="btn-del-sm" onclick="eliminarBloqueo(${f.id})">
+                                🗑️ Eliminar
+                            </button>
+                        </td>
+                    </tr>
+                `;
+            });
+            body.innerHTML = html;
+        } catch (e) {
+            body.innerHTML = `<tr><td colspan="6" class="empty-td">Error de conexión</td></tr>`;
+        }
+    };
+
+    window.abrirModalBloqueo = function() {
+        const modal = document.getElementById('modalBloqueo');
+        if (modal) modal.classList.remove('hidden');
+    };
+
+    window.cerrarModalBloqueo = function() {
+        const modal = document.getElementById('modalBloqueo');
+        if (modal) modal.classList.add('hidden');
+    };
+
+    window.guardarBloqueo = async function(e) {
+        e.preventDefault();
+        const sucursalId = parseInt((document.getElementById('bloqueoSucursal') as HTMLSelectElement).value);
+        const fecha = (document.getElementById('bloqueoFecha') as HTMLInputElement).value;
+        const desc = (document.getElementById('bloqueoDesc') as HTMLInputElement).value.trim();
+
+        if (!fecha || !desc) return;
+
+        try {
+            const res = await fetch('/api/admin/festivos', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    sucursal_id: sucursalId,
+                    fecha: fecha,
+                    descripcion: desc,
+                    sin_reservas: true
+                })
+            });
+            const data = await res.json();
+            if (data.success) {
+                cerrarModalBloqueo();
+                (document.getElementById('formBloqueo') as HTMLFormElement).reset();
+                cargarFechasBloqueadas(sucursalActualId);
+            } else {
+                alert('❌ Error: ' + (data.error || 'No se pudo guardar la fecha'));
+            }
+        } catch (err) {
+            alert('❌ Error de conexión.');
+        }
+    };
+
+    window.eliminarBloqueo = async function(id) {
+        if (!confirm('¿Deseas desbloquear esta fecha? Los clientes podrán volver a reservar en este día.')) return;
+        try {
+            const res = await fetch(`/api/admin/festivos?id=${id}`, {
+                method: 'DELETE'
+            });
+            const data = await res.json();
+            if (data.success) {
+                cargarFechasBloqueadas(sucursalActualId);
+            } else {
+                alert('❌ Error: ' + data.error);
+            }
+        } catch (err) {
+            alert('❌ Error de conexión.');
+        }
+    };
+</script>
+
+<style>
+    .fechas-admin-wrapper {
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+    }
+
+    .header-card {
+        background: #ffffff;
+        padding: 24px;
+        border-radius: 20px;
+        box-shadow: 0 4px 14px rgba(0,0,0,0.04);
+        border-left: 5px solid #9e2a2b;
+    }
+
+    .header-card h1 {
+        font-size: 1.5rem;
+        font-weight: 800;
+        color: #1a1a1a;
+        margin-bottom: 4px;
+    }
+
+    .subtitle {
+        color: #6b7280;
+        font-size: 0.9rem;
+    }
+
+    .alerta-regla-global {
+        background: #eff6ff;
+        border: 1px solid #bfdbfe;
+        border-radius: 14px;
+        padding: 14px 18px;
+        display: flex;
+        align-items: flex-start;
+        gap: 12px;
+    }
+
+    .alerta-icono {
+        font-size: 1.4rem;
+        line-height: 1;
+    }
+
+    .alerta-regla-global strong {
+        color: #1e40af;
+        font-size: 0.9rem;
+        display: block;
+        margin-bottom: 2px;
+    }
+
+    .alerta-regla-global p {
+        color: #1e3a8a;
+        font-size: 0.85rem;
+        margin: 0;
+    }
+
+    .actions-bar {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 16px;
+        background: #ffffff;
+        padding: 16px 24px;
+        border-radius: 16px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.03);
+    }
+
+    .sucursal-selector {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    }
+
+    .sucursal-selector label {
+        font-weight: 700;
+        font-size: 0.9rem;
+    }
+
+    .sucursal-selector select {
+        padding: 8px 14px;
+        border-radius: 10px;
+        border: 1.5px solid rgba(26,26,26,0.15);
+        font-weight: 600;
+        background: #fffaf0;
+        color: #9e2a2b;
+        cursor: pointer;
+    }
+
+    .admin-card {
+        background: #ffffff;
+        border-radius: 20px;
+        padding: 24px;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.04);
+    }
+
+    .card-header h2 {
+        font-size: 1.15rem;
+        font-weight: 800;
+        color: #1a1a1a;
+        margin-bottom: 16px;
+    }
+
+    .table-responsive {
+        overflow-x: auto;
+    }
+
+    table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+
+    th, td {
+        padding: 12px 16px;
+        text-align: left;
+        border-bottom: 1px solid rgba(26,26,26,0.06);
+        font-size: 0.9rem;
+    }
+
+    th {
+        background: #f8f5f0;
+        font-weight: 700;
+        color: rgba(26,26,26,0.6);
+        text-transform: uppercase;
+        font-size: 0.75rem;
+        letter-spacing: 0.5px;
+    }
+
+    .badge-sucursal {
+        padding: 4px 10px;
+        background: rgba(158, 42, 43, 0.08);
+        color: #9e2a2b;
+        border-radius: 12px;
+        font-size: 0.8rem;
+        font-weight: 600;
+    }
+
+    .badge-bloqueado {
+        padding: 4px 10px;
+        background: rgba(239, 68, 68, 0.1);
+        color: #dc2626;
+        border-radius: 20px;
+        font-size: 0.78rem;
+        font-weight: 700;
+    }
+
+    .btn-primary {
+        background: #9e2a2b;
+        color: #ffffff;
+        padding: 10px 18px;
+        border-radius: 10px;
+        border: none;
+        font-weight: 700;
+        font-size: 0.88rem;
+        cursor: pointer;
+        transition: background 0.2s;
+    }
+
+    .btn-primary:hover { background: #7a2021; }
+
+    .btn-del-sm {
+        background: rgba(239, 68, 68, 0.1);
+        color: #dc2626;
+        border: 1px solid rgba(239, 68, 68, 0.2);
+        padding: 6px 12px;
+        border-radius: 8px;
+        font-weight: 700;
+        font-size: 0.8rem;
+        cursor: pointer;
+    }
+
+    .btn-del-sm:hover { background: rgba(239, 68, 68, 0.2); }
+
+    .modal-overlay {
+        position: fixed;
+        inset: 0;
+        background: rgba(0,0,0,0.7);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 9999;
+    }
+
+    .modal-card {
+        background: #fffaf0;
+        width: 100%;
+        max-width: 480px;
+        border-radius: 20px;
+        padding: 24px;
+        box-shadow: 0 20px 60px rgba(0,0,0,0.4);
+    }
+
+    .modal-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 16px;
+    }
+
+    .modal-close-btn {
+        background: none;
+        border: none;
+        font-size: 1.2rem;
+        cursor: pointer;
+    }
+
+    .form-group {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        margin-bottom: 14px;
+    }
+
+    .form-group label {
+        font-size: 0.85rem;
+        font-weight: 700;
+    }
+
+    .form-group select,
+    .form-group input[type="text"],
+    .form-group input[type="date"] {
+        padding: 10px 14px;
+        border: 1.5px solid rgba(26,26,26,0.12);
+        border-radius: 10px;
+        font-family: inherit;
+        font-size: 0.9rem;
+    }
+
+    .modal-actions {
+        display: flex;
+        justify-content: flex-end;
+        gap: 12px;
+        margin-top: 20px;
+    }
+
+    .btn-sec {
+        background: transparent;
+        border: 1.5px solid rgba(26,26,26,0.2);
+        padding: 10px 18px;
+        border-radius: 10px;
+        cursor: pointer;
+    }
+
+    .hidden { display: none !important; }
+    .loading-td, .empty-td { text-align: center; padding: 24px; color: rgba(26,26,26,0.4); }
+</style>

@@ -1,7 +1,7 @@
 ---
 import Layout from '../layouts/Layout.astro';
-import Navbar from '../components/Navbar.astro';
-import Footer from '../components/Footer.astro';
+import NavbarSimple from '../components/NavbarSimple.astro';
+import FooterSimple from '../components/FooterSimple.astro';
 
 const galleryImages = [
   { src: '/hero-bg.jpg', title: 'Parrilla en Acción', category: 'grill' },
@@ -17,7 +17,7 @@ const galleryImages = [
   title="Galería - Brasargent Rodizio"
   description="Explora nuestra galería de fotos: parrilla en acción, cortes premium, ambiente acogedor y más. Descubre la experiencia Brasargent."
 >
-  <Navbar />
+  <NavbarSimple />
   
   <!-- Hero de Galería -->
   <section class="relative h-[50vh] flex items-center justify-center overflow-hidden brasas-overlay">
@@ -144,7 +144,7 @@ const galleryImages = [
     </div>
   </section>
 
-  <Footer />
+  <FooterSimple />
 </Layout>
 
 <script>

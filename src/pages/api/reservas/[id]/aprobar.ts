@@ -1,7 +1,12 @@
 import type { APIRoute } from 'astro';
 import { query } from '../../../../lib/db';
-import { actualizarCubiertosAlAprobar } from '../../../../lib/cubiertos';
-import { enviarWhatsApp, generarMensajeConfirmacion } from '../../../../lib/whatsapp';
+import { 
+    actualizarCubiertosAlAprobar, 
+    getCubiertosDisponibles,
+    verificarCubiertosSuficientes 
+} from '../../../../lib/cubiertos';
+import { openwa } from '../../../../lib/whatsapp/openwa';
+import { generarMensajeConfirmacion } from '../../../../lib/whatsapp';
 
 export const POST: APIRoute = async ({ params, request, cookies }) => {
     try {
@@ -17,11 +22,10 @@ export const POST: APIRoute = async ({ params, request, cookies }) => {
             }), { status: 401 });
         }
 
-        // Obtener datos completos de la reserva
+        // Obtener datos de la reserva
         const [reservas] = await query(
             `SELECT 
                 r.id,
-                r.numero_reserva,
                 r.sucursal_id,
                 r.nombre_cliente,
                 r.telefono,
@@ -33,17 +37,20 @@ export const POST: APIRoute = async ({ params, request, cookies }) => {
                 r.cantidad_ninos,
                 r.cubiertos_reservados,
                 r.estado,
+                r.numero_reserva,
                 s.nombre AS sucursal_nombre,
                 s.direccion,
                 s.telefono AS telefono_sucursal,
-                s.cubiertos_disponibles
+                s.capacidad_total,
+                s.cubiertos_disponibles,
+                s.cubiertos_ocupados
              FROM reservas r
              JOIN sucursales s ON r.sucursal_id = s.id
              WHERE r.id = ?`,
             [id]
         ) as any[];
 
-        const reserva = (reservas as any[])[0];
+        const reserva = Array.isArray(reservas) && reservas.length > 0 ? reservas[0] : null;
 
         if (!reserva) {
             return new Response(JSON.stringify({
@@ -52,7 +59,6 @@ export const POST: APIRoute = async ({ params, request, cookies }) => {
             }), { status: 404 });
         }
 
-        // Verificar que la reserva esté pendiente
         if (reserva.estado !== 'pendiente') {
             return new Response(JSON.stringify({
                 success: false,
@@ -60,91 +66,135 @@ export const POST: APIRoute = async ({ params, request, cookies }) => {
             }), { status: 409 });
         }
 
-        // Calcular cubiertos necesarios (Adultos + Niños)
-        const adultos = parseInt(reserva.numero_personas) || 0;
-        const ninos = parseInt(reserva.cantidad_ninos) || 0;
-        const cubiertosNecesarios = reserva.cubiertos_reservados || (adultos + ninos);
+        const cubiertosNecesarios = (parseInt(reserva.numero_personas) || 0) + (parseInt(reserva.cantidad_ninos) || 0);
 
-        // Obtener ID de usuario (admin)
-        const userIdCookie = cookies.get('user_id');
-        const adminId = userIdCookie ? parseInt(userIdCookie.value) : 1;
+        console.log(`📊 Procesando Reserva ${id}: ${reserva.nombre_cliente}`);
+        console.log(`   👥 Personas: ${reserva.numero_personas}, Niños: ${reserva.cantidad_ninos}`);
+        console.log(`   🪑 Cubiertos necesarios: ${cubiertosNecesarios}`);
 
         if (accion === 'aprobar') {
-            // Actualizar cubiertos en sucursal
-            const resultCubiertos = await actualizarCubiertosAlAprobar(
+            // 🔴 1. VALIDAR VENTANA DE 24 HORAS
+            const ahora = new Date();
+            const fechaStr = typeof reserva.fecha === 'string' ? reserva.fecha.slice(0, 10) : new Date(reserva.fecha).toISOString().slice(0, 10);
+            const horaStr = reserva.hora ? (reserva.hora.length === 5 ? `${reserva.hora}:00` : reserva.hora) : '12:00:00';
+            const fechaHoraReserva = new Date(`${fechaStr}T${horaStr}`);
+            const diferenciaMs = fechaHoraReserva.getTime() - ahora.getTime();
+            const diferenciaHoras = diferenciaMs / (1000 * 60 * 60);
+
+            if (diferenciaHoras > 24) {
+                const diasRestantes = Math.ceil(diferenciaHoras / 24);
+                return new Response(JSON.stringify({
+                    success: false,
+                    error: `⚠️ No se puede confirmar esta reserva aún. Faltan ${diasRestantes} días (${Math.round(diferenciaHoras)}h). Solo se aceptan reservas dentro de las 24 horas previas para no bloquear cubiertos con anticipación.`
+                }), { status: 400 });
+            }
+
+            // 🔴 2. VERIFICAR DISPONIBILIDAD EN TIEMPO REAL
+            const verificacion = await verificarCubiertosSuficientes(
                 reserva.sucursal_id,
                 cubiertosNecesarios
             );
 
-            if (!resultCubiertos.success) {
+            if (!verificacion.success) {
                 return new Response(JSON.stringify({
                     success: false,
-                    error: resultCubiertos.message
+                    error: verificacion.message,
+                    disponibles: verificacion.disponibles,
+                    necesarios: cubiertosNecesarios
                 }), { status: 409 });
             }
 
-            // Actualizar reserva a confirmada
+            // 🔴 3. ACTUALIZAR RESERVA A CONFIRMADA
             await query(
                 `UPDATE reservas 
                  SET estado = 'confirmada',
                      cubiertos_reservados = ?,
                      fecha_confirmacion = NOW(),
-                     mensaje_admin = ?,
-                     confirmado_por = ?
+                     mensaje_admin = ?
                  WHERE id = ?`,
-                [cubiertosNecesarios, mensaje || 'Reserva confirmada', adminId, id]
+                [cubiertosNecesarios, mensaje || 'Reserva confirmada', id]
             );
 
-            // 🔴 ENVIAR MENSAJE DE WHATSAPP AL CLIENTE
-            const mensajeWhatsApp = generarMensajeConfirmacion(reserva, cubiertosNecesarios);
-            const telefonoCliente = reserva.telefono_completo || `${reserva.codigo_pais || '591'}${reserva.telefono}`;
-            
-            // Enviar WhatsApp
-            const whatsappResult = await enviarWhatsApp(telefonoCliente, mensajeWhatsApp);
+            // 🔴 4. RECALCULAR Y ACTUALIZAR CUBIERTOS EN TIEMPO REAL
+            const stats = await getCubiertosDisponibles(reserva.sucursal_id);
 
-            // Registrar en logs de actividad
+            // 🔴 5. ENVIAR MENSAJE POR WHATSAPP CON OPENWA
+            let whatsappResult = { success: false, messageId: null as string | null, error: null as string | null };
+            const rawTel = String(reserva.telefono_completo || reserva.telefono || '').replace(/\D/g, '');
+            const telefonoCliente = rawTel.startsWith('591') || rawTel.length > 8 ? rawTel : `591${rawTel}`;
+            const mensajeWhatsApp = generarMensajeConfirmacion(reserva, cubiertosNecesarios);
+            const urlWhatsAppFallback = `https://api.whatsapp.com/send/?phone=${telefonoCliente}&text=${encodeURIComponent(mensajeWhatsApp)}&type=phone_number&app_absent=0`;
+
+            try {
+                const result = await openwa.sendMessage({
+                    to: telefonoCliente,
+                    text: mensajeWhatsApp
+                });
+                
+                whatsappResult = {
+                    success: result.success,
+                    messageId: result.messageId || null,
+                    error: result.error || null
+                };
+                
+                console.log(`📱 Mensaje WhatsApp enviado a ${telefonoCliente}:`, result);
+                
+            } catch (error: any) {
+                console.error('❌ Error enviando WhatsApp con OpenWA:', error);
+                whatsappResult = {
+                    success: false,
+                    messageId: null,
+                    error: error.message || 'Error desconocido'
+                };
+            }
+
+            // 🔴 6. REGISTRAR EN LOGS DE ACTIVIDAD
             try {
                 await query(
                     `INSERT INTO logs_actividad 
                      (usuario_id, accion, tabla_afectada, registro_id, detalles) 
-                     VALUES (?, 'RESERVA_APROBADA_Y_NOTIFICADA', 'reservas', ?, ?)`,
+                     VALUES (?, 'RESERVA_APROBADA_WHATSAPP', 'reservas', ?, ?)`,
                     [
-                        adminId,
+                        1,
                         reserva.id,
                         JSON.stringify({
                             cliente: reserva.nombre_cliente,
                             telefono: telefonoCliente,
                             cubiertos: cubiertosNecesarios,
                             whatsapp_enviado: whatsappResult.success,
+                            message_id: whatsappResult.messageId,
+                            error: whatsappResult.error,
                             fecha: reserva.fecha,
-                            hora: reserva.hora
+                            hora: reserva.hora,
+                            whatsapp_url: urlWhatsAppFallback
                         })
                     ]
                 );
             } catch (errLog) {
-                console.error('Error al registrar log de aprobación:', errLog);
+                console.error('Error al registrar log de actividad:', errLog);
             }
 
             return new Response(JSON.stringify({
                 success: true,
                 mensaje: 'Reserva aprobada exitosamente',
-                cubiertos_ocupados: cubiertosNecesarios,
-                cubiertos_disponibles: reserva.cubiertos_disponibles - cubiertosNecesarios,
+                cubiertos: {
+                    ocupados: stats.ocupados,
+                    disponibles: stats.disponibles,
+                    total: stats.total
+                },
                 whatsapp: whatsappResult,
-                whatsapp_enviado: whatsappResult.success,
-                url_whatsapp: whatsappResult.url || whatsappResult.url_whatsapp
+                whatsapp_url: urlWhatsAppFallback,
+                telefono: telefonoCliente
             }));
 
         } else if (accion === 'rechazar') {
-            // Rechazar reserva (no ocupa cubiertos)
             await query(
                 `UPDATE reservas 
                  SET estado = 'rechazada',
                      mensaje_admin = ?,
-                     fecha_rechazo = NOW(),
-                     confirmado_por = ?
+                     fecha_rechazo = NOW()
                  WHERE id = ?`,
-                [mensaje || 'No hay disponibilidad', adminId, id]
+                [mensaje || 'No hay disponibilidad', id]
             );
 
             return new Response(JSON.stringify({

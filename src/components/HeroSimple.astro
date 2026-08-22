@@ -1,5 +1,6 @@
 ---
-// Hero section con imagen full-bleed, overlay oscuro y CTA WhatsApp
+// src/components/HeroSimple.astro
+// Hero con video YouTube como fondo + overlay oscuro + texto serif premium
 const whatsappNumber = "59178555886";
 const whatsappMessage = encodeURIComponent(
   "Hola! Me gustaría hacer una reserva en Brasargent",
@@ -8,112 +9,387 @@ const whatsappMessage = encodeURIComponent(
 
 <section
   id="inicio"
-  class="relative h-[90vh] min-h-[600px] flex items-center justify-center overflow-hidden"
+  class="hero-luxury-section"
 >
-  <!-- Video de fondo de YouTube -->
-  <div class="absolute inset-0 z-0">
-    <!-- YouTube iframe como fondo -->
+  <!-- Video de fondo YouTube -->
+  <div class="hero-video-bg">
     <iframe
-      class="absolute top-1/2 left-1/2 w-[300%] h-[300%] -translate-x-1/2 -translate-y-1/2 pointer-events-none"
+      class="hero-iframe"
       src="https://www.youtube.com/embed/jsaMCU7iHkw?autoplay=1&mute=1&loop=1&playlist=jsaMCU7iHkw&controls=0&showinfo=0&rel=0&iv_load_policy=3&enablejsapi=1"
       title="Brasargent Background"
       frameborder="0"
-      allow="autoplay; encrypted-media"></iframe>
-    <!-- Overlay oscuro para mejorar legibilidad del texto -->
-    <div
-      class="absolute inset-0 bg-gradient-to-b from-black/60 via-black/50 to-black/70"
-    >
-    </div>
+      allow="autoplay; encrypted-media"
+    ></iframe>
+    <!-- Overlay con gradiente oscuro elegante -->
+    <div class="hero-overlay"></div>
+    <!-- Overlay inferior más oscuro para legibilidad del texto -->
+    <div class="hero-overlay-bottom"></div>
   </div>
 
-  <!-- Contenido centrado -->
-  <div class="relative z-10 text-center px-4 sm:px-6 lg:px-8 max-w-4xl mx-auto">
-    <div
-      id="hero-cta-container"
-      class="transition-all duration-700 ease-out"
-      data-aos="fade-up"
-      data-aos-delay="300"
-    >
+  <!-- Contenido -->
+  <div class="hero-content-luxury" id="hero-cta-container">
+
+    
+
+    <!-- Título principal -->
+    
+
+    <!-- Divider dorado -->
+    <div class="hero-divider">
+      <div class="hero-divider-line"></div>
+      <span class="hero-divider-icon">✦</span>
+      <div class="hero-divider-line"></div>
+    </div>
+
+    
+
+    <!-- CTA Buttons -->
+    <div class="hero-cta-group" data-aos="fade-up" data-aos-delay="300">
       <a
         href="/sucursales"
         id="hero-reserve-btn"
-        class="inline-block bg-[#9e2a2b] text-white px-12 py-6 rounded-lg font-bold text-2xl hover:bg-[#8a2426] hover:shadow-2xl hover:shadow-[#9e2a2b]/60 transition-all duration-300 hover:scale-105 border-2 border-[#9e2a2b] hover:border-[#fa69695e] heartbeat-btn"
+        class="hero-btn-primary"
       >
+        <span class="hero-btn-shimmer"></span>
+        <svg class="hero-btn-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+          <line x1="16" y1="2" x2="16" y2="6"/>
+          <line x1="8" y1="2" x2="8" y2="6"/>
+          <line x1="3" y1="10" x2="21" y2="10"/>
+        </svg>
         Reservar Mesa
       </a>
+      <a
+        href={`https://wa.me/${whatsappNumber}?text=${whatsappMessage}`}
+        target="_blank"
+        rel="noopener noreferrer"
+        class="hero-btn-secondary"
+      >
+        <img src="/img/iconos/wp.png" alt="WhatsApp" width="20" height="20" />
+        WhatsApp
+      </a>
     </div>
+
+    <!-- Stats row -->
+    
   </div>
 
-  <script>
-    // Animación del botón Reservar Mesa
-    window.addEventListener("scroll", () => {
-      const heroBtn = document.getElementById("hero-reserve-btn");
-      const heroCont = document.getElementById("hero-cta-container");
-      const navbarBtn = document.querySelector('nav a[href="/#contacto"]');
-
-      if (!heroBtn || !heroCont || !navbarBtn) return;
-
-      const scrollY = window.scrollY;
-      const threshold = 200; // Píxeles de scroll para activar la animación
-
-      if (scrollY > threshold) {
-        // Ocultar botón del hero con fade out y scale
-        heroCont.style.opacity = "0";
-        heroCont.style.transform = "translateY(-50px) scale(0.8)";
-        heroCont.style.pointerEvents = "none";
-      } else {
-        // Mostrar botón del hero
-        heroCont.style.opacity = "1";
-        heroCont.style.transform = "translateY(0) scale(1)";
-        heroCont.style.pointerEvents = "auto";
-      }
-    });
-  </script>
-
-  <!-- Indicador de scroll -->
-  <div class="absolute bottom-8 left-1/2 -translate-x-1/2 z-10 animate-bounce">
-    <svg
-      class="w-6 h-6 text-white/60"
-      fill="none"
-      stroke="currentColor"
-      viewBox="0 0 24 24"
-    >
-      <path
-        stroke-linecap="round"
-        stroke-linejoin="round"
-        stroke-width="2"
-        d="M19 14l-7 7m0 0l-7-7m7 7V3"></path>
-    </svg>
-  </div>
+ 
 </section>
 
+
+
 <style>
-  @keyframes heartbeat {
-    0% {
-      transform: scale(1);
-    }
-    14% {
-      transform: scale(1.1);
-    }
-    28% {
-      transform: scale(1);
-    }
-    42% {
-      transform: scale(1.15);
-    }
-    70% {
-      transform: scale(1);
-    }
-  }
+/* ============================================
+   HERO SECTION — PREMIUM LUXURY
+   ============================================ */
+.hero-luxury-section {
+  position: relative;
+  height: 100vh;
+  min-height: 640px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
 
-  .heartbeat-btn {
-    animation: heartbeat 2s ease-in-out infinite;
-    will-change: transform;
-  }
+/* Video Background */
+.hero-video-bg {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+}
 
-  /* Asegurar que el hover gane sobre la animación */
-  .heartbeat-btn:hover {
-    animation: none;
-    transform: scale(1.05);
+.hero-iframe {
+  position: absolute;
+  top: 50%; left: 50%;
+  width: 300%;
+  height: 300%;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+}
+
+.hero-overlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    135deg,
+    rgba(26, 26, 26, 0.75) 0%,
+    rgba(26, 26, 26, 0.50) 50%,
+    rgba(26, 26, 26, 0.65) 100%
+  );
+}
+
+.hero-overlay-bottom {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 40%;
+  background: linear-gradient(to top, rgba(26, 26, 26, 0.7), transparent);
+}
+
+/* Contenido */
+.hero-content-luxury {
+  position: relative;
+  z-index: 2;
+  text-align: center;
+  padding: 0 24px;
+  max-width: 860px;
+  margin: 0 auto;
+  transition: all 0.7s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+
+/* Badge */
+.hero-badge-row {
+  margin-bottom: 20px;
+}
+
+.hero-badge-luxury {
+  display: inline-block;
+  font-family: 'Montserrat', sans-serif;
+  font-size: 0.7rem;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 3px;
+  color: #C9A87C;
+  background: rgba(201, 168, 124, 0.1);
+  border: 1px solid rgba(201, 168, 124, 0.2);
+  padding: 8px 24px;
+  border-radius: 50px;
+  backdrop-filter: blur(4px);
+}
+
+/* Título */
+.hero-title-luxury {
+  font-family: 'Playfair Display', serif;
+  font-size: clamp(2.4rem, 6vw, 4.8rem);
+  font-weight: 800;
+  color: #FFFFFF;
+  line-height: 1.08;
+  letter-spacing: -0.02em;
+  margin-bottom: 20px;
+  text-shadow: 0 4px 20px rgba(0,0,0,0.3);
+}
+
+.hero-title-accent {
+  color: #C9A87C;
+  font-style: italic;
+}
+
+/* Divider */
+.hero-divider {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  margin: 20px auto;
+  max-width: 280px;
+}
+.hero-divider-line {
+  flex: 1;
+  height: 1px;
+  background: rgba(201, 168, 124, 0.4);
+}
+.hero-divider-icon {
+  color: #C9A87C;
+  font-size: 0.8rem;
+}
+
+/* Subtítulo */
+.hero-subtitle-luxury {
+  font-family: 'Inter', sans-serif;
+  font-size: clamp(0.9rem, 2vw, 1.1rem);
+  font-weight: 300;
+  color: rgba(255, 255, 255, 0.65);
+  line-height: 1.8;
+  margin-bottom: 32px;
+  max-width: 560px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+/* CTA Buttons */
+.hero-cta-group {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  margin-bottom: 40px;
+  flex-wrap: wrap;
+}
+
+.hero-btn-primary {
+  position: relative;
+  overflow: hidden;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  background: #8B1A1A;
+  color: #fffaf0;
+  padding: 16px 36px;
+  border-radius: 50px;
+  font-family: 'Montserrat', sans-serif;
+  font-size: 0.9rem;
+  font-weight: 600;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  text-decoration: none;
+  transition: all 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  box-shadow: 0 8px 32px rgba(139, 26, 26, 0.4);
+  animation: heroHeartbeat 2.5s ease-in-out infinite;
+}
+.hero-btn-primary:hover {
+  animation: none;
+  background: #C9A87C;
+  color: #1A1A1A;
+  transform: translateY(-4px) scale(1.03);
+  box-shadow: 0 16px 48px rgba(201, 168, 124, 0.4);
+}
+.hero-btn-shimmer {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.12), transparent);
+  transform: translateX(-100%);
+  transition: transform 0.8s ease;
+}
+.hero-btn-primary:hover .hero-btn-shimmer { transform: translateX(100%); }
+.hero-btn-icon { flex-shrink: 0; }
+
+.hero-btn-secondary {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  background: transparent;
+  color: rgba(255,255,255,0.85);
+  padding: 16px 32px;
+  border-radius: 50px;
+  font-family: 'Montserrat', sans-serif;
+  font-size: 0.9rem;
+  font-weight: 500;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  text-decoration: none;
+  border: 1.5px solid rgba(255,255,255,0.25);
+  transition: all 0.4s ease;
+  backdrop-filter: blur(4px);
+}
+.hero-btn-secondary:hover {
+  border-color: #C9A87C;
+  color: #C9A87C;
+  transform: translateY(-3px);
+  background: rgba(201, 168, 124, 0.05);
+}
+.hero-btn-secondary img { filter: brightness(1.1); }
+
+/* Stats Row */
+.hero-stats-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+
+.hero-stat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.hero-stat-number {
+  font-family: 'Playfair Display', serif;
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #C9A87C;
+  line-height: 1.1;
+}
+
+.hero-stat-label {
+  font-family: 'Montserrat', sans-serif;
+  font-size: 0.6rem;
+  font-weight: 500;
+  color: rgba(255,255,255,0.4);
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  margin-top: 3px;
+}
+
+.hero-stat-divider {
+  font-size: 1.5rem;
+  color: rgba(201, 168, 124, 0.3);
+  line-height: 1;
+}
+
+/* Scroll Indicator */
+.hero-scroll-indicator {
+  position: absolute;
+  bottom: 32px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  animation: scrollBounce 2s ease-in-out infinite;
+}
+
+.hero-scroll-mouse {
+  width: 22px; height: 34px;
+  border: 1.5px solid rgba(255,255,255,0.3);
+  border-radius: 11px;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding-top: 5px;
+}
+
+.hero-scroll-wheel {
+  width: 4px; height: 8px;
+  background: rgba(201, 168, 124, 0.7);
+  border-radius: 2px;
+  animation: scrollWheel 2s ease-in-out infinite;
+}
+
+.hero-scroll-text {
+  font-family: 'Montserrat', sans-serif;
+  font-size: 0.55rem;
+  font-weight: 500;
+  color: rgba(255,255,255,0.3);
+  text-transform: uppercase;
+  letter-spacing: 2px;
+}
+
+/* Animaciones */
+@keyframes heroHeartbeat {
+  0%   { transform: scale(1); box-shadow: 0 8px 32px rgba(139,26,26,0.4); }
+  14%  { transform: scale(1.04); }
+  28%  { transform: scale(1); }
+  42%  { transform: scale(1.06); box-shadow: 0 12px 40px rgba(139,26,26,0.5); }
+  70%  { transform: scale(1); box-shadow: 0 8px 32px rgba(139,26,26,0.4); }
+  100% { transform: scale(1); }
+}
+
+@keyframes scrollBounce {
+  0%, 100% { transform: translateX(-50%) translateY(0); }
+  50%       { transform: translateX(-50%) translateY(6px); }
+}
+
+@keyframes scrollWheel {
+  0%   { opacity: 1; transform: translateY(0); }
+  100% { opacity: 0; transform: translateY(10px); }
+}
+
+/* Responsive */
+@media (max-width: 640px) {
+  .hero-title-luxury { font-size: 2.2rem; }
+  .hero-cta-group { flex-direction: column; gap: 12px; }
+  .hero-btn-primary, .hero-btn-secondary {
+    width: 100%;
+    max-width: 280px;
+    justify-content: center;
   }
+  .hero-stats-row { gap: 12px; }
+}
 </style>

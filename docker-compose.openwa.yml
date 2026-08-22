@@ -1,0 +1,27 @@
+version: '3.8'
+
+services:
+  openwa:
+    image: rmyndharis/openwa:latest
+    container_name: brasargent-whatsapp
+    restart: unless-stopped
+    ports:
+      - "2785:2785"
+    environment:
+      - NODE_ENV=production
+      - DATABASE_URL=sqlite:./data/openwa.db
+      - STORAGE_TYPE=local
+      - STORAGE_LOCAL_PATH=./data/media
+      - CACHE_TYPE=memory
+      - WEBHOOK_URL=http://host.docker.internal:4321/api/webhooks/whatsapp
+      - WEBHOOK_EVENTS=message.ack,message.received
+      - API_KEY=${OPENWA_API_KEY}
+      - ADMIN_KEY=${OPENWA_ADMIN_KEY}
+    volumes:
+      - ./openwa-data:/app/data
+    networks:
+      - brasargent-network
+
+networks:
+  brasargent-network:
+    driver: bridge

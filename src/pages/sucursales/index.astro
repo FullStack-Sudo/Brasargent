@@ -1,0 +1,45 @@
+---
+// src/pages/sucursales/index.astro
+// Página de Sucursales con Modal de Términos y Condiciones Obligatorio
+import Minimal from "../../layouts/Minimal.astro";
+import NavbarSimple from "../../components/NavbarSimple.astro";
+import SucursalesSection from "../../components/SucursalesSection.astro";
+import FooterSimple from "../../components/FooterSimple.astro";
+import FloatCTA from "../../components/FloatCTA.astro";
+import TerminosModal from "../../components/TerminosModal.astro";
+---
+
+<Minimal
+  title="Sucursales - Brasargent | Encuentra tu restaurante más cercano"
+  description="Descubre todas nuestras sucursales de Brasargent en Santa Cruz. Rodizio, Churrasqueria y Express. Encuentra la ubicación más cercana a ti."
+>
+  <!-- 🔴 Modal de Términos y Condiciones -->
+  <TerminosModal />
+
+  <!-- Navbar fija -->
+  <NavbarSimple />
+
+  <!-- 🔴 Sección de Sucursales (inicia bloqueada hasta aceptar los términos) -->
+  <div id="sucursalesContent" class="sucursales-page-wrapper blocked">
+    <SucursalesSection />
+  </div>
+
+  <!-- Footer -->
+  <FooterSimple />
+
+  <!-- Botón flotante de WhatsApp -->
+  <FloatCTA />
+</Minimal>
+
+<style>
+  .sucursales-page-wrapper {
+    transition: filter 0.4s ease, opacity 0.4s ease;
+  }
+
+  .sucursales-page-wrapper.blocked {
+    filter: blur(6px);
+    pointer-events: none;
+    user-select: none;
+    opacity: 0.2;
+  }
+</style>

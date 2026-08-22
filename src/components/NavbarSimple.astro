@@ -1,426 +1,643 @@
 ---
-// Navbar Dinámico y Menú Premium
+// src/components/NavbarSimple.astro
+// Navbar Premium — Transparente al inicio → Blanco glassmorphism al scroll
 const whatsappNumber = "59178555886";
 const whatsappMessage = encodeURIComponent(
   "Hola! Me gustaría hacer una reserva en Brasargent Rodizio"
 );
-const whatsappUrl = `https://wa.me/${whatsappNumber}?text=${whatsappMessage}`;
 ---
 
-<nav id="navbar" class="fixed top-0 left-0 right-0 z-50 transition-all duration-300 ease-in-out bg-[#1a1a1a] border-b border-[#fffaf0]/10">
-  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-    <div class="flex justify-between items-center h-16 md:h-20">
-      
-      <!-- Logo -->
-      <a href="/" class="flex items-center group relative z-[60]">
-        <img
-          src="/img/logo/LOGO1SF.png"
-          alt="Brasargent Rodizio Logo"
-          class="h-12 w-auto object-contain transition-transform duration-300 group-hover:scale-105"
-        />
+<nav id="navbar" class="navbar-luxury-fixed">
+  <div class="navbar-inner">
+
+    <!-- Logo Oficial (blanca.png arriba -> negro.png al scroll) -->
+    <a href="/" class="navbar-logo-luxury" aria-label="Brasargent - Inicio">
+      <img
+        src="/img/logo/blanca.png"
+        alt="Brasargent Rodizio Logo"
+        class="navbar-logo-img"
+        id="navbar-logo-img"
+      />
+    </a>
+
+    <!-- Desktop Menu -->
+    <div class="navbar-links-luxury hidden md:flex">
+      <a href="/#inicio"      class="nav-link-luxury">Inicio</a>
+      <a href="/#menu"        class="nav-link-luxury">Nuestros Platos</a>
+      <a href="/#testimonios" class="nav-link-luxury">Testimonios</a>
+      <a href="/sucursales"   class="nav-link-luxury nav-link-new">
+        Sucursales
+        <span class="nav-new-badge">NEW</span>
       </a>
 
-      <!-- Desktop Menu -->
-      <div class="hidden md:flex items-center gap-8 z-[60]">
-        <a href="/#inicio" class="nav-link text-[#fffaf0]/80 hover:text-[#d4af37] transition-colors text-sm font-medium">Inicio</a>
-        <a href="/#menu" class="nav-link text-[#fffaf0]/80 hover:text-[#d4af37] transition-colors text-sm font-medium">Nuestros Platos</a>
-        <a href="/#testimonios" class="nav-link text-[#fffaf0]/80 hover:text-[#d4af37] transition-colors text-sm font-medium">Testimonios</a>
-        <a href="/sucursales" class="nav-link text-[#fffaf0]/80 hover:text-[#d4af37] transition-colors text-sm font-medium relative">
-          Sucursales
-          <span class="absolute -top-2 -right-6 text-[9px] font-bold bg-[#9e2a2b] hover:text-black transition-colors duration-300 hover:bg-[#d4af37]  text-white px-1.5 py-0.5 rounded-full animate-pulse-badge">
-            NEW
-          </span>
+      <div class="navbar-cta-group">
+        <a href="/admin/login" class="nav-link-luxury nav-link-admin">
+          Iniciar Sesión
         </a>
-        
-        <div class="flex items-center gap-4 pl-4 border-l border-[#fffaf0]/20 nav-divider transition-colors duration-300">
-          <a href="/admin/login" class="nav-link text-[#fffaf0] hover:text-[#d4af37] hover:text-[#d4af37] transition-colors font-semibold text-sm tracking-wide">
-            INICIAR SESIÓN
-          </a>
-          <a id="btnReservar" 
-             href="/sucursales" 
-             class="bg-[#9e2a2b] hover:text-black transition-colors duration-300 hover:bg-[#d4af37]  text-[#fffaf0] px-5 py-2 rounded-full text-sm font-semibold transition-all hover:scale-105 shadow-lg shadow-[#9e2a2b]/25">
-            Reservar
-          </a>
-        </div>
+        <a href="/sucursales" class="btn-nav-reservar">
+          <span class="btn-shimmer"></span>
+          Reservar
+        </a>
       </div>
-
-      <!-- Mobile Menu Button -->
-      <button id="hamburgerBtn" class="md:hidden relative w-10 h-10 flex items-center justify-center rounded-lg hover:bg-[#fffaf0]/10 transition-colors group z-[60]" aria-label="Toggle menu" aria-expanded="false">
-        <div class="relative w-6 h-5">
-          <span id="line1" class="absolute top-0 left-0 w-full h-0.5 bg-[#fffaf0] transition-all duration-300"></span>
-          <span id="line2" class="absolute top-2 left-0 w-full h-0.5 bg-[#fffaf0] transition-all duration-300"></span>
-          <span id="line3" class="absolute top-4 left-0 w-full h-0.5 bg-[#fffaf0] transition-all duration-300"></span>
-        </div>
-      </button>
-
     </div>
-  </div>
 
-  <!-- MENU FULLSCREEN PREMIUM -->
-  <div id="mobileMenu" 
-       class="md:hidden fixed inset-0 z-50 
-              bg-[#1a1a1a]/98 backdrop-blur-[20px]
-              opacity-0 pointer-events-none
-              transition-all duration-500 ease-[cubic-bezier(0.4,0,0.2,1)]
-              overflow-hidden">
-    
-    <div class="flex flex-col items-center justify-center w-full h-full px-6 py-8 relative">
-      
-      
-      <!-- Enlaces principales -->
-      <div class="flex flex-col items-center gap-6 md:gap-8 max-w-2xl w-full mt-10">
-        <a href="/#inicio" class="menu-link group flex items-center gap-3 text-4xl md:text-5xl lg:text-6xl font-serif text-[#fffaf0]/80 hover:text-[#fffaf0] transition-all duration-300 hover:translate-x-3">
-          <span class="text-2xl group-hover:rotate-12 transition-transform duration-300"></span>
-          <span class="relative">
-            Inicio
-            <span class="absolute -bottom-2 left-0 w-0 h-0.5 bg-gradient-to-r from-[#9e2a2b] to-[#d4af37] transition-all duration-300 group-hover:w-full"></span>
-          </span>
-        </a>
-        
-        <a href="/#menu" class="menu-link group flex items-center gap-3 text-4xl md:text-5xl lg:text-6xl font-serif text-[#fffaf0]/80 hover:text-[#fffaf0] transition-all duration-300 hover:translate-x-3">
-          <span class="text-2xl group-hover:rotate-12 transition-transform duration-300"></span>
-          <span class="relative">
-            Nuestros Platos
-            <span class="absolute -bottom-2 left-0 w-0 h-0.5 bg-gradient-to-r from-[#9e2a2b] to-[#d4af37] transition-all duration-300 group-hover:w-full"></span>
-          </span>
-        </a>
-        
-        <a href="/#testimonios" class="menu-link group flex items-center gap-3 text-4xl md:text-5xl lg:text-6xl font-serif text-[#fffaf0]/80 hover:text-[#fffaf0] transition-all duration-300 hover:translate-x-3">
-          <span class="text-2xl group-hover:rotate-12 transition-transform duration-300"></span>
-          <span class="relative">
-            Testimonios
-            <span class="absolute -bottom-2 left-0 w-0 h-0.5 bg-gradient-to-r from-[#9e2a2b] to-[#d4af37] transition-all duration-300 group-hover:w-full"></span>
-          </span>
-        </a>
-        
-        <a href="/sucursales" class="menu-link group flex items-center gap-3 text-4xl md:text-5xl lg:text-6xl font-serif text-[#fffaf0]/80 hover:text-[#fffaf0] transition-all duration-300 hover:translate-x-3">
-          <span class="text-2xl group-hover:rotate-12 transition-transform duration-300"></span>
-          <span class="relative flex items-center gap-3">
-            Sucursales
-            <span class="text-xs bg-gradient-to-r from-[#9e2a2b] to-[#d4af37] text-white px-3 py-1 rounded-full animate-pulse-badge shadow-lg shadow-[#9e2a2b]/30">
-              🔥 NEW
-            </span>
-          </span>
-        </a>
-        
-        <a href="/#contacto" class="menu-link group flex items-center gap-3 text-4xl md:text-5xl lg:text-6xl font-serif text-[#fffaf0]/80 hover:text-[#fffaf0] transition-all duration-300 hover:translate-x-3">
-          <span class="text-2xl group-hover:rotate-12 transition-transform duration-300"></span>
-          <span class="relative">
-            Contacto
-            <span class="absolute -bottom-2 left-0 w-0 h-0.5 bg-gradient-to-r from-[#9e2a2b] to-[#d4af37] transition-all duration-300 group-hover:w-full"></span>
-          </span>
-        </a>
-        
-        <a href="/admin/login" class="menu-link group flex items-center gap-3 text-4xl md:text-5xl lg:text-6xl font-serif text-[#fffaf0]/80 hover:text-[#fffaf0] transition-all duration-300 hover:translate-x-3">
-          <span class="text-2xl group-hover:rotate-12 transition-transform duration-300"></span>
-          <span class="relative">
-            Iniciar Sesión
-            <span class="absolute -bottom-2 left-0 w-0 h-0.5 bg-gradient-to-r from-[#9e2a2b] to-[#d4af37] transition-all duration-300 group-hover:w-full"></span>
-          </span>
-        </a>
+    <!-- Mobile Hamburger -->
+    <button id="hamburgerBtn"
+      class="hamburger-luxury md:hidden"
+      aria-label="Toggle menu"
+      aria-expanded="false"
+    >
+      <div class="hamburger-lines">
+        <span id="line1"></span>
+        <span id="line2"></span>
+        <span id="line3"></span>
       </div>
-      
-      <!-- Divisor elegante -->
-      <div class="flex items-center gap-4 my-8 w-64">
-        <div class="flex-1 h-px bg-gradient-to-r from-transparent via-[#d4af37]/50 to-transparent"></div>
-        <span class="text-[#d4af37]/60 text-sm">✦</span>
-        <div class="flex-1 h-px bg-gradient-to-r from-transparent via-[#d4af37]/50 to-transparent"></div>
-      </div>
-      
-      <!-- CTA Reservar -->
-      <a href="/sucursales"
-         class="group w-full max-w-sm relative overflow-hidden bg-gradient-to-r from-[#9e2a2b] to-[#8a2426] text-[#fffaf0] text-center py-4 px-6 rounded-xl font-semibold text-lg transition-all duration-300 hover:scale-105 shadow-lg shadow-[#9e2a2b]/30">
-        
-        <!-- Efecto Shimmer -->
-        <span class="absolute inset-0 w-full h-full bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></span>
-        
-        📅 Reservar
-      </a>
-      
-      <!-- Redes Sociales -->
-      <div class="flex gap-8 mt-8">
-        <a href="https://facebook.com/brasargent" target="_blank" rel="noopener noreferrer" class="text-[#fffaf0]/40 hover:text-[#fffaf0] transition-all duration-300 hover:scale-110 hover:rotate-6" aria-label="Facebook">
-          <svg class="w-8 h-8" fill="currentColor" viewBox="0 0 24 24">
-            <path d="M22 12c0-5.523-4.477-10-10-10S2 6.477 2 12c0 4.991 3.657 9.128 8.438 9.878v-6.99h-2.54V12h2.54V9.797c0-2.506 1.492-3.89 3.777-3.89 1.094 0 2.238.195 2.238.195v2.46h-1.26c-1.243 0-1.63.771-1.63 1.562V12h2.773l-.443 2.89h-2.33v6.988C18.343 21.128 22 16.991 22 12z"/>
-          </svg>
-        </a>
-        <a href="https://instagram.com/brasargent" target="_blank" rel="noopener noreferrer" class="text-[#fffaf0]/40 hover:text-[#fffaf0] transition-all duration-300 hover:scale-110 hover:-rotate-6" aria-label="Instagram">
-          <svg class="w-8 h-8" fill="currentColor" viewBox="0 0 24 24">
-            <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 100 12.324 6.162 6.162 0 000-12.324zM12 16a4 4 0 110-8 4 4 0 010 8zm6.406-11.845a1.44 1.44 0 100 2.881 1.44 1.44 0 000-2.881z"/>
-          </svg>
-        </a>
-      </div>
-      
-      <!-- Copyright -->
-      <p class="text-[#fffaf0]/20 text-xs mt-8 tracking-wider">© 2026 BRASARGENT - Todos los derechos reservados</p>
-    </div>
+    </button>
   </div>
 </nav>
 
-<script>
-  document.addEventListener('DOMContentLoaded', () => {
-    // =========================================
-    // 1. SCROLL DETECTION - NAVBAR DINÁMICO
-    // =========================================
-    const navbar = document.getElementById('navbar');
-    const navLinks = document.querySelectorAll('.nav-link');
-    const navDivider = document.querySelector('.nav-divider');
-    const btnReservar = document.getElementById('btnReservar');
-    const hamburgerBtn = document.getElementById('hamburgerBtn');
-    
-    if (!navbar || !hamburgerBtn) return;
+<!-- Mobile Menu Fullscreen -->
+<div id="mobileMenu" class="mobile-menu-overlay">
+  <div class="mobile-menu-inner">
 
-    const lines = [
-      document.getElementById('line1'),
-      document.getElementById('line2'),
-      document.getElementById('line3')
-    ];
-    
-    const SCROLL_THRESHOLD = 50;
-    let isScrolled = false;
+    <!-- Links principales -->
+    <nav class="mobile-nav-links">
+      <a href="/#inicio"      class="menu-link mobile-nav-item">Inicio</a>
+      <a href="/#menu"        class="menu-link mobile-nav-item">Nuestros Platos</a>
+      <a href="/#testimonios" class="menu-link mobile-nav-item">Testimonios</a>
+      <a href="/sucursales"   class="menu-link mobile-nav-item">
+        Sucursales
+        <span class="mobile-badge-new">🔥 NEW</span>
+      </a>
+      <a href="/#contacto"    class="menu-link mobile-nav-item">Contacto</a>
+      <a href="/admin/login"  class="menu-link mobile-nav-item">Iniciar Sesión</a>
+    </nav>
 
-    window.addEventListener('scroll', () => {
-      const scrollY = window.scrollY;
-      
-      if (scrollY > SCROLL_THRESHOLD && !isScrolled) {
-        // Cambiar a modo "scroll" (fondo claro)
-        isScrolled = true;
-        navbar.classList.remove('bg-[#1a1a1a]', 'border-[#fffaf0]/10');
-        navbar.classList.add('bg-[#fffaf0]', 'shadow-lg', 'shadow-black/10', 'border-[#1a1a1a]/10');
-        
-        
-        
-        // Links oscuros
-        navLinks.forEach(link => {
-          link.classList.remove('text-[#fffaf0]/80', 'hover:text-[#fffaf0]', 'text-[#fffaf0]');
-          link.classList.add('text-[#1a1a1a]/70', 'hover:text-[#1a1a1a]');
-        });
+    <!-- Divider -->
+    <div class="mobile-divider">
+      <div class="mobile-divider-line"></div>
+      <span class="mobile-divider-icon">✦</span>
+      <div class="mobile-divider-line"></div>
+    </div>
 
-        // Divisor oscuro
-        if (navDivider) {
-          navDivider.classList.remove('border-[#fffaf0]/20');
-          navDivider.classList.add('border-[#1a1a1a]/20');
-        }
-        
-        // Botón reservar oscuro
-        if (btnReservar) {
-          btnReservar.classList.remove('bg-[#9e2a2b]', 'shadow-[#9e2a2b]/25');
-          btnReservar.classList.add('bg-[#1a1a1a]', 'shadow-[#1a1a1a]/25');
-        }
-        
-        // Líneas hamburguesa oscuras (solo si menú cerrado)
-        if (!menu.isOpen) {
-          lines.forEach(line => {
-            if (line) {
-              line.classList.remove('bg-[#fffaf0]');
-              line.classList.add('bg-[#1a1a1a]');
-            }
-          });
-        }
-        
-      } else if (scrollY <= SCROLL_THRESHOLD && isScrolled) {
-        // Volver a modo "inicial" (fondo oscuro)
-        isScrolled = false;
-        navbar.classList.remove('bg-[#fffaf0]', 'shadow-lg', 'shadow-black/10', 'border-[#1a1a1a]/10');
-        navbar.classList.add('bg-[#1a1a1a]', 'border-[#fffaf0]/10');
-        
-        
-        
-        // Links claros
-        navLinks.forEach(link => {
-          link.classList.remove('text-[#1a1a1a]/70', 'hover:text-[#1a1a1a]');
-          if (link.textContent?.includes('SESIÓN')) {
-             link.classList.add('text-[#fffaf0]', 'hover:text-[#d4af37]');
-          } else {
-             link.classList.add('text-[#fffaf0]/80', 'hover:text-[#fffaf0]');
-          }
-        });
+    <!-- CTA Reservar -->
+    <a href="/sucursales" class="mobile-btn-reservar">
+      <span class="mobile-btn-shimmer"></span>
+      📅 Reservar Mesa
+    </a>
 
-        // Divisor claro
-        if (navDivider) {
-          navDivider.classList.remove('border-[#1a1a1a]/20');
-          navDivider.classList.add('border-[#fffaf0]/20');
-        }
-        
-        // Botón reservar terracota
-        if (btnReservar) {
-          btnReservar.classList.remove('bg-[#1a1a1a]', 'shadow-[#1a1a1a]/25');
-          btnReservar.classList.add('bg-[#9e2a2b]', 'shadow-[#9e2a2b]/25');
-        }
-        
-        // Líneas hamburguesa claras (solo si menú cerrado)
-        if (!menu.isOpen) {
-          lines.forEach(line => {
-            if (line) {
-              line.classList.remove('bg-[#1a1a1a]');
-              line.classList.add('bg-[#fffaf0]');
-            }
-          });
-        }
-      }
-    });
+    <!-- Redes Sociales -->
+    <div class="mobile-social-links">
+      <a href="https://facebook.com/brasargent" target="_blank" rel="noopener noreferrer"
+         class="mobile-social-icon" aria-label="Facebook">
+        <svg class="w-7 h-7" fill="currentColor" viewBox="0 0 24 24">
+          <path d="M22 12c0-5.523-4.477-10-10-10S2 6.477 2 12c0 4.991 3.657 9.128 8.438 9.878v-6.99h-2.54V12h2.54V9.797c0-2.506 1.492-3.89 3.777-3.89 1.094 0 2.238.195 2.238.195v2.46h-1.26c-1.243 0-1.63.771-1.63 1.562V12h2.773l-.443 2.89h-2.33v6.988C18.343 21.128 22 16.991 22 12z"/>
+        </svg>
+      </a>
+      <a href="https://instagram.com/brasargent" target="_blank" rel="noopener noreferrer"
+         class="mobile-social-icon" aria-label="Instagram">
+        <svg class="w-7 h-7" fill="currentColor" viewBox="0 0 24 24">
+          <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/>
+        </svg>
+      </a>
+    </div>
 
-    // =========================================
-    // 2. MENÚ HAMBURGUESA FULLSCREEN
-    // =========================================
-    const mobileMenu = document.getElementById('mobileMenu');
-    const menuLinks = document.querySelectorAll('.menu-link');
-    
-    if (!mobileMenu) return;
-
-    const menu = {
-      isOpen: false,
-      
-      toggle() {
-        this.isOpen ? this.close() : this.open();
-      },
-      
-      open() {
-        this.isOpen = true;
-        hamburgerBtn.setAttribute('aria-expanded', 'true');
-        mobileMenu.classList.remove('opacity-0', 'pointer-events-none');
-        mobileMenu.classList.add('opacity-100', 'pointer-events-auto');
-        document.body.style.overflow = 'hidden';
-        
-        // Transformar hamburguesa a X
-        if (lines[0] && lines[1] && lines[2]) {
-          lines[0].style.transform = 'rotate(45deg)';
-          lines[0].style.top = '8px';
-          lines[1].style.opacity = '0';
-          lines[2].style.transform = 'rotate(-45deg)';
-          lines[2].style.top = '8px';
-        }
-        
-        // Forzar color crema en líneas cuando menú abierto
-        lines.forEach(line => {
-          if (line) {
-            line.classList.remove('bg-[#1a1a1a]', 'bg-[#fffaf0]');
-            line.classList.add('bg-[#fffaf0]');
-          }
-        });
-        
-        // Stagger animation para enlaces
-        menuLinks.forEach((link, i) => {
-          (link as HTMLElement).style.transitionDelay = `${i * 80 + 100}ms`;
-          (link as HTMLElement).style.transform = 'translateX(0) scale(1)';
-          (link as HTMLElement).style.opacity = '1';
-        });
-      },
-      
-      close() {
-        this.isOpen = false;
-        hamburgerBtn.setAttribute('aria-expanded', 'false');
-        mobileMenu.classList.remove('opacity-100', 'pointer-events-auto');
-        mobileMenu.classList.add('opacity-0', 'pointer-events-none');
-        document.body.style.overflow = '';
-        
-        // Resetear hamburguesa a líneas
-        if (lines[0] && lines[1] && lines[2]) {
-          lines[0].style.transform = 'rotate(0deg)';
-          lines[0].style.top = '0px';
-          lines[1].style.opacity = '1';
-          lines[2].style.transform = 'rotate(0deg)';
-          lines[2].style.top = '16px';
-        }
-        
-        // Restaurar color según scroll
-        const currentScroll = window.scrollY;
-        const isScrolledNow = currentScroll > SCROLL_THRESHOLD;
-        lines.forEach(line => {
-          if (line) {
-            line.classList.remove('bg-[#fffaf0]', 'bg-[#1a1a1a]');
-            line.classList.add(isScrolledNow ? 'bg-[#1a1a1a]' : 'bg-[#fffaf0]');
-          }
-        });
-        
-        // Resetear stagger
-        menuLinks.forEach((link) => {
-          (link as HTMLElement).style.transitionDelay = '0ms';
-          (link as HTMLElement).style.transform = 'translateX(-20px) scale(0.95)';
-          (link as HTMLElement).style.opacity = '0';
-        });
-      }
-    };
-
-    // Event listeners
-    hamburgerBtn.addEventListener('click', () => menu.toggle());
-
-    // Cerrar al hacer clic en enlace
-    menuLinks.forEach(link => {
-      link.addEventListener('click', (e) => {
-        const targetId = link.getAttribute('href');
-        if (targetId && targetId.startsWith('/#')) {
-          const id = targetId.substring(1);
-          if (window.location.pathname === '/') {
-            e.preventDefault();
-            menu.close();
-            setTimeout(() => {
-              document.querySelector(id)?.scrollIntoView({ 
-                behavior: 'smooth',
-                block: 'start' 
-              });
-            }, 400);
-          }
-        }
-      });
-    });
-
-    // Cerrar con ESC
-    document.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape' && menu.isOpen) {
-        menu.close();
-      }
-    });
-
-    // Cerrar al redimensionar a desktop
-    window.addEventListener('resize', () => {
-      if (window.innerWidth > 768 && menu.isOpen) {
-        menu.close();
-      }
-    });
-
-    // Inicializar enlaces ocultos para stagger
-    menuLinks.forEach((link) => {
-      (link as HTMLElement).style.transform = 'translateX(-20px) scale(0.95)';
-      (link as HTMLElement).style.opacity = '0';
-      (link as HTMLElement).style.transition = 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)';
-    });
-    
-    // Smooth scroll para desktop links
-    document.querySelectorAll('.nav-link').forEach(anchor => {
-      anchor.addEventListener('click', function (e) {
-        const href = this.getAttribute('href');
-        if (href && href.startsWith('/#')) {
-          const targetId = href.substring(1);
-          const target = document.querySelector(targetId);
-          if (target && window.location.pathname === '/') {
-            e.preventDefault();
-            target.scrollIntoView({ behavior: 'smooth', block: 'start' });
-          }
-        }
-      });
-    });
-  });
-</script>
+    <p class="mobile-copyright">© 2026 BRASARGENT — Todos los derechos reservados</p>
+  </div>
+</div>
 
 <style>
-  html {
-    scroll-behavior: smooth;
+/* ============================================
+   NAVBAR — TRANSPARENTE → BLANCO CON SCROLL
+   ============================================ */
+.navbar-luxury-fixed {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 1000;
+  /* Estado inicial: transparente */
+  background: transparent;
+  border-bottom: 1px solid transparent;
+  transition: all 0.35s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+
+/* Estado scrolled — añadido via JS */
+.navbar-luxury-fixed.scrolled {
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-bottom: 1px solid rgba(26, 26, 26, 0.06);
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.06);
+}
+
+.navbar-inner {
+  max-width: 1280px;
+  margin: 0 auto;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  height: 72px;
+  padding: 0 24px;
+}
+
+/* Logo */
+.navbar-logo-luxury {
+  display: flex;
+  align-items: center;
+  text-decoration: none;
+  transition: opacity 0.3s ease;
+}
+.navbar-logo-luxury:hover { opacity: 0.85; }
+
+.navbar-logo-img {
+  height: 44px;
+  width: auto;
+  object-fit: contain;
+  transition: all 0.35s ease;
+}
+
+/* Desktop Links */
+.navbar-links-luxury {
+  align-items: center;
+  gap: 32px;
+}
+
+.nav-link-luxury {
+  font-family: 'Montserrat', sans-serif;
+  font-size: 0.72rem;
+  font-weight: 500;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  /* Inicial: blanco */
+  color: rgba(255, 255, 255, 0.75);
+  text-decoration: none;
+  transition: color 0.35s ease;
+  position: relative;
+}
+.nav-link-luxury::after {
+  content: '';
+  position: absolute;
+  bottom: -4px;
+  left: 0;
+  width: 0;
+  height: 1px;
+  background: #C9A87C;
+  transition: width 0.3s ease;
+}
+.nav-link-luxury:hover {
+  color: #fff;
+}
+.nav-link-luxury:hover::after { width: 100%; }
+
+/* Scrolled state para links */
+.navbar-luxury-fixed.scrolled .nav-link-luxury {
+  color: rgba(26, 26, 26, 0.6);
+}
+.navbar-luxury-fixed.scrolled .nav-link-luxury:hover {
+  color: #1A1A1A;
+}
+.navbar-luxury-fixed.scrolled .nav-link-luxury::after {
+  background: #8B1A1A;
+}
+
+.nav-link-new { position: relative; }
+.nav-new-badge {
+  position: absolute;
+  top: -10px;
+  right: -28px;
+  font-size: 0.55rem;
+  font-weight: 700;
+  background: #8B1A1A;
+  color: white;
+  padding: 2px 6px;
+  border-radius: 10px;
+  letter-spacing: 0.5px;
+  animation: pulseBadge 2s ease-in-out infinite;
+}
+
+.nav-link-admin {
+  color: rgba(255, 255, 255, 0.85) !important;
+  font-weight: 600;
+}
+.navbar-luxury-fixed.scrolled .nav-link-admin {
+  color: rgba(26, 26, 26, 0.75) !important;
+}
+.nav-link-admin:hover { color: #C9A87C !important; }
+
+.navbar-cta-group {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding-left: 20px;
+  border-left: 1px solid rgba(255, 255, 255, 0.15);
+  transition: border-color 0.35s ease;
+}
+.navbar-luxury-fixed.scrolled .navbar-cta-group {
+  border-left-color: rgba(26, 26, 26, 0.1);
+}
+
+/* Botón Reservar — siempre terracota */
+.btn-nav-reservar {
+  position: relative;
+  overflow: hidden;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: #8B1A1A;
+  color: #fffaf0;
+  padding: 8px 20px;
+  border-radius: 50px;
+  font-family: 'Montserrat', sans-serif;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  text-decoration: none;
+  transition: all 0.4s ease;
+  box-shadow: 0 4px 16px rgba(139, 26, 26, 0.3);
+}
+.btn-nav-reservar:hover {
+  background: #C9A87C;
+  color: #1A1A1A;
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(201, 168, 124, 0.35);
+}
+.btn-shimmer {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.15), transparent);
+  transform: translateX(-100%);
+  transition: transform 0.8s ease;
+}
+.btn-nav-reservar:hover .btn-shimmer { transform: translateX(100%); }
+
+/* Hamburger - SOLO EN MÓVIL */
+.hamburger-luxury {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 40px; height: 40px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 8px;
+  transition: background 0.3s;
+}
+
+@media (max-width: 768px) {
+  .hamburger-luxury {
+    display: flex !important;
   }
-  
-  /* Animación para el badge de NOVEDADES / SUCURSALES */
-  @keyframes pulse-badge {
-    0%, 100% {
-      transform: scale(1);
-      opacity: 1;
-    }
-    50% {
-      transform: scale(1.1);
-      opacity: 0.7;
-    }
+  .navbar-links-luxury {
+    display: none !important;
   }
-  
-  .animate-pulse-badge {
-    animation: pulse-badge 2s ease-in-out infinite;
+}
+
+@media (min-width: 769px) {
+  .hamburger-luxury {
+    display: none !important;
   }
+  .navbar-links-luxury {
+    display: flex !important;
+  }
+}
+.hamburger-luxury:hover { background: rgba(255,255,255,0.1); }
+.navbar-luxury-fixed.scrolled .hamburger-luxury:hover {
+  background: rgba(0,0,0,0.05);
+}
+
+.hamburger-lines {
+  position: relative;
+  width: 24px; height: 18px;
+}
+.hamburger-lines span {
+  position: absolute;
+  left: 0;
+  width: 100%;
+  height: 2px;
+  background: #fff;
+  border-radius: 2px;
+  transition: all 0.3s ease;
+}
+.navbar-luxury-fixed.scrolled .hamburger-lines span {
+  background: #1A1A1A;
+}
+#line1 { top: 0; }
+#line2 { top: 8px; }
+#line3 { top: 16px; }
+
+/* ============================================
+   MOBILE MENU FULLSCREEN
+   ============================================ */
+.mobile-menu-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 999;
+  background: rgba(26, 26, 26, 0.98);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.mobile-menu-overlay.open {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.mobile-menu-inner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0;
+  width: 100%;
+  max-width: 480px;
+  padding: 24px;
+}
+
+.mobile-nav-links {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  margin-top: 64px;
+}
+
+.mobile-nav-item {
+  font-family: 'Playfair Display', serif;
+  font-size: 2.8rem;
+  font-weight: 700;
+  color: rgba(255,255,255,0.75);
+  text-decoration: none;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  transition: all 0.3s ease;
+  transform: translateX(-20px) scale(0.95);
+  opacity: 0;
+  position: relative;
+}
+.mobile-nav-item::after {
+  content: '';
+  position: absolute;
+  bottom: -2px;
+  left: 0;
+  width: 0;
+  height: 2px;
+  background: linear-gradient(90deg, #8B1A1A, #C9A87C);
+  transition: width 0.3s ease;
+}
+.mobile-nav-item:hover { color: #fff; }
+.mobile-nav-item:hover::after { width: 100%; }
+
+.mobile-badge-new {
+  font-size: 0.75rem;
+  font-family: 'Montserrat', sans-serif;
+  background: linear-gradient(135deg, #8B1A1A, #C9A87C);
+  color: white;
+  padding: 4px 12px;
+  border-radius: 50px;
+  font-weight: 700;
+}
+
+.mobile-divider {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin: 24px 0 20px;
+  width: 240px;
+}
+.mobile-divider-line {
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(201,168,124,0.4));
+}
+.mobile-divider-line:last-child {
+  background: linear-gradient(90deg, rgba(201,168,124,0.4), transparent);
+}
+.mobile-divider-icon { color: rgba(201,168,124,0.6); font-size: 0.9rem; }
+
+.mobile-btn-reservar {
+  position: relative;
+  overflow: hidden;
+  width: 100%;
+  max-width: 320px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background: linear-gradient(135deg, #8B1A1A, #6B1414);
+  color: #fffaf0;
+  padding: 16px 24px;
+  border-radius: 12px;
+  font-family: 'Montserrat', sans-serif;
+  font-weight: 600;
+  font-size: 1rem;
+  text-decoration: none;
+  transition: all 0.3s ease;
+  box-shadow: 0 8px 32px rgba(139,26,26,0.35);
+}
+.mobile-btn-reservar:hover {
+  transform: scale(1.03);
+  box-shadow: 0 12px 40px rgba(139,26,26,0.45);
+}
+.mobile-btn-shimmer {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.12), transparent);
+  transform: translateX(-100%);
+  transition: transform 1s ease;
+}
+.mobile-btn-reservar:hover .mobile-btn-shimmer { transform: translateX(100%); }
+
+.mobile-social-links {
+  display: flex;
+  gap: 24px;
+  margin-top: 24px;
+}
+.mobile-social-icon {
+  color: rgba(255,255,255,0.3);
+  transition: all 0.3s ease;
+}
+.mobile-social-icon:hover {
+  color: #C9A87C;
+  transform: translateY(-3px) scale(1.1);
+}
+
+.mobile-copyright {
+  font-family: 'Montserrat', sans-serif;
+  font-size: 0.65rem;
+  color: rgba(255,255,255,0.15);
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  margin-top: 20px;
+  text-align: center;
+}
+
+/* Animaciones */
+@keyframes pulseBadge {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50%       { transform: scale(1.1); opacity: 0.75; }
+}
+
+html { scroll-behavior: smooth; }
 </style>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  const navbar      = document.getElementById('navbar');
+  const hamburgerBtn = document.getElementById('hamburgerBtn');
+  const mobileMenu   = document.getElementById('mobileMenu');
+  const menuLinks    = document.querySelectorAll('.menu-link');
+
+  // ============================================
+  // SCROLL DETECTION — Transparente → Blanco
+  // ============================================
+  const SCROLL_THRESHOLD = 60;
+
+  const logoImg = document.getElementById('navbar-logo-img') as HTMLImageElement | null;
+
+  function updateNavbar() {
+    if (!navbar) return;
+    if (window.scrollY > SCROLL_THRESHOLD) {
+      navbar.classList.add('scrolled');
+      if (logoImg && !logoImg.src.endsWith('/img/logo/negro.png')) {
+        logoImg.src = '/img/logo/negro.png';
+      }
+    } else {
+      navbar.classList.remove('scrolled');
+      if (logoImg && !logoImg.src.endsWith('/img/logo/blanca.png')) {
+        logoImg.src = '/img/logo/blanca.png';
+      }
+    }
+  }
+
+  window.addEventListener('scroll', updateNavbar, { passive: true });
+  updateNavbar(); // run on load
+
+  // ============================================
+  // MOBILE MENU
+  // ============================================
+  if (!hamburgerBtn || !mobileMenu) return;
+
+  const lines = [
+    document.getElementById('line1'),
+    document.getElementById('line2'),
+    document.getElementById('line3'),
+  ];
+
+  const menu = {
+    isOpen: false,
+
+    open() {
+      this.isOpen = true;
+      hamburgerBtn.setAttribute('aria-expanded', 'true');
+      mobileMenu.classList.add('open');
+      document.body.style.overflow = 'hidden';
+
+      // X icon
+      if (lines[0] && lines[1] && lines[2]) {
+        lines[0].style.transform = 'rotate(45deg)';
+        lines[0].style.top = '8px';
+        lines[1].style.opacity = '0';
+        lines[2].style.transform = 'rotate(-45deg)';
+        lines[2].style.top = '8px';
+      }
+
+      // Stagger links in
+      menuLinks.forEach((link, i) => {
+        const el = link as HTMLElement;
+        el.style.transitionDelay = `${i * 70 + 100}ms`;
+        el.style.transform = 'translateX(0) scale(1)';
+        el.style.opacity = '1';
+      });
+    },
+
+    close() {
+      this.isOpen = false;
+      hamburgerBtn.setAttribute('aria-expanded', 'false');
+      mobileMenu.classList.remove('open');
+      document.body.style.overflow = '';
+
+      // Reset icon
+      if (lines[0] && lines[1] && lines[2]) {
+        lines[0].style.transform = 'rotate(0deg)';
+        lines[0].style.top = '0px';
+        lines[1].style.opacity = '1';
+        lines[2].style.transform = 'rotate(0deg)';
+        lines[2].style.top = '16px';
+      }
+
+      // Reset links
+      menuLinks.forEach((link) => {
+        const el = link as HTMLElement;
+        el.style.transitionDelay = '0ms';
+        el.style.transform = 'translateX(-20px) scale(0.95)';
+        el.style.opacity = '0';
+      });
+    },
+
+    toggle() { this.isOpen ? this.close() : this.open(); }
+  };
+
+  hamburgerBtn.addEventListener('click', () => menu.toggle());
+
+  // Close on link click
+  menuLinks.forEach(link => {
+    link.addEventListener('click', (e) => {
+      const href = link.getAttribute('href');
+      if (href && href.startsWith('/#')) {
+        const id = href.substring(1);
+        if (window.location.pathname === '/') {
+          e.preventDefault();
+          menu.close();
+          setTimeout(() => {
+            document.querySelector(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          }, 400);
+        }
+      } else {
+        menu.close();
+      }
+    });
+  });
+
+  // Close on ESC
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && menu.isOpen) menu.close();
+  });
+
+  // Close on resize to desktop
+  window.addEventListener('resize', () => {
+    if (window.innerWidth > 768 && menu.isOpen) menu.close();
+  });
+
+  // Init hidden for stagger
+  menuLinks.forEach((link) => {
+    const el = link as HTMLElement;
+    el.style.transform = 'translateX(-20px) scale(0.95)';
+    el.style.opacity = '0';
+    el.style.transition = 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)';
+  });
+
+  // Smooth scroll for desktop nav-links
+  document.querySelectorAll('.nav-link-luxury').forEach(anchor => {
+    anchor.addEventListener('click', function(e) {
+      const href = (this as HTMLAnchorElement).getAttribute('href');
+      if (href && href.startsWith('/#')) {
+        const targetId = href.substring(1);
+        const target = document.querySelector(targetId);
+        if (target && window.location.pathname === '/') {
+          e.preventDefault();
+          target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+      }
+    });
+  });
+});
+</script>

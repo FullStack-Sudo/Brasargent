@@ -1,5 +1,6 @@
 import type { APIRoute } from 'astro';
 import pool from '../../../lib/db';
+import { generarNumeroReserva } from '../../../lib/reservas';
 
 export const POST: APIRoute = async ({ request }) => {
     try {
@@ -147,11 +148,12 @@ export const POST: APIRoute = async ({ request }) => {
         // ============================================
         
         const telefono_completo = `${codigo_pais || '591'}${telefono.replace(/[^0-9]/g, '')}`;
+        const numeroReserva = await generarNumeroReserva(sucursal_id);
 
         const [result] = await pool.query(
             `INSERT INTO reservas 
-             (sucursal_id, nombre_cliente, telefono, codigo_pais, telefono_completo, fecha, hora, turno, numero_personas, cantidad_ninos, necesita_silla_bebe, observaciones, cubiertos_reservados, estado) 
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pendiente')`,
+             (sucursal_id, nombre_cliente, telefono, codigo_pais, telefono_completo, fecha, hora, turno, numero_personas, cantidad_ninos, necesita_silla_bebe, observaciones, cubiertos_reservados, numero_reserva, estado) 
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pendiente')`,
             [
                 sucursal_id,
                 nombre_cliente,
@@ -165,7 +167,8 @@ export const POST: APIRoute = async ({ request }) => {
                 cantidad_ninos || 0,
                 necesita_silla_bebe ? 1 : 0,
                 observaciones || null,
-                cubiertos_necesarios
+                cubiertos_necesarios,
+                numeroReserva
             ]
         );
         

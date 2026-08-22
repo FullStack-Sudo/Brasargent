@@ -505,6 +505,24 @@ import NavbarSimple from "../../components/NavbarSimple.astro";
                     )
                 }
 
+                {/* 🔴 MOSTRAR ALERTA DE CIERRE DE SESIÓN */}
+                {Astro.url.searchParams.get('logout') === 'true' && (
+                    <div class="alerta-logout" style="background: rgba(59, 130, 246, 0.12); border: 1px solid rgba(59, 130, 246, 0.3); border-radius: 14px; padding: 14px 18px; margin-bottom: 20px; display: flex; align-items: center; gap: 14px;">
+                        <div style="font-size: 1.8rem; flex-shrink: 0;">📋</div>
+                        <div>
+                            <strong style="display: block; color: #fffaf0; font-size: 0.95rem; font-weight: 600;">Sesión cerrada correctamente</strong>
+                            <p style="margin: 4px 0 2px; font-size: 0.85rem; color: rgba(255, 250, 240, 0.7);">
+                                Reservas para mañana: 
+                                <strong style="color: #60a5fa;">{Astro.url.searchParams.get('reservas_manana') || 0}</strong>
+                                · 
+                                Cubiertos: 
+                                <strong style="color: #60a5fa;">{Astro.url.searchParams.get('cubiertos_manana') || 0}</strong>
+                            </p>
+                            <p style="font-size: 0.75rem; color: rgba(255, 250, 240, 0.4);">Prepara los insumos necesarios para atender a los comensales.</p>
+                        </div>
+                    </div>
+                )}
+
                 <!-- MENSAJE DE ERROR JS -->
                 <div class="error-alert" id="errorAlertJS">
                     <span class="icon">⚠️</span>

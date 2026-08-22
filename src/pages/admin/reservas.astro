@@ -3,13 +3,15 @@
 // Página completa de gestión de reservas
 import AdminLayout from '../../layouts/AdminLayout.astro';
 import pool from '../../lib/db';
+import { esAceptable } from '../../lib/reservas';
 
 // Obtener parámetros de filtro
 const url = new URL(Astro.request.url);
 const sucursalId = url.searchParams.get('sucursal') || '';
 const estado = url.searchParams.get('estado') || '';
-const fechaInicio = url.searchParams.get('fecha_inicio') || '';
-const fechaFin = url.searchParams.get('fecha_fin') || '';
+const fechaParam = url.searchParams.get('fecha') || '';
+const fechaInicio = url.searchParams.get('fecha_inicio') || fechaParam || '';
+const fechaFin = url.searchParams.get('fecha_fin') || fechaParam || '';
 
 // Construir query de reservas
 let sql = `
@@ -113,6 +115,14 @@ const estadoTexto = (estado: string) => {
     };
     return textos[estado as keyof typeof textos] || estado;
 };
+
+const getColorSucursal = (nombre: string): string => {
+    if (!nombre) return '#6b7280';
+    if (nombre.includes('Churrasquería') || nombre.includes('Churrasqueria')) return '#9e2a2b';
+    if (nombre.includes('Fast Grill')) return '#d4af37';
+    if (nombre.includes('Rodizio')) return '#d4a574';
+    return '#6b7280';
+};
 ---
 
 <AdminLayout title="Reservas" description="Gestión completa de todas las reservas">
@@ -209,11 +219,9 @@ const estadoTexto = (estado: string) => {
                                 <th>Teléfono</th>
                                 <th>Sucursal</th>
                                 <th>Fecha</th>
-                                <th>Turno</th>
                                 <th>Hora</th>
                                 <th>Adultos</th>
                                 <th>🧒 Niños</th>
-                                <th>Preparación</th>
                                 <th>Cubiertos</th>
                                 <th>Estado</th>
                                 <th>Acciones</th>
@@ -223,9 +231,14 @@ const estadoTexto = (estado: string) => {
                             {reservas.map((reserva: any) => (
                                 <tr class={`row-estado-${reserva.estado}`}>
                                     <td>
-                                        <code class="px-2 py-1 bg-gray-100 rounded text-xs font-mono font-bold text-[#9e2a2b]">
-                                            {reserva.numero_reserva || 'BR-2026-0000'}
-                                        </code>
+                                        <div style="display: flex; align-items: center; gap: 4px; flex-wrap: wrap;">
+                                            <code class="px-2 py-1 bg-gray-100 rounded text-xs font-mono font-bold text-[#9e2a2b]">
+                                                {reserva.numero_reserva || 'BR-2026-0000'}
+                                            </code>
+                                            <span class="badge-sucursal" style={`background: ${getColorSucursal(reserva.sucursal_nombre)}; color: white; padding: 2px 6px; border-radius: 4px; font-size: 0.7rem; font-weight: 600;`}>
+                                                {(reserva.sucursal_nombre || 'BR').substring(0, 3).toUpperCase()}
+                                            </span>
+                                        </div>
                                     </td>
                                     <td>
                                         <strong>{reserva.nombre_cliente}</strong>
@@ -239,32 +252,26 @@ const estadoTexto = (estado: string) => {
                                     </td>
                                     <td>{reserva.sucursal_nombre}</td>
                                     <td>{formatearFecha(reserva.fecha)}</td>
-                                    <td>
-                                        {reserva.turno ? (
-                                            <span class={`badge-turno turno-${reserva.turno}`}>
-                                                {reserva.turno === 'manana' ? '☀️ Mañana' : reserva.turno === 'tarde' ? '🌅 Tarde' : '🌙 Noche'}
-                                            </span>
-                                        ) : <span style="color: rgba(26,26,26,0.3); font-size:0.8rem">-</span>}
-                                    </td>
                                     <td>{reserva.hora}</td>
                                     <td>{reserva.numero_personas}</td>
                                     <td>{reserva.cantidad_ninos || 0}</td>
-                                    <td>
-                                        {reserva.necesita_silla_bebe ? <span class="badge-silla">🪑 Silla</span> : ''}
-                                        {reserva.necesita_menu_infantil ? <span class="badge-menu">🍽️ Menu</span> : ''}
-                                        {(!reserva.necesita_silla_bebe && !reserva.necesita_menu_infantil) ? <span class="badge-nada">-</span> : ''}
-                                    </td>
                                     <td>{reserva.cubiertos_reservados || '-'}</td>
                                     <td>
                                         <span class={`badge ${estadoBadge(reserva.estado)}`}>
                                             {estadoTexto(reserva.estado)}
                                         </span>
+                                        {reserva.estado === 'pendiente' && !esAceptable(reserva.fecha, reserva.hora) && (
+                                            <span style="display: block; font-size: 0.7rem; color: #d97706; margin-top: 3px; font-weight: 600;">
+                                                ⏳ Esperando ventana (24h)
+                                            </span>
+                                        )}
                                     </td>
                                     <td>
                                         <div class="acciones-btns">
                                             {reserva.estado === 'pendiente' && (
                                                 <>
                                                     <button class="btn-aprobar" 
+                                                            data-reserva-id={reserva.id}
                                                             onclick={`aprobarReserva(${reserva.id}, ${reserva.sucursal_id}, ${reserva.numero_personas}, ${reserva.cubiertos_disponibles})`}>
                                                         ✅
                                                     </button>
@@ -309,11 +316,11 @@ window.aprobarReserva = async function(id, sucursalId, personas, disponibles) {
         return;
     }
 
-    if (!confirm(`¿Aprobar reserva de ${personas} personas?\nSe enviará confirmación por WhatsApp al cliente.`)) {
+    if (!confirm(`¿Aprobar reserva de ${personas} personas?\nSe enviará la confirmación por WhatsApp.`)) {
         return;
     }
 
-    const btn = document.querySelector(`.btn-aprobar[onclick*="${id}"]`);
+    const btn = document.querySelector(`.btn-aprobar[data-reserva-id="${id}"]`) || document.querySelector(`.btn-aprobar[onclick*="${id}"]`);
     const originalText = btn ? btn.textContent : '✅';
     if (btn) {
         btn.textContent = '⏳';
@@ -330,24 +337,14 @@ window.aprobarReserva = async function(id, sucursalId, personas, disponibles) {
         const result = await response.json();
 
         if (result.success) {
-            let mensaje = '✅ Reserva aprobada exitosamente';
-            
-            const waUrl = result.whatsapp?.url || result.url_whatsapp || result.whatsapp?.url_whatsapp;
-            const waSuccess = result.whatsapp?.success || result.whatsapp_enviado;
-
-            if (waSuccess) {
-                mensaje += '\n📱 Mensaje de confirmación preparado/enviado por WhatsApp';
-                if (waUrl) {
-                    mensaje += '\n🔗 Se abrirá WhatsApp en una nueva ventana';
-                    window.open(waUrl, '_blank');
-                }
+            if (result.whatsapp && result.whatsapp.success) {
+                alert(`✅ Reserva aprobada exitosamente.\n📱 Mensaje enviado automáticamente por WhatsApp al ${result.telefono || 'cliente'}.`);
             } else {
-                mensaje += `\n⚠️ No se pudo enviar WhatsApp: ${result.whatsapp?.error || 'Verifica el número del cliente'}`;
-                mensaje += '\n📋 La reserva está confirmada, pero el cliente no recibió la notificación.';
+                const errorWa = result.whatsapp?.error || 'OpenWA desconectado';
+                alert(`✅ Reserva aprobada exitosamente.\n⚠️ WhatsApp no enviado: ${errorWa}`);
             }
             
-            alert(mensaje);
-            location.reload();
+            setTimeout(() => location.reload(), 1500);
         } else {
             alert('❌ Error: ' + result.error);
             if (btn) {

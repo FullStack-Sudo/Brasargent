@@ -91,3 +91,18 @@ BEGIN
     END IF;
 END$$
 DELIMITER ;
+
+-- 8. TABLA LOGS_WHATSAPP
+CREATE TABLE IF NOT EXISTS logs_whatsapp (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    destinatario VARCHAR(20) NOT NULL,
+    mensaje TEXT NOT NULL,
+    message_id VARCHAR(100),
+    estado ENUM('enviado', 'entregado', 'leido', 'error', 'pendiente') DEFAULT 'pendiente',
+    error TEXT,
+    fecha_envio TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    fecha_actualizacion TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX idx_destinatario (destinatario),
+    INDEX idx_estado (estado),
+    INDEX idx_fecha (fecha_envio)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

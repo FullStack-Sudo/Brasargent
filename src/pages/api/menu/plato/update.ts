@@ -20,7 +20,7 @@ export const PUT: APIRoute = async ({ request }) => {
             return new Response(JSON.stringify({ 
                 success: false, 
                 message: 'Datos inválidos',
-                errors: result.error.errors
+                errors: result.error.issues
             }), {
                 status: 400,
                 headers: { 'Content-Type': 'application/json' }

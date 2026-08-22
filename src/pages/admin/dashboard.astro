@@ -1,55 +1,21 @@
 ---
 // src/pages/admin/dashboard.astro
-// Dashboard con registro de asistencia totalmente funcional
-
+// Dashboard rediseñado en columna sin scroll horizontal
 import AdminLayout from '../../layouts/AdminLayout.astro';
 import pool, { query } from '../../lib/db';
 import { getEstadisticasCubiertos } from '../../lib/cubiertos';
+import { getReservasAceptables } from '../../lib/reservas';
+import { verificarReservasParaLiberar } from '../../lib/liberacion-cubiertos';
 
-// ============================================
-// OBTENER DATOS DE CUBIERTOS EN TIEMPO REAL
-// ============================================
+// Ejecutar liberación y obtener reservas dentro de 24h
+await verificarReservasParaLiberar();
+const reservasAceptables = await getReservasAceptables();
 
+// Obtener estadísticas de cubiertos
 const cubiertos = await getEstadisticasCubiertos();
 
-// ============================================
-// OBTENER RESERVAS EN CURSO / CONFIRMADAS (MESAS OCUPADAS)
-// ============================================
-
-const [reservasEnCursoRows] = await pool.query(`
-    SELECT 
-        r.id,
-        r.nombre_cliente,
-        r.telefono,
-        r.telefono_completo,
-        r.codigo_pais,
-        r.fecha,
-        r.hora,
-        r.numero_personas,
-        r.cantidad_ninos,
-        r.cubiertos_reservados,
-        r.personas_asistentes,
-        r.estado,
-        r.hora_llegada,
-        s.nombre AS sucursal_nombre,
-        s.id AS sucursal_id
-    FROM reservas r
-    JOIN sucursales s ON r.sucursal_id = s.id
-    WHERE r.estado IN ('confirmada', 'en_curso')
-    ORDER BY r.fecha ASC, r.hora ASC
-`) as any[];
-const reservasEnCurso = reservasEnCursoRows || [];
-
-// ============================================
-// CALCULAR ESTADÍSTICAS GLOBALES
-// ============================================
-
-const totalCubiertosOcupados = cubiertos.reduce((acc: number, s: any) => acc + (parseInt(s.cubiertos_ocupados) || 0), 0);
-const totalCapacidad = cubiertos.reduce((acc: number, s: any) => acc + (parseInt(s.capacidad_total) || 0), 0);
-const porcentajeGlobal = totalCapacidad > 0 ? Math.round((totalCubiertosOcupados / totalCapacidad) * 100) : 0;
-
-// Obtener estadísticas generales
-const [stats] = await pool.query(`
+// Obtener totales globales
+const [statsRows] = await pool.query(`
     SELECT 
         (SELECT COUNT(*) FROM reservas) AS total_reservas,
         (SELECT COUNT(*) FROM reservas WHERE estado = 'pendiente') AS pendientes,
@@ -58,186 +24,143 @@ const [stats] = await pool.query(`
         (SELECT COUNT(*) FROM clientes) AS total_clientes
 `) as any[];
 
-// Obtener reservas de hoy
-const hoy = new Date().toLocaleDateString('en-CA', { timeZone: 'America/La_Paz' });
-const [reservasHoyRows] = await pool.query(`
+const stats = Array.isArray(statsRows) && statsRows.length > 0 ? statsRows[0] : {
+    total_reservas: 0,
+    pendientes: 0,
+    confirmadas: 0,
+    rechazadas: 0,
+    total_clientes: 0
+};
+
+// Obtener reservas recientes
+const [reservasRecientesRows] = await pool.query(`
     SELECT 
         r.id,
-        r.numero_reserva,
         r.nombre_cliente,
         r.telefono,
-        r.telefono_completo,
-        r.codigo_pais,
         r.fecha,
         r.hora,
         r.numero_personas,
         r.cantidad_ninos,
-        r.cubiertos_reservados,
         r.estado,
         s.nombre AS sucursal_nombre
     FROM reservas r
     JOIN sucursales s ON r.sucursal_id = s.id
-    WHERE r.fecha = ?
-    ORDER BY r.hora ASC
-`, [hoy]) as any[];
-const reservasHoy = reservasHoyRows || [];
+    ORDER BY r.created_at DESC
+    LIMIT 6
+`) as any[];
 
-// Calcular ventas estimadas del día (Precio base: 190 Bs Adultos, 80 Bs Niños)
-const PRECIO_ADULTO_STD = 190;
-const PRECIO_NINO_STD = 80;
-
-let ventasTotalesHoy = 0;
-let totalAdultosHoy = 0;
-let totalNinosHoy = 0;
-let reservasEfectivasHoy = 0;
-
-reservasHoy.forEach((r: any) => {
-    const adultos = parseInt(r.numero_personas) || 0;
-    const ninos = parseInt(r.cantidad_ninos) || 0;
-    const esValida = ['confirmada', 'en_curso', 'completada'].includes(r.estado);
-    
-    if (esValida) {
-        totalAdultosHoy += adultos;
-        totalNinosHoy += ninos;
-        reservasEfectivasHoy += 1;
-        r.monto_estimado = (adultos * PRECIO_ADULTO_STD) + (ninos * PRECIO_NINO_STD);
-        ventasTotalesHoy += r.monto_estimado;
-    } else {
-        r.monto_estimado = 0;
-    }
-});
-
-// Obtener estado del reinicio
-const [controlRows] = await pool.query(
-    `SELECT * FROM control_reinicio_diario WHERE fecha = ?`,
-    [hoy]
-) as any[];
-const control = controlRows && controlRows.length > 0 ? controlRows[0] : null;
-
-// Obtener última semana de reinicios
-const [ultimaSemanaRows] = await pool.query(
-    `SELECT * FROM control_reinicio_diario 
-     ORDER BY fecha DESC 
-     LIMIT 7`
-) as any[];
-const ultimaSemana = ultimaSemanaRows || [];
+const reservasRecientes = Array.isArray(reservasRecientesRows) ? reservasRecientesRows : [];
 ---
 
-<AdminLayout title="Dashboard" description="Resumen de actividad y gestión de tu restaurante">
-    <div class="dashboard-content">
-        <!-- Header -->
-        <div class="dashboard-header">
-            <div>
-                <h1>📊 Dashboard y Reportes</h1>
-                <p>Resumen de actividad, ventas e ingresos del día</p>
+<AdminLayout title="Dashboard" description="Resumen de actividad y gestión de tu restaurante" currentPage="dashboard">
+    <div class="dashboard-column">
+        
+        <!-- HEADER Y ACCIONES -->
+        <div class="dashboard-top-bar">
+            <div class="dashboard-title-area">
+                <h2>📊 Dashboard de Gestión</h2>
+                <p>Monitoreo en tiempo real de reservas y cubiertos</p>
             </div>
             <div class="header-actions">
-                <button class="btn-reporte btn-imprimir" onclick="window.imprimirReporte()">
-                    🖨️ Imprimir Reporte
+                <button type="button" class="btn-reporte btn-excel" onclick="window.abrirModalReportes()">
+                    📊 Reportes
                 </button>
-                <button class="btn-reporte btn-pdf" onclick="window.descargarPDF()">
-                    📥 Descargar PDF
+                <button type="button" class="btn-reporte btn-imprimir" onclick="window.imprimirReporte()">
+                    🖨️ Imprimir
                 </button>
-                <button class="btn-reiniciar" onclick="reiniciarReservas()">
-                    🔄 Reiniciar Reservas
+                <button type="button" class="btn-reporte btn-pdf" onclick="window.descargarPDF()">
+                    📥 PDF
+                </button>
+                <a href="/admin/whatsapp" class="btn-reporte btn-openwa">
+                    💬 WhatsApp
+                </a>
+                <button type="button" class="btn-reiniciar" onclick="window.reiniciarReservas()">
+                    🔄 Reiniciar
                 </button>
             </div>
         </div>
 
-        <!-- Tarjetas de estadísticas generales -->
+        <!-- 🔴 ALERTA DE RESERVAS DENTRO DE LAS 24 HORAS -->
+        {reservasAceptables.length > 0 && (
+            <div class="alerta-aceptables mb-6">
+                <div class="flex items-center gap-3">
+                    <span class="text-2xl">🔔</span>
+                    <div>
+                        <strong>{reservasAceptables.length} reservas listas para confirmar (Ventana 24h)</strong>
+                        <p class="text-xs text-amber-800">Estas reservas están dentro de las 24 horas y esperan tu confirmación.</p>
+                    </div>
+                </div>
+                <a href="/admin/reservas?estado=pendiente" class="btn-alerta-link">
+                    Ver pendientes →
+                </a>
+            </div>
+        )}
+
+        <!-- ============================================
+        SECCIÓN 1: ESTADÍSTICAS RÁPIDAS
+        ============================================ -->
         <div class="stats-grid">
             <div class="stat-card">
-                <div class="stat-icon" style="background: rgba(59, 130, 246, 0.1); color: #3b82f6;">📋</div>
-                <div class="stat-info">
-                    <span class="stat-number">{stats[0]?.total_reservas || 0}</span>
+                <span class="stat-icon">📋</span>
+                <div>
+                    <span class="stat-number">{stats.total_reservas || 0}</span>
                     <span class="stat-label">Total Reservas</span>
                 </div>
             </div>
-            
             <div class="stat-card">
-                <div class="stat-icon" style="background: rgba(245, 158, 11, 0.1); color: #f59e0b;">⏳</div>
-                <div class="stat-info">
-                    <span class="stat-number">{stats[0]?.pendientes || 0}</span>
+                <span class="stat-icon">⏳</span>
+                <div>
+                    <span class="stat-number">{stats.pendientes || 0}</span>
                     <span class="stat-label">Pendientes</span>
                 </div>
             </div>
-            
             <div class="stat-card">
-                <div class="stat-icon" style="background: rgba(16, 185, 129, 0.1); color: #10b981;">✅</div>
-                <div class="stat-info">
-                    <span class="stat-number">{stats[0]?.confirmadas || 0}</span>
+                <span class="stat-icon">✅</span>
+                <div>
+                    <span class="stat-number">{stats.confirmadas || 0}</span>
                     <span class="stat-label">Confirmadas</span>
-                </div>
-            </div>
-            
-            <div class="stat-card">
-                <div class="stat-icon" style="background: rgba(239, 68, 68, 0.1); color: #ef4444;">❌</div>
-                <div class="stat-info">
-                    <span class="stat-number">{stats[0]?.rechazadas || 0}</span>
-                    <span class="stat-label">Rechazadas</span>
-                </div>
-            </div>
-            
-            <div class="stat-card">
-                <div class="stat-icon" style="background: rgba(158, 42, 43, 0.1); color: #9e2a2b;">👥</div>
-                <div class="stat-info">
-                    <span class="stat-number">{stats[0]?.total_clientes || 0}</span>
-                    <span class="stat-label">Clientes Registrados</span>
                 </div>
             </div>
         </div>
 
-        <!-- 🔴 USO DE CUBIERTOS (RECUADRO PRINCIPAL) -->
-        <div class="section-card cubiertos-section">
+        <!-- ============================================
+        SECCIÓN 2: USO DE CUBIERTOS
+        ============================================ -->
+        <div class="section-card">
             <div class="section-header">
-                <h2>🪑 Uso de Cubiertos</h2>
-                <span class="badge-porcentaje" style={`background: ${porcentajeGlobal > 80 ? '#ef4444' : porcentajeGlobal > 60 ? '#f59e0b' : '#10b981'}20; color: ${porcentajeGlobal > 80 ? '#ef4444' : porcentajeGlobal > 60 ? '#f59e0b' : '#10b981'}`}>
-                    {porcentajeGlobal}% ocupado
-                </span>
+                <h3>🪑 Uso de Cubiertos por Sucursal</h3>
+                <span class="section-badge">Estado actual</span>
             </div>
-
-            <div class="cubiertos-grid">
+            
+            <div class="cubiertos-list">
                 {cubiertos.map((sucursal: any) => {
-                    const porcentaje = parseFloat(sucursal.porcentaje_ocupacion) || 0;
-                    const color = porcentaje > 80 ? '#ef4444' : 
-                                 porcentaje > 60 ? '#f59e0b' : '#10b981';
+                    const ocupados = Number(sucursal.cubiertos_ocupados) || 0;
+                    const total = Number(sucursal.capacidad_total) || 120;
+                    const disponibles = Number(sucursal.cubiertos_disponibles) || (total - ocupados);
+                    const porcentaje = Math.min(100, Math.round((ocupados / total) * 100));
+                    const color = porcentaje > 80 ? '#EF4444' : porcentaje > 60 ? '#F59E0B' : '#10B981';
+                    const icono = sucursal.nombre.includes('Churrasquería') || sucursal.nombre.includes('Churrasqueria') ? '🔥' :
+                                 sucursal.nombre.includes('Fast') ? '⚡' : '🥩';
                     
                     return (
-                        <div class="cubiertos-card" style={`border-left: 4px solid ${color}`}>
+                        <div class="cubiertos-item">
                             <div class="cubiertos-header">
-                                <span class="cubiertos-icon">
-                                    {sucursal.nombre === 'Churrasquería' ? '🔥' :
-                                     sucursal.nombre === 'Fast Grill' ? '⚡' : '🥩'}
+                                <span class="cubiertos-icon">{icono}</span>
+                                <span class="cubiertos-nombre">{sucursal.nombre}</span>
+                                <span class="cubiertos-porcentaje" style={`color: ${color}`}>
+                                    {porcentaje}%
                                 </span>
-                                <strong>{sucursal.nombre}</strong>
                             </div>
                             
-                            <div class="cubiertos-numeros">
-                                <div>
-                                    <span class="cubiertos-label">TOTAL</span>
-                                    <span class="cubiertos-valor">{sucursal.capacidad_total}</span>
-                                </div>
-                                <div>
-                                    <span class="cubiertos-label">OCUPADOS</span>
-                                    <span class="cubiertos-valor ocupado" style="color: #3b82f6;">
-                                        {sucursal.cubiertos_ocupados}
-                                    </span>
-                                </div>
-                                <div>
-                                    <span class="cubiertos-label">DISPONIBLES</span>
-                                    <span class="cubiertos-valor disponible" style={`color: ${color}`}>
-                                        {sucursal.cubiertos_disponibles}
-                                    </span>
-                                </div>
+                            <div class="cubiertos-barra">
+                                <div class="cubiertos-progreso" style={`width: ${porcentaje}%; background: ${color};`}></div>
                             </div>
                             
-                            <div class="cubiertos-bar">
-                                <div class="cubiertos-progreso" style={`width: ${porcentaje}%; background: ${color}`}></div>
-                            </div>
-                            
-                            <div class="cubiertos-footer">
-                                <span style={`color: ${color}`}>{porcentaje}% ocupado</span>
-                                <span class="cubiertos-libres">{sucursal.cubiertos_disponibles} cubiertos libres</span>
+                            <div class="cubiertos-detalles">
+                                <span>🪑 <strong>{ocupados}</strong> ocupados</span>
+                                <span style="color: #10B981;">✅ <strong>{disponibles}</strong> disponibles</span>
+                                <span style="color: #6B6B6B;">📋 Total: {total} cubiertos</span>
                             </div>
                         </div>
                     );
@@ -245,1179 +168,570 @@ const ultimaSemana = ultimaSemanaRows || [];
             </div>
         </div>
 
-        <!-- 🔴 MESAS OCUPADAS (CON CONTROL DE ASISTENCIA FUNCIONAL) -->
-        <div class="section-card mesas-section">
-            <div class="section-header">
-                <h2>🪑 Mesas Ocupadas ({reservasEnCurso.length})</h2>
-                <span class="badge-total">🔴 {totalCubiertosOcupados} cubiertos ocupados</span>
-            </div>
-
-            {reservasEnCurso.length === 0 ? (
-                <div class="empty-state">
-                    <span class="empty-icon">🍽️</span>
-                    <p>No hay mesas ocupadas actualmente</p>
-                    <span class="empty-sub">Todas las mesas están disponibles</span>
-                </div>
-            ) : (
-                <div class="mesas-grid">
-                    {reservasEnCurso.map((reserva: any) => {
-                        const maxAsistentes = reserva.cubiertos_reservados || 0;
-                        const yaRegistrado = reserva.estado === 'en_curso';
-                        
-                        return (
-                            <div class="mesa-card" id={`mesa-${reserva.id}`}>
-                                <div class="mesa-header">
-                                    <div class="mesa-info">
-                                        <span class="mesa-icon">🪑</span>
-                                        <div>
-                                            <span class="mesa-cliente">{reserva.nombre_cliente}</span>
-                                            <span class="mesa-sucursal">📍 {reserva.sucursal_nombre}</span>
-                                        </div>
-                                    </div>
-                                    <span class="mesa-estado" style={`color: ${yaRegistrado ? '#10b981' : '#f59e0b'}`}>
-                                        {yaRegistrado ? '🟢 En curso' : '⏳ Esperando'}
-                                    </span>
-                                </div>
-
-                                <div class="mesa-detalles">
-                                    <span>🕐 {reserva.hora} ({new Date(reserva.fecha).toLocaleDateString('es-ES')})</span>
-                                    <span>👥 {reserva.numero_personas + (reserva.cantidad_ninos || 0)} reservados</span>
-                                    <span>📞 {reserva.telefono}</span>
-                                </div>
-
-                                <div class="mesa-asistencia">
-                                    <div class="asistencia-info">
-                                        <span class="asistencia-label">Reservados:</span>
-                                        <span class="asistencia-valor">{reserva.cubiertos_reservados || 0}</span>
-                                        <span class="asistencia-label">Asistentes:</span>
-                                        <span class="asistencia-valor" id={`asistentes-label-${reserva.id}`}>
-                                            {reserva.personas_asistentes ? `${reserva.personas_asistentes}` : '--'}
-                                        </span>
-                                    </div>
-
-                                    <div class="asistencia-control">
-                                        <input 
-                                            type="number" 
-                                            id={`input-asistentes-${reserva.id}`}
-                                            class="input-asistentes"
-                                            placeholder="Cantidad"
-                                            min="1"
-                                            max={maxAsistentes}
-                                            value={reserva.personas_asistentes || ''}
-                                            disabled={yaRegistrado}
-                                            onkeypress="return event.keyCode >= 48 && event.keyCode <= 57"
-                                            oninput={`validarAsistentes(this, ${maxAsistentes})`}
-                                            onclick="this.select()"
-                                        />
-                                        <button 
-                                            class="btn-registrar-asistencia" 
-                                            onclick={`registrarAsistencia(${reserva.id}, ${maxAsistentes})`}
-                                            data-reserva-id={reserva.id}
-                                            disabled={yaRegistrado}
-                                        >
-                                            {yaRegistrado ? '✅ Registrado' : '📋 Registrar'}
-                                        </button>
-                                        <button 
-                                            class="btn-liberar-mesa" 
-                                            onclick={`liberarMesa(${reserva.id})`}
-                                            data-reserva-id={reserva.id}
-                                        >
-                                            ✅ Liberar
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
-                        );
-                    })}
-                </div>
-            )}
-        </div>
-
-        <!-- 🔴 RESERVAS DE HOY -->
+        <!-- ============================================
+        SECCIÓN 3: RESERVAS RECIENTES
+        ============================================ -->
         <div class="section-card">
             <div class="section-header">
-                <h2>📋 Reservas de Hoy</h2>
-                <span class="badge-total">{reservasHoy.length} reservas</span>
+                <h3>📋 Reservas Recientes</h3>
+                <a href="/admin/reservas" class="btn-ver-todas">Ver todas →</a>
             </div>
             
-            {reservasHoy.length === 0 ? (
+            {reservasRecientes.length === 0 ? (
                 <div class="empty-state">
                     <span class="empty-icon">📭</span>
-                    <p>No hay reservas de hoy</p>
+                    <p>No hay reservas recientes registras en el sistema</p>
                 </div>
             ) : (
-                <div class="table-wrapper">
-                    <table class="tabla-reservas">
-                        <thead>
-                            <tr>
-                                <th>Cliente</th>
-                                <th>Teléfono</th>
-                                <th>Sucursal</th>
-                                <th>Fecha</th>
-                                <th>Hora</th>
-                                <th>Personas</th>
-                                <th>Cubiertos</th>
-                                <th>Estado</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {reservasHoy.map((reserva: any) => (
-                                <tr class={`row-${reserva.estado}`}>
-                                    <td><strong>{reserva.nombre_cliente}</strong></td>
-                                    <td>
-                                        <a href={`https://wa.me/${reserva.telefono_completo || '591' + reserva.telefono}`} target="_blank" class="whatsapp-link">
-                                            💬 {reserva.codigo_pais || '591'} {reserva.telefono}
-                                        </a>
-                                    </td>
-                                    <td>{reserva.sucursal_nombre}</td>
-                                    <td>{new Date(reserva.fecha).toLocaleDateString('es-ES')}</td>
-                                    <td>{reserva.hora}</td>
-                                    <td>{reserva.numero_personas}</td>
-                                    <td>{reserva.cubiertos_reservados || '-'}</td>
-                                    <td>
-                                        <span class={`badge badge-${reserva.estado}`}>
-                                            {reserva.estado === 'confirmada' ? '✅ Confirmada' :
-                                             reserva.estado === 'en_curso' ? '🟢 En curso' :
-                                             reserva.estado === 'completada' ? '🏁 Completada' :
-                                             reserva.estado === 'pendiente' ? '⏳ Pendiente' :
-                                             reserva.estado === 'rechazada' ? '❌ Rechazada' : '⏰ Cancelada'}
-                                        </span>
-                                    </td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
+                <div class="reservas-list">
+                    {reservasRecientes.map((reserva: any) => (
+                        <div class="reserva-item">
+                            <div class="reserva-info">
+                                <div>
+                                    <span class="reserva-cliente">{reserva.nombre_cliente}</span>
+                                    <span class="reserva-sucursal">📍 {reserva.sucursal_nombre}</span>
+                                </div>
+                                <span class={`estado-badge ${reserva.estado}`}>
+                                    {reserva.estado === 'confirmada' ? '✅ Confirmada' :
+                                     reserva.estado === 'pendiente' ? '⏳ Pendiente' :
+                                     reserva.estado === 'rechazada' ? '❌ Rechazada' :
+                                     '⏰ Cancelada'}
+                                </span>
+                            </div>
+                            <div class="reserva-detalles">
+                                <span>📅 {reserva.fecha ? new Date(reserva.fecha).toLocaleDateString('es-ES') : 'Hoy'}</span>
+                                <span>🕐 {reserva.hora}</span>
+                                <span>👥 {reserva.numero_personas} personas</span>
+                                {reserva.telefono && <span>📞 {reserva.telefono}</span>}
+                            </div>
+                        </div>
+                    ))}
                 </div>
             )}
         </div>
+    </div>
 
-        <!-- 📄 PLANTILLA OFICIAL DE REPORTE DE VENTAS (VISUAL Y PARA IMPRESIÓN/PDF) -->
-        <div id="reporteImprimible" class="section-card reporte-imprimible-container">
-            <div class="reporte-header-print">
-                <div class="reporte-logo-title">
-                    <span class="reporte-logo">🥩</span>
-                    <div>
-                        <h2>BRASARGENT - CHURRASQUERÍA & RODIZIO</h2>
-                        <h3>Reporte Oficial de Ventas y Reservas Diarias</h3>
+    <!-- Modal de Reportes Excel/PDF -->
+    <div id="modalReportes" class="modal-reportes" style="display:none;">
+        <div class="modal-reportes-content">
+            <div class="modal-header">
+                <div>
+                    <h2>📊 Generar Reporte de Reservas</h2>
+                    <p class="modal-subtext">Exporta todas las reservas en formato Excel o PDF</p>
+                </div>
+                <button type="button" class="modal-close" onclick="window.cerrarModalReportes()">✕</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="fechaInicio">📅 Fecha Inicio</label>
+                        <input type="date" id="fechaInicio" class="input-reporte" />
+                    </div>
+                    <div class="form-group">
+                        <label for="fechaFin">📅 Fecha Fin</label>
+                        <input type="date" id="fechaFin" class="input-reporte" />
                     </div>
                 </div>
-                <div class="reporte-meta">
-                    <p><strong>Fecha de Operaciones:</strong> {hoy}</p>
-                    <p><strong>Total Venta Estimada:</strong> <span style="color: #10b981; font-weight: 700;">{ventasTotalesHoy.toLocaleString('es-BO')} Bs.</span></p>
+                <div class="form-group">
+                    <label for="sucursalReporte">📍 Sucursal</label>
+                    <select id="sucursalReporte" class="input-reporte">
+                        <option value="">Todas las sucursales</option>
+                        <option value="1">🔥 Churrasquería</option>
+                        <option value="2">⚡ Fast Grill</option>
+                        <option value="3">🥩 Rodizio</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>📄 Formato de Exportación</label>
+                    <div class="formato-options">
+                        <button type="button" class="formato-btn active" data-formato="excel" onclick="window.seleccionarFormato('excel')">
+                            📊 Excel (.xlsx)
+                        </button>
+                        <button type="button" class="formato-btn" data-formato="pdf" onclick="window.seleccionarFormato('pdf')">
+                            📄 PDF (.pdf)
+                        </button>
+                    </div>
+                    <input type="hidden" id="formatoReporte" value="excel" />
+                </div>
+                <div class="info-reporte">
+                    <span class="info-icon">ℹ️</span>
+                    <span class="info-text">El reporte incluirá todas las reservas del período seleccionado con todos los detalles.</span>
                 </div>
             </div>
-
-            <!-- Resumen Estadístico de Ventas -->
-            <div class="reporte-cards-grid">
-                <div class="reporte-card-stat">
-                    <span class="reporte-card-label">💰 Ingreso Total Estimado</span>
-                    <span class="reporte-card-value" style="color: #10b981;">{ventasTotalesHoy.toLocaleString('es-BO')} Bs.</span>
-                </div>
-                <div class="reporte-card-stat">
-                    <span class="reporte-card-label">✅ Reservas Efectivas</span>
-                    <span class="reporte-card-value">{reservasEfectivasHoy}</span>
-                </div>
-                <div class="reporte-card-stat">
-                    <span class="reporte-card-label">👥 Adultos Atendidos</span>
-                    <span class="reporte-card-value">{totalAdultosHoy}</span>
-                </div>
-                <div class="reporte-card-stat">
-                    <span class="reporte-card-label">👧 Niños Atendidos</span>
-                    <span class="reporte-card-value">{totalNinosHoy}</span>
-                </div>
-            </div>
-
-            <!-- Tabla Resumen por Sucursal -->
-            <div class="reporte-tabla-section">
-                <h4>🪑 Resumen de Ocupación por Sucursal</h4>
-                <table class="reporte-tabla">
-                    <thead>
-                        <tr>
-                            <th>Sucursal</th>
-                            <th>Capacidad Total</th>
-                            <th>Cubiertos Ocupados</th>
-                            <th>Cubiertos Libres</th>
-                            <th>% Ocupación</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {cubiertos.map((s: any) => (
-                            <tr>
-                                <td><strong>{s.nombre}</strong></td>
-                                <td>{s.capacidad_total}</td>
-                                <td>{s.cubiertos_ocupados}</td>
-                                <td>{s.cubiertos_disponibles}</td>
-                                <td><strong>{s.porcentaje_ocupacion}%</strong></td>
-                            </tr>
-                        ))}
-                    </tbody>
-                </table>
-            </div>
-
-            <!-- Detalle de Transacciones del Día -->
-            <div class="reporte-tabla-section">
-                <h4>📋 Detalle de Reservas y Ventas del Día ({reservasHoy.length})</h4>
-                <table class="reporte-tabla">
-                    <thead>
-                        <tr>
-                            <th>Nº Reserva</th>
-                            <th>Cliente</th>
-                            <th>Teléfono</th>
-                            <th>Sucursal</th>
-                            <th>Hora</th>
-                            <th>Adultos</th>
-                            <th>Niños</th>
-                            <th>Estado</th>
-                            <th>Monto Estimado</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {reservasHoy.length === 0 ? (
-                            <tr><td colspan="9" style="text-align: center; color: #64748b; padding: 20px;">No hay reservas o ventas registradas para el día de hoy.</td></tr>
-                        ) : (
-                            reservasHoy.map((r: any) => (
-                                <tr>
-                                    <td><code style="font-family: monospace; font-weight: bold; color: #9e2a2b;">{r.numero_reserva || `BR-${r.id}`}</code></td>
-                                    <td><strong>{r.nombre_cliente}</strong></td>
-                                    <td>{r.codigo_pais || '591'} {r.telefono}</td>
-                                    <td>{r.sucursal_nombre}</td>
-                                    <td>{r.hora}</td>
-                                    <td>{r.numero_personas}</td>
-                                    <td>{r.cantidad_ninos || 0}</td>
-                                    <td>
-                                        <span class={`badge badge-${r.estado}`}>
-                                            {r.estado === 'confirmada' ? 'Confirmada' :
-                                             r.estado === 'en_curso' ? 'En Curso' :
-                                             r.estado === 'completada' ? 'Completada' :
-                                             r.estado === 'pendiente' ? 'Pendiente' :
-                                             r.estado === 'rechazada' ? 'Rechazada' : 'Cancelada'}
-                                        </span>
-                                    </td>
-                                    <td><strong>{r.monto_estimado > 0 ? `${r.monto_estimado.toLocaleString('es-BO')} Bs.` : '0 Bs.'}</strong></td>
-                                </tr>
-                            ))
-                        )}
-                    </tbody>
-                </table>
-            </div>
-
-            <div class="reporte-footer-print">
-                <p>Brasargent Churrasquería - Documento de Control Interno de Ventas y Reservas</p>
+            <div class="modal-footer">
+                <button type="button" class="btn-cancel" onclick="window.cerrarModalReportes()">Cancelar</button>
+                <button type="button" class="btn-generar" onclick="window.generarReporte()">📥 Descargar Reporte</button>
             </div>
         </div>
     </div>
 </AdminLayout>
 
-<script is:inline>
-// ============================================
-// FUNCIONES DE IMPRESIÓN Y DESCARGA DE PDF
-// ============================================
+<style>
+.btn-excel { background: #C9A87C; color: #1A1A1A; }
 
-window.imprimirReporte = function() {
-    window.print();
-};
-
-window.descargarPDF = function() {
-    if (typeof window.html2pdf === 'undefined') {
-        const script = document.createElement('script');
-        script.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js';
-        script.onload = () => window._ejecutarDescargaPDF();
-        script.onerror = () => {
-            alert('💡 Abriendo vista previa para guardar como PDF...');
-            window.print();
-        };
-        document.head.appendChild(script);
-    } else {
-        window._ejecutarDescargaPDF();
-    }
-};
-
-window._ejecutarDescargaPDF = function() {
-    const element = document.getElementById('reporteImprimible');
-    if (!element) return;
-
-    const btnImprimir = document.querySelector('.btn-imprimir');
-    const btnPdf = document.querySelector('.btn-pdf');
-    if (btnPdf) btnPdf.textContent = '⏳ Generando PDF...';
-
-    const opt = {
-        margin:       [10, 10, 10, 10],
-        filename:     `Reporte_Ventas_Brasargent_${new Date().toISOString().split('T')[0]}.pdf`,
-        image:        { type: 'jpeg', quality: 0.98 },
-        html2canvas:  { scale: 2, useCORS: true },
-        jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
-    };
-
-    window.html2pdf().set(opt).from(element).save().then(() => {
-        if (btnPdf) btnPdf.textContent = '📥 Descargar PDF';
-    }).catch((err) => {
-        console.error('Error creando PDF:', err);
-        if (btnPdf) btnPdf.textContent = '📥 Descargar PDF';
-        window.print();
-    });
-};
-// ============================================
-// VALIDACIÓN DE ASISTENTES EN TIEMPO REAL
-// ============================================
-
-window.validarAsistentes = function(input, max) {
-    const valor = parseInt(input.value);
-    
-    if (input.value === '') {
-        return;
-    }
-    
-    if (valor < 1) {
-        input.value = 1;
-    }
-    
-    if (valor > max) {
-        input.value = max;
-        alert(`⚠️ Solo hay ${max} cubiertos reservados`);
-    }
-};
-
-// ============================================
-// REGISTRAR ASISTENCIA
-// ============================================
-
-window.registrarAsistencia = async function(reservaId, maxAsistentes) {
-    const input = document.getElementById(`input-asistentes-${reservaId}`);
-    const personas = parseInt(input.value);
-    
-    // Validar entrada
-    if (!personas || personas < 1) {
-        alert('⚠️ Ingresa el número de personas que asistieron');
-        if (input) input.focus();
-        return;
-    }
-    
-    if (personas > maxAsistentes) {
-        alert(`⚠️ Solo hay ${maxAsistentes} cubiertos reservados`);
-        if (input) input.value = maxAsistentes;
-        return;
-    }
-    
-    if (!confirm(`¿Registrar ${personas} asistentes para esta reserva?`)) return;
-
-    const btn = document.querySelector(`.btn-registrar-asistencia[data-reserva-id="${reservaId}"]`);
-    const originalText = btn ? btn.textContent : '📋 Registrar';
-    if (btn) {
-        btn.textContent = '⏳ Procesando...';
-        btn.disabled = true;
-    }
-
-    try {
-        const response = await fetch(`/api/reservas/${reservaId}/asistencia`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({ personas_asistentes: personas })
-        });
-
-        const result = await response.json();
-
-        if (result.success) {
-            // Actualizar UI inmediatamente
-            const label = document.getElementById(`asistentes-label-${reservaId}`);
-            if (label) label.textContent = `${personas}`;
-            
-            if (input) input.disabled = true;
-            if (btn) {
-                btn.textContent = '✅ Registrado';
-                btn.disabled = true;
-            }
-            
-            const card = document.getElementById(`mesa-${reservaId}`);
-            if (card) {
-                const estado = card.querySelector('.mesa-estado');
-                if (estado) {
-                    estado.textContent = '🟢 En curso';
-                    estado.style.color = '#10b981';
-                }
-            }
-            
-            alert(`✅ ${result.mensaje}`);
-            setTimeout(() => location.reload(), 1500);
-        } else {
-            alert('❌ Error: ' + result.error);
-            if (btn) {
-                btn.textContent = originalText;
-                btn.disabled = false;
-            }
-        }
-    } catch (error) {
-        alert('❌ Error de conexión');
-        if (btn) {
-            btn.textContent = originalText;
-            btn.disabled = false;
-        }
-    }
-};
-
-// ============================================
-// LIBERAR MESA
-// ============================================
-
-window.liberarMesa = async function(reservaId) {
-    if (!confirm('¿Estás seguro de liberar esta mesa?')) return;
-    if (!confirm('⚠️ El cliente ya terminó su comida y se retiró.')) return;
-
-    const btn = document.querySelector(`.btn-liberar-mesa[data-reserva-id="${reservaId}"]`);
-    const originalText = btn ? btn.textContent : '✅ Liberar';
-    if (btn) {
-        btn.textContent = '⏳ Liberando...';
-        btn.disabled = true;
-    }
-
-    try {
-        const response = await fetch(`/api/reservas/${reservaId}/liberar`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            }
-        });
-
-        const result = await response.json();
-
-        if (result.success) {
-            alert(`✅ ${result.mensaje}`);
-            location.reload();
-        } else {
-            alert('❌ Error: ' + result.error);
-            if (btn) {
-                btn.textContent = originalText;
-                btn.disabled = false;
-            }
-        }
-    } catch (error) {
-        alert('❌ Error de conexión');
-        if (btn) {
-            btn.textContent = originalText;
-            btn.disabled = false;
-        }
-    }
-};
-
-// ============================================
-// REINICIAR RESERVAS
-// ============================================
-
-window.reiniciarReservas = function() {
-    if (!confirm('⚠️ ¿Estás seguro de reiniciar todas las reservas?\n\nSe eliminarán todas las reservas del día actual y se liberarán todos los cubiertos.')) {
-        return;
-    }
-    
-    if (!confirm('🔴 Esta acción NO se puede deshacer. ¿Continuar?')) {
-        return;
-    }
-    
-    const btn = document.querySelector('.btn-reiniciar');
-    btn.textContent = '⏳ Procesando...';
-    btn.disabled = true;
-    
-    fetch('/api/reservas/reiniciar', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json'
-        }
-    })
-    .then(response => response.json())
-    .then(result => {
-        if (result.success) {
-            alert(`✅ Reservas reiniciadas exitosamente\n\n📋 ${result.reservas_eliminadas} reservas eliminadas\n🪑 ${result.cubiertos_liberados} cubiertos liberados`);
-            location.reload();
-        } else {
-            alert('❌ Error: ' + result.error);
-            btn.textContent = '🔄 Reiniciar Reservas';
-            btn.disabled = false;
-        }
-    })
-    .catch(() => {
-        alert('❌ Error de conexión. Intenta de nuevo.');
-        btn.textContent = '🔄 Reiniciar Reservas';
-        btn.disabled = false;
-    });
-};
-</script>
-
-<style is:global>
-/* ============================================
-   ESTILOS DE BOTONES DE REPORTE E IMPRESIÓN
-   ============================================ */
-.header-actions {
-    display: flex;
+/* MODAL DE REPORTES */
+.modal-reportes {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.55);
+    backdrop-filter: blur(8px);
+    display: none;
     align-items: center;
-    gap: 10px;
-    flex-wrap: wrap;
+    justify-content: center;
+    z-index: 99999;
 }
 
-.btn-reporte {
-    padding: 10px 18px;
-    border: none;
-    border-radius: 10px;
-    font-size: 0.88rem;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all 0.3s ease;
-    font-family: 'Inter', sans-serif;
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
-}
-
-.btn-imprimir {
-    background: #2563eb;
-    color: white;
-}
-
-.btn-imprimir:hover {
-    background: #1d4ed8;
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(37, 99, 235, 0.25);
-}
-
-.btn-pdf {
-    background: #059669;
-    color: white;
-}
-
-.btn-pdf:hover {
-    background: #047857;
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(5, 150, 105, 0.25);
-}
-
-/* ============================================
-   ESTILOS DEL REPORTE IMPRIMIBLE
-   ============================================ */
-.reporte-imprimible-container {
+.modal-reportes-content {
     background: white;
-    border-radius: 16px;
-    padding: 28px;
-    margin-top: 24px;
-    border: 1px solid rgba(26, 26, 26, 0.08);
-    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.04);
+    border-radius: 20px;
+    max-width: 520px;
+    width: 92%;
+    padding: 28px 32px;
+    box-shadow: 0 25px 60px rgba(0, 0, 0, 0.25);
 }
 
-.reporte-header-print {
+.modal-header {
     display: flex;
     justify-content: space-between;
     align-items: flex-start;
-    border-bottom: 2px solid #9e2a2b;
-    padding-bottom: 16px;
-    margin-bottom: 24px;
+    margin-bottom: 20px;
 }
 
-.reporte-logo-title {
-    display: flex;
-    align-items: center;
-    gap: 14px;
-}
-
-.reporte-logo {
-    font-size: 2.8rem;
-}
-
-.reporte-logo-title h2 {
+.modal-header h2 {
     font-family: 'Playfair Display', serif;
-    font-size: 1.4rem;
-    color: #9e2a2b;
-    margin: 0;
+    font-size: 1.3rem;
     font-weight: 700;
+    margin: 0;
+    color: #1A1A1A;
 }
 
-.reporte-logo-title h3 {
-    font-size: 1rem;
-    color: #1a1a1a;
+.modal-subtext {
+    font-size: 0.82rem;
+    color: #6B6B6B;
     margin: 4px 0 0;
-    font-weight: 600;
 }
 
-.reporte-meta {
-    font-size: 0.85rem;
-    color: #4b5563;
-    text-align: right;
-    line-height: 1.5;
+.modal-close {
+    background: transparent;
+    border: none;
+    font-size: 1.2rem;
+    cursor: pointer;
+    color: #6B6B6B;
+    padding: 4px;
 }
 
-.reporte-meta p {
-    margin: 2px 0;
+.modal-body {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
 }
 
-.reporte-cards-grid {
+.form-row {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-    gap: 14px;
-    margin-bottom: 24px;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
 }
 
-.reporte-card-stat {
-    background: #f8fafc;
-    border: 1px solid #e2e8f0;
-    border-radius: 12px;
-    padding: 14px 16px;
-    text-align: center;
+.form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
 }
 
-.reporte-card-label {
-    display: block;
-    font-size: 0.75rem;
-    color: #64748b;
-    text-transform: uppercase;
+.form-group label {
+    font-size: 0.8rem;
     font-weight: 600;
-    letter-spacing: 0.5px;
+    color: #1A1A1A;
 }
 
-.reporte-card-value {
-    display: block;
-    font-size: 1.4rem;
-    font-weight: 700;
-    color: #0f172a;
-    margin-top: 4px;
+.input-reporte {
+    padding: 10px 14px;
+    border: 1.5px solid rgba(0, 0, 0, 0.08);
+    border-radius: 10px;
+    font-family: 'Inter', sans-serif;
+    font-size: 0.88rem;
+    background: #F9FAFB;
 }
 
-.reporte-tabla-section {
-    margin-bottom: 24px;
+.input-reporte:focus {
+    outline: none;
+    border-color: #9E2A2B;
+    background: white;
 }
 
-.reporte-tabla-section h4 {
-    font-size: 1rem;
-    font-weight: 700;
-    color: #1e293b;
-    margin-bottom: 12px;
+.formato-options {
+    display: flex;
+    gap: 10px;
 }
 
-.reporte-tabla {
-    width: 100%;
-    border-collapse: collapse;
+.formato-btn {
+    flex: 1;
+    padding: 10px 16px;
+    border: 1.5px solid rgba(0, 0, 0, 0.08);
+    border-radius: 10px;
+    background: #F9FAFB;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 0.85rem;
+    transition: all 0.2s ease;
+    color: #4B5563;
+}
+
+.formato-btn.active {
+    border-color: #9E2A2B;
+    background: rgba(158, 42, 43, 0.06);
+    color: #9E2A2B;
+}
+
+.info-reporte {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    background: rgba(201, 168, 124, 0.08);
+    border-radius: 10px;
+    padding: 12px 14px;
+    border: 1px solid rgba(201, 168, 124, 0.2);
+}
+
+.info-icon { font-size: 1.1rem; }
+
+.info-text {
+    font-size: 0.78rem;
+    color: #6B7280;
+    line-height: 1.4;
+}
+
+.modal-footer {
+    display: flex;
+    gap: 12px;
+    margin-top: 24px;
+    justify-content: flex-end;
+}
+
+.btn-cancel {
+    padding: 10px 20px;
+    border: 1.5px solid rgba(0, 0, 0, 0.1);
+    border-radius: 10px;
+    background: transparent;
+    cursor: pointer;
+    font-weight: 600;
     font-size: 0.85rem;
 }
 
-.reporte-tabla th {
-    background: #f1f5f9;
-    color: #334155;
-    padding: 10px 12px;
-    text-align: left;
-    font-weight: 600;
-    border-bottom: 2px solid #cbd5e1;
-}
-
-.reporte-tabla td {
-    padding: 10px 12px;
-    border-bottom: 1px solid #e2e8f0;
-    color: #1e293b;
-}
-
-.reporte-footer-print {
-    text-align: center;
-    border-top: 1px solid #e2e8f0;
-    padding-top: 14px;
-    margin-top: 20px;
-    font-size: 0.8rem;
-    color: #94a3b8;
-}
-
-/* ============================================
-   ESTILOS EXCLUSIVOS PARA IMPRESIÓN (@media print)
-   ============================================ */
-@media print {
-    /* Ocultar elementos de la interfaz de administración que no son del reporte */
-    aside, 
-    nav, 
-    header, 
-    .header-actions,
-    .btn-reiniciar,
-    .btn-reporte,
-    .stats-grid,
-    .cubiertos-section,
-    .mesas-section {
-        display: none !important;
-    }
-
-    body {
-        background: white !important;
-        color: black !important;
-    }
-
-    .dashboard-content {
-        max-width: 100% !important;
-        margin: 0 !important;
-        padding: 0 !important;
-    }
-
-    .reporte-imprimible-container {
-        border: none !important;
-        box-shadow: none !important;
-        padding: 0 !important;
-        margin: 0 !important;
-    }
-
-    .reporte-card-stat {
-        border: 1px solid #cbd5e1 !important;
-        background: #fff !important;
-    }
-
-    .reporte-tabla th {
-        background: #e2e8f0 !important;
-        color: #000 !important;
-    }
-
-    .reporte-tabla td {
-        border-bottom: 1px solid #cbd5e1 !important;
-    }
-}
-
-/* ============================================
-   ESTILOS DEL DASHBOARD
-   ============================================ */
-
-.dashboard-content {
-    max-width: 1400px;
-    margin: 0 auto;
-}
-
-.dashboard-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 24px;
-}
-
-.dashboard-header h1 {
-    font-family: 'Playfair Display', serif;
-    font-size: 1.8rem;
-    color: #1a1a1a;
-    margin: 0;
-}
-
-.dashboard-header p {
-    color: rgba(26, 26, 26, 0.5);
-    margin: 4px 0 0;
-}
-
-.btn-reiniciar {
+.btn-generar {
     padding: 10px 24px;
-    background: #ef4444;
+    background: #9E2A2B;
     color: white;
     border: none;
     border-radius: 10px;
-    font-size: 0.9rem;
-    font-weight: 600;
     cursor: pointer;
-    transition: all 0.3s ease;
-    font-family: 'Inter', sans-serif;
+    font-weight: 600;
+    font-size: 0.85rem;
+    transition: all 0.2s ease;
+}
+
+.btn-generar:hover {
+    background: #7A2021;
+}
+/* ============================================
+   DASHBOARD - COLUMNA SIN SCROLL HORIZONTAL
+   ============================================ */
+.dashboard-column {
+    max-width: 900px;
+    margin: 0 auto;
+    width: 100%;
+    overflow-x: hidden;
+    box-sizing: border-box;
+}
+
+.dashboard-top-bar {
     display: flex;
+    justify-content: space-between;
     align-items: center;
+    gap: 16px;
+    margin-bottom: 24px;
+    flex-wrap: wrap;
+}
+
+.dashboard-title-area h2 {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #1A1A1A;
+}
+
+.dashboard-title-area p {
+    font-size: 0.85rem;
+    color: #6B6B6B;
+}
+
+.header-actions {
+    display: flex;
     gap: 8px;
+    flex-wrap: wrap;
 }
 
-.btn-reiniciar:hover {
-    background: #dc2626;
-    transform: scale(1.02);
+.btn-reporte, .btn-reiniciar {
+    padding: 8px 14px;
+    border-radius: 10px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    border: none;
+    cursor: pointer;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    transition: all 0.2s ease;
 }
 
-.section-card {
+.btn-imprimir { background: #E5E7EB; color: #1F2937; }
+.btn-pdf { background: #3B82F6; color: white; }
+.btn-openwa { background: #25D366; color: white; }
+.btn-reiniciar { background: #9E2A2B; color: white; }
+
+.btn-reporte:hover, .btn-reiniciar:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+/* ALERTA DE RESERVAS DENTRO DE 24H */
+.alerta-aceptables {
+    background: #FEF3C7;
+    border: 1px solid #F59E0B;
+    border-radius: 14px;
+    padding: 14px 18px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.btn-alerta-link {
+    background: #D97706;
+    color: white;
+    font-size: 0.75rem;
+    font-weight: 700;
+    padding: 6px 14px;
+    border-radius: 8px;
+    text-decoration: none;
+}
+
+/* ============================================
+   ESTADÍSTICAS
+   ============================================ */
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 16px;
+    margin-bottom: 24px;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.stat-card {
     background: white;
     border-radius: 16px;
-    padding: 24px;
+    padding: 18px 20px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.04);
+    border-left: 4px solid #C9A87C;
+    min-width: 0;
+    box-sizing: border-box;
+}
+
+.stat-icon {
+    font-size: 1.8rem;
+}
+
+.stat-number {
+    display: block;
+    font-size: 1.5rem;
+    font-weight: 800;
+    color: #1A1A1A;
+    line-height: 1.1;
+}
+
+.stat-label {
+    font-size: 0.7rem;
+    color: #6B6B6B;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    font-weight: 600;
+}
+
+/* ============================================
+   SECCIÓN CARD
+   ============================================ */
+.section-card {
+    background: white;
+    border-radius: 20px;
+    padding: 22px 24px;
     margin-bottom: 24px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.04);
+    border: 1px solid rgba(0, 0, 0, 0.04);
+    width: 100%;
+    box-sizing: border-box;
 }
 
 .section-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 16px;
+    margin-bottom: 18px;
 }
 
-.section-header h2 {
-    font-size: 1.1rem;
-    font-weight: 600;
-    color: #1a1a1a;
-}
-
-.badge-porcentaje {
-    padding: 4px 16px;
-    border-radius: 20px;
-    font-size: 0.8rem;
-    font-weight: 600;
-}
-
-.badge-total {
-    font-size: 0.75rem;
-    font-weight: 500;
-    color: #3b82f6;
-    background: rgba(59, 130, 246, 0.1);
-    padding: 4px 12px;
-    border-radius: 20px;
-}
-
-/* ============================================
-   STATS GRID
-   ============================================ */
-.stats-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 16px;
-    margin-bottom: 24px;
-}
-
-.stat-card {
-    background: white;
-    padding: 18px 20px;
-    border-radius: 12px;
-    display: flex;
-    align-items: center;
-    gap: 16px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
-    transition: all 0.3s ease;
-}
-
-.stat-card:hover {
-    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
-    transform: translateY(-2px);
-}
-
-.stat-icon {
-    width: 48px;
-    height: 48px;
-    border-radius: 12px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 1.5rem;
-}
-
-.stat-info {
-    flex: 1;
-}
-
-.stat-number {
-    display: block;
-    font-size: 1.5rem;
+.section-header h3 {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.15rem;
     font-weight: 700;
-    color: #1a1a1a;
+    color: #1A1A1A;
+    margin: 0;
 }
 
-.stat-label {
+.section-badge {
+    font-size: 0.7rem;
+    font-weight: 600;
+    color: #6B6B6B;
+    background: rgba(0, 0, 0, 0.04);
+    padding: 4px 12px;
+    border-radius: 50px;
+}
+
+.btn-ver-todas {
     font-size: 0.8rem;
-    color: rgba(26, 26, 26, 0.4);
+    color: #9E2A2B;
+    text-decoration: none;
+    font-weight: 600;
 }
 
 /* ============================================
-   CUBIERTOS GRID
+   CUBIERTOS LIST
    ============================================ */
-.cubiertos-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+.cubiertos-list {
+    display: flex;
+    flex-direction: column;
     gap: 16px;
 }
 
-.cubiertos-card {
-    background: rgba(255, 250, 240, 0.3);
-    border-radius: 12px;
+.cubiertos-item {
+    background: rgba(255, 250, 240, 0.5);
+    border-radius: 14px;
     padding: 16px 20px;
-    border-left: 4px solid #10b981;
-    transition: all 0.3s ease;
-}
-
-.cubiertos-card:hover {
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
-    transform: translateY(-2px);
+    border: 1px solid rgba(201, 168, 124, 0.15);
 }
 
 .cubiertos-header {
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 10px;
     margin-bottom: 10px;
 }
 
 .cubiertos-icon {
-    font-size: 1.2rem;
+    font-size: 1.3rem;
 }
 
-.cubiertos-header strong {
-    font-weight: 600;
-    color: #1a1a1a;
-}
-
-.cubiertos-numeros {
-    display: flex;
-    justify-content: space-between;
-    margin-bottom: 10px;
-}
-
-.cubiertos-numeros div {
-    text-align: center;
-}
-
-.cubiertos-label {
-    display: block;
-    font-size: 0.6rem;
-    color: rgba(26, 26, 26, 0.3);
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-}
-
-.cubiertos-valor {
-    display: block;
-    font-size: 1.2rem;
+.cubiertos-nombre {
     font-weight: 700;
-    color: #1a1a1a;
+    font-size: 0.95rem;
+    color: #1A1A1A;
+    flex: 1;
 }
 
-.cubiertos-bar {
+.cubiertos-porcentaje {
+    font-weight: 800;
+    font-size: 0.9rem;
+}
+
+.cubiertos-barra {
     width: 100%;
-    height: 4px;
-    background: rgba(26, 26, 26, 0.06);
-    border-radius: 2px;
+    height: 8px;
+    background: rgba(0, 0, 0, 0.06);
+    border-radius: 4px;
     overflow: hidden;
-    margin-bottom: 8px;
+    margin-bottom: 10px;
 }
 
 .cubiertos-progreso {
     height: 100%;
-    border-radius: 2px;
-    transition: width 0.8s ease;
+    border-radius: 4px;
+    transition: width 0.5s ease;
 }
 
-.cubiertos-footer {
-    display: flex;
-    justify-content: space-between;
-    font-size: 0.75rem;
-}
-
-.cubiertos-libres {
-    color: rgba(26, 26, 26, 0.3);
-}
-
-/* ============================================
-   MESAS GRID
-   ============================================ */
-.mesas-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-    gap: 16px;
-}
-
-.mesa-card {
-    background: white;
-    border-radius: 12px;
-    padding: 16px 20px;
-    border: 1px solid rgba(26, 26, 26, 0.06);
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
-    transition: all 0.3s ease;
-}
-
-.mesa-card:hover {
-    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
-}
-
-.mesa-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 8px;
-}
-
-.mesa-info {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-}
-
-.mesa-icon {
-    font-size: 1.5rem;
-}
-
-.mesa-cliente {
-    font-weight: 600;
-    color: #1a1a1a;
-}
-
-.mesa-sucursal {
-    display: block;
-    font-size: 0.75rem;
-    color: rgba(26, 26, 26, 0.4);
-}
-
-.mesa-estado {
-    font-size: 0.75rem;
-    font-weight: 600;
-}
-
-.mesa-detalles {
+.cubiertos-detalles {
     display: flex;
     gap: 16px;
     font-size: 0.8rem;
-    color: rgba(26, 26, 26, 0.5);
-    margin: 8px 0 12px;
+    color: #4B5563;
     flex-wrap: wrap;
 }
 
-.mesa-asistencia {
-    border-top: 1px solid rgba(26, 26, 26, 0.04);
-    padding-top: 12px;
+/* ============================================
+   RESERVAS LIST
+   ============================================ */
+.reservas-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
 }
 
-.asistencia-info {
+.reserva-item {
+    background: #F9FAFB;
+    border-radius: 14px;
+    padding: 14px 18px;
+    border: 1px solid rgba(0, 0, 0, 0.04);
+}
+
+.reserva-info {
     display: flex;
-    gap: 12px;
-    align-items: center;
-    font-size: 0.85rem;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 8px;
     margin-bottom: 8px;
 }
 
-.asistencia-label {
-    color: rgba(26, 26, 26, 0.3);
+.reserva-cliente {
+    font-weight: 700;
+    font-size: 0.95rem;
+    color: #1A1A1A;
+    display: block;
 }
 
-.asistencia-valor {
-    font-weight: 600;
-    color: #1a1a1a;
+.reserva-sucursal {
+    font-size: 0.75rem;
+    color: #6B6B6B;
 }
 
-.asistencia-control {
+.reserva-detalles {
     display: flex;
-    gap: 8px;
+    gap: 12px;
+    font-size: 0.78rem;
+    color: #4B5563;
+    flex-wrap: wrap;
 }
 
-.input-asistentes {
-    width: 100px;
-    padding: 8px 12px;
-    border: 1.5px solid rgba(26, 26, 26, 0.08);
-    border-radius: 8px;
-    font-size: 0.85rem;
-    font-family: 'Inter', sans-serif;
-    transition: all 0.3s ease;
-    background: #fff;
-    color: #1a1a1a;
-}
-
-.input-asistentes:focus {
-    outline: none;
-    border-color: #9e2a2b;
-    box-shadow: 0 0 0 3px rgba(158, 42, 43, 0.08);
-}
-
-.input-asistentes:disabled {
-    background: #f3f4f6;
-    color: #9ca3af;
-    cursor: not-allowed;
-}
-
-.btn-registrar-asistencia {
-    flex: 1;
-    padding: 8px 16px;
-    background: #3b82f6;
-    color: white;
-    border: none;
-    border-radius: 8px;
-    font-size: 0.8rem;
-    font-weight: 500;
-    cursor: pointer;
-    transition: all 0.3s ease;
-    font-family: 'Inter', sans-serif;
-}
-
-.btn-registrar-asistencia:hover:not(:disabled) {
-    background: #2563eb;
-    transform: scale(1.02);
-}
-
-.btn-registrar-asistencia:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-}
-
-.btn-liberar-mesa {
-    flex: 1;
-    padding: 8px 16px;
-    background: #10b981;
-    color: white;
-    border: none;
-    border-radius: 8px;
-    font-size: 0.8rem;
-    font-weight: 500;
-    cursor: pointer;
-    transition: all 0.3s ease;
-    font-family: 'Inter', sans-serif;
-}
-
-.btn-liberar-mesa:hover {
-    background: #059669;
-    transform: scale(1.02);
-}
-
-/* ============================================
-   TABLA DE RESERVAS DE HOY
-   ============================================ */
-.table-wrapper {
-    overflow-x: auto;
-}
-
-.tabla-reservas {
-    width: 100%;
-    border-collapse: collapse;
-}
-
-.tabla-reservas thead {
-    background: #f8f5f0;
-}
-
-.tabla-reservas th {
-    padding: 10px 14px;
-    text-align: left;
+.estado-badge {
     font-size: 0.7rem;
     font-weight: 600;
-    color: rgba(26, 26, 26, 0.4);
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    border-bottom: 1px solid rgba(26, 26, 26, 0.06);
+    padding: 3px 10px;
+    border-radius: 50px;
+    white-space: nowrap;
 }
 
-.tabla-reservas td {
-    padding: 10px 14px;
-    font-size: 0.85rem;
-    color: #1a1a1a;
-    border-bottom: 1px solid rgba(26, 26, 26, 0.04);
-    vertical-align: middle;
-}
+.estado-badge.confirmada { background: rgba(16, 185, 129, 0.12); color: #10B981; }
+.estado-badge.pendiente { background: rgba(245, 158, 11, 0.12); color: #F59E0B; }
+.estado-badge.rechazada { background: rgba(239, 68, 68, 0.12); color: #EF4444; }
+.estado-badge.cancelada { background: rgba(107, 114, 128, 0.12); color: #6B7280; }
 
-.tabla-reservas tr:hover td {
-    background: rgba(255, 250, 240, 0.3);
-}
-
-.badge {
-    display: inline-block;
-    padding: 3px 12px;
-    border-radius: 20px;
-    font-size: 0.7rem;
-    font-weight: 500;
-}
-
-.badge-pendiente { background: rgba(245, 158, 11, 0.1); color: #f59e0b; }
-.badge-confirmada { background: rgba(16, 185, 129, 0.1); color: #10b981; }
-.badge-en_curso { background: rgba(16, 185, 129, 0.2); color: #059669; }
-.badge-completada { background: rgba(59, 130, 246, 0.1); color: #3b82f6; }
-.badge-rechazada { background: rgba(239, 68, 68, 0.1); color: #ef4444; }
-.badge-cancelada { background: rgba(107, 114, 128, 0.1); color: #6b7280; }
-
-.whatsapp-link {
-    color: #25d366;
-    text-decoration: none;
-    font-weight: 500;
-}
-
-/* EMPTY STATE */
 .empty-state {
     text-align: center;
-    padding: 32px 24px;
+    padding: 32px 16px;
+    word-break: break-word;
+    overflow-wrap: break-word;
 }
 
 .empty-icon {
@@ -1429,45 +743,175 @@ window.reiniciarReservas = function() {
 .empty-state p {
     font-size: 0.95rem;
     font-weight: 500;
-    color: #1a1a1a;
+    color: #4B5563;
     margin: 0;
+    word-break: break-word;
+    overflow-wrap: break-word;
 }
 
-.empty-sub {
-    color: rgba(26, 26, 26, 0.3);
-    font-size: 0.85rem;
-}
-
-/* RESPONSIVE */
+/* ============================================
+   RESPONSIVE MÓVIL
+   ============================================ */
 @media (max-width: 768px) {
-    .cubiertos-grid,
-    .mesas-grid {
-        grid-template-columns: 1fr;
+    .dashboard-column {
+        padding: 0 2px;
+        width: 100%;
+        max-width: 100%;
     }
-    
-    .dashboard-header {
+
+    .dashboard-top-bar {
         flex-direction: column;
         align-items: flex-start;
+        gap: 12px;
+    }
+
+    .header-actions {
+        width: 100%;
+        display: grid;
+        grid-template-columns: 1fr 1fr;
         gap: 8px;
     }
-    
-    .asistencia-control {
-        flex-direction: column;
-    }
-    
-    .input-asistentes {
+
+    .btn-reporte, .btn-reiniciar {
         width: 100%;
+        justify-content: center;
     }
 }
 
-@media (max-width: 480px) {
-    .section-card {
-        padding: 16px;
+@media (max-width: 580px) {
+    .stats-grid {
+        grid-template-columns: 1fr;
+        gap: 10px;
     }
     
-    .mesa-detalles {
-        flex-direction: column;
-        gap: 4px;
+    .stat-card {
+        padding: 14px 16px;
+        flex-direction: row;
+        text-align: left;
+        gap: 14px;
+        border-left: 4px solid #C9A87C;
+        border-top: none;
     }
+    
+    .stat-icon { font-size: 1.6rem; }
+    .stat-number { font-size: 1.3rem; }
+    .stat-label { font-size: 0.65rem; }
+    
+    .section-card { padding: 16px 14px; }
 }
 </style>
+
+<script is:inline>
+window.seleccionarFormato = function(fmt) {
+    document.querySelectorAll('.formato-btn').forEach(btn => btn.classList.remove('active'));
+    const btn = document.querySelector(`.formato-btn[data-formato="${fmt}"]`);
+    if (btn) btn.classList.add('active');
+    const inputFmt = document.getElementById('formatoReporte');
+    if (inputFmt) inputFmt.value = fmt;
+};
+
+window.abrirModalReportes = function() {
+    const m = document.getElementById('modalReportes');
+    if (m) {
+        m.style.display = 'flex';
+        document.body.style.overflow = 'hidden';
+    }
+};
+
+window.cerrarModalReportes = function() {
+    const m = document.getElementById('modalReportes');
+    if (m) {
+        m.style.display = 'none';
+        document.body.style.overflow = '';
+    }
+};
+
+window.generarReporteConFormato = async function(fmt, fechaInicio, fechaFin, sucursalId) {
+    const btnGenerar = document.querySelector('.btn-generar');
+    const originalText = btnGenerar ? btnGenerar.textContent : 'Descargar Reporte';
+    
+    let url = `/api/reportes/reservas?formato=${fmt || 'excel'}`;
+    if (fechaInicio) url += `&fecha_inicio=${fechaInicio}`;
+    if (fechaFin) url += `&fecha_fin=${fechaFin}`;
+    if (sucursalId) url += `&sucursal_id=${sucursalId}`;
+
+    try {
+        if (btnGenerar) {
+            btnGenerar.disabled = true;
+            btnGenerar.textContent = '⏳ Generando...';
+        }
+
+        const res = await fetch(url);
+
+        if (!res.ok) {
+            let errorMsg = 'No existen reservas actualmente para los filtros seleccionados.';
+            try {
+                const data = await res.json();
+                if (data.error) errorMsg = data.error;
+            } catch (e) {}
+
+            alert(`⚠️ ${errorMsg}`);
+            return;
+        }
+
+        const blob = await res.blob();
+        const downloadUrl = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = downloadUrl;
+        a.download = fmt === 'pdf' 
+            ? `reservas_brasargent_${new Date().toISOString().split('T')[0]}.pdf`
+            : `reservas_brasargent_${new Date().toISOString().split('T')[0]}.xlsx`;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        window.URL.revokeObjectURL(downloadUrl);
+
+        window.cerrarModalReportes();
+    } catch (err) {
+        alert('❌ Error de conexión al generar el reporte.');
+    } finally {
+        if (btnGenerar) {
+            btnGenerar.disabled = false;
+            btnGenerar.textContent = originalText;
+        }
+    }
+};
+
+window.generarReporte = function() {
+    const fechaInicio = document.getElementById('fechaInicio')?.value;
+    const fechaFin = document.getElementById('fechaFin')?.value;
+    const sucursalId = document.getElementById('sucursalReporte')?.value;
+    const formato = document.getElementById('formatoReporte')?.value || 'excel';
+
+    if (fechaInicio && fechaFin && fechaInicio > fechaFin) {
+        alert('⚠️ La fecha de inicio debe ser anterior o igual a la fecha fin.');
+        return;
+    }
+
+    window.generarReporteConFormato(formato, fechaInicio, fechaFin, sucursalId);
+};
+
+window.imprimirReporte = function() {
+    window.print();
+};
+
+window.descargarPDF = function() {
+    window.generarReporteConFormato('pdf');
+};
+
+window.reiniciarReservas = async function() {
+    if (!confirm('⚠️ ¿Estás seguro de que deseas reiniciar las reservas ocupadas del día?')) return;
+    try {
+        const res = await fetch('/api/reservas/reiniciar', { method: 'POST' });
+        const data = await res.json();
+        if (data.success) {
+            alert('✅ Reservas reiniciadas con éxito.');
+            window.location.reload();
+        } else {
+            alert('❌ Error: ' + (data.error || 'No se pudo reiniciar'));
+        }
+    } catch (e) {
+        alert('❌ Error de conexión al reiniciar reservas.');
+    }
+};
+</script>

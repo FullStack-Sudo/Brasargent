@@ -1,0 +1,363 @@
+---
+// src/components/Navbar.astro
+// Navbar con menú hamburguesa solo para móviles
+---
+
+<nav class="navbar-premium" id="navbar">
+    <div class="navbar-container">
+        <!-- 🔴 LOGO -->
+        <a href="/" class="navbar-logo" aria-label="BRASARGENT - Inicio">
+            <span class="logo-icon">🔥</span>
+            <span class="logo-text">BRASARGENT</span>
+        </a>
+        
+        <!-- 🔴 NAV LINKS - SIEMPRE VISIBLES EN DESKTOP -->
+        <div class="navbar-links" id="navLinks">
+            <a href="/#inicio">Inicio</a>
+            <a href="/#servicios">Servicios</a>
+            <a href="/#cortes">Platos</a>
+            <a href="/sucursales">Sucursales</a>
+            <a href="/#contacto">Contacto</a>
+            <a href="/admin/login" class="btn-nav-admin">Admin</a>
+            <a href="/sucursales" class="btn-nav-reservar">Reservar</a>
+        </div>
+        
+        <!-- 🔴 MENÚ HAMBURGUESA - SOLO VISIBLE EN MÓVIL -->
+        <button class="hamburger-btn" id="hamburgerBtn" aria-label="Menú">
+            <span></span><span></span><span></span>
+        </button>
+    </div>
+</nav>
+
+<script>
+// ============================================
+// TOGGLE MENÚ HAMBURGUESA (MÓVIL)
+// ============================================
+
+function toggleMenu() {
+    const links = document.getElementById('navLinks');
+    const btn = document.getElementById('hamburgerBtn');
+    if (links && btn) {
+        links.classList.toggle('open');
+        btn.classList.toggle('active');
+    }
+}
+
+// Global binding for inline handlers if any
+(window as any).toggleMenu = toggleMenu;
+
+document.addEventListener('DOMContentLoaded', function() {
+    const hamburgerBtn = document.getElementById('hamburgerBtn');
+    if (hamburgerBtn) {
+        hamburgerBtn.addEventListener('click', toggleMenu);
+    }
+
+    // ============================================
+    // CERRAR MENÚ AL REDIMENSIONAR A DESKTOP
+    // ============================================
+
+    window.addEventListener('resize', function() {
+        const links = document.getElementById('navLinks');
+        const btn = document.getElementById('hamburgerBtn');
+        if (window.innerWidth > 768 && links && btn) {
+            links.classList.remove('open');
+            btn.classList.remove('active');
+        }
+    });
+
+    // ============================================
+    // CERRAR MENÚ AL HACER CLICK EN UN ENLACE
+    // ============================================
+
+    document.querySelectorAll('.navbar-links a').forEach(link => {
+        link.addEventListener('click', function() {
+            const links = document.getElementById('navLinks');
+            const btn = document.getElementById('hamburgerBtn');
+            if (window.innerWidth <= 768 && links && btn) {
+                links.classList.remove('open');
+                btn.classList.remove('active');
+            }
+        });
+    });
+
+    // ============================================
+    // SCROLL DINÁMICO - CAMBIO DE COLOR
+    // ============================================
+
+    const navbar = document.getElementById('navbar');
+    const links = document.querySelectorAll('.navbar-links a');
+    
+    if (navbar) {
+        window.addEventListener('scroll', function() {
+            const currentScroll = window.pageYOffset || document.documentElement.scrollTop;
+            
+            if (currentScroll > 50) {
+                navbar.classList.add('scrolled');
+                links.forEach(link => {
+                    if (!link.classList.contains('btn-nav-admin') && 
+                        !link.classList.contains('btn-nav-reservar')) {
+                        (link as HTMLElement).style.color = '#1A1A1A';
+                    }
+                });
+            } else {
+                navbar.classList.remove('scrolled');
+                links.forEach(link => {
+                    if (!link.classList.contains('btn-nav-admin') && 
+                        !link.classList.contains('btn-nav-reservar')) {
+                        (link as HTMLElement).style.color = 'rgba(255,255,255,0.6)';
+                    }
+                });
+            }
+        });
+    }
+});
+</script>
+
+<style>
+/* ============================================
+   NAVBAR PREMIUM
+   ============================================ */
+.navbar-premium {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 1000;
+    padding: 0 24px;
+    transition: all 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+    height: 72px;
+    display: flex;
+    align-items: center;
+}
+
+/* 🔴 ESTADO INICIAL (Transparente) */
+.navbar-premium {
+    background: transparent;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+/* 🔴 ESTADO CON SCROLL (Glassmorphism) */
+.navbar-premium.scrolled {
+    background: rgba(255, 255, 255, 0.92);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border-bottom: 1px solid rgba(0, 0, 0, 0.04);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.04);
+}
+
+.navbar-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+}
+
+/* 🔴 LOGO */
+.navbar-logo {
+    text-decoration: none;
+    font-size: 1.8rem;
+    font-weight: 700;
+    color: white;
+    transition: color 0.3s ease;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.navbar-logo .logo-text {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.4rem;
+    letter-spacing: 1px;
+}
+
+.navbar-premium.scrolled .navbar-logo {
+    color: #1A1A1A;
+}
+
+.logo-icon {
+    font-size: 1.8rem;
+    filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1));
+}
+
+/* 🔴 NAV LINKS - SIEMPRE VISIBLES EN DESKTOP */
+.navbar-links {
+    display: flex;
+    align-items: center;
+    gap: 28px;
+}
+
+.navbar-links a {
+    color: rgba(255, 255, 255, 0.6);
+    text-decoration: none;
+    font-family: 'Montserrat', sans-serif;
+    font-size: 0.7rem;
+    font-weight: 500;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    transition: all 0.3s ease;
+}
+
+.navbar-links a:hover {
+    color: white;
+}
+
+.navbar-premium.scrolled .navbar-links a {
+    color: #1A1A1A;
+}
+
+.navbar-premium.scrolled .navbar-links a:hover {
+    color: #8B1A1A;
+}
+
+/* Botones de navegación */
+.btn-nav-admin {
+    padding: 6px 16px;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 50px;
+    font-size: 0.6rem !important;
+}
+
+.navbar-premium.scrolled .btn-nav-admin {
+    border-color: rgba(0, 0, 0, 0.1);
+}
+
+.btn-nav-reservar {
+    padding: 8px 24px;
+    background: #8B1A1A;
+    color: white !important;
+    border-radius: 50px;
+    font-weight: 600 !important;
+    transition: all 0.3s ease;
+}
+
+.btn-nav-reservar:hover {
+    background: #6B1414;
+    transform: translateY(-2px);
+}
+
+.navbar-premium.scrolled .btn-nav-reservar {
+    color: white !important;
+}
+
+/* 🔴 MENÚ HAMBURGUESA - OCULTO EN DESKTOP */
+.hamburger-btn {
+    display: none;
+    flex-direction: column;
+    gap: 5px;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    padding: 4px;
+    z-index: 1001;
+}
+
+.hamburger-btn span {
+    width: 24px;
+    height: 2px;
+    background: white;
+    border-radius: 2px;
+    transition: all 0.3s ease;
+}
+
+.navbar-premium.scrolled .hamburger-btn span {
+    background: #1A1A1A;
+}
+
+.hamburger-btn.active span:nth-child(1) {
+    transform: rotate(45deg) translate(5px, 5px);
+}
+
+.hamburger-btn.active span:nth-child(2) {
+    opacity: 0;
+}
+
+.hamburger-btn.active span:nth-child(3) {
+    transform: rotate(-45deg) translate(5px, -5px);
+}
+
+/* ============================================
+   RESPONSIVE - MENÚ HAMBURGUESA SOLO EN MÓVIL
+   ============================================ */
+
+/* 🔴 MÓVIL (≤768px) - Mostrar hamburguesa, ocultar enlaces */
+@media (max-width: 768px) {
+    .navbar-links {
+        display: none;
+        flex-direction: column;
+        position: absolute;
+        top: 72px;
+        left: 0;
+        right: 0;
+        background: rgba(26, 26, 26, 0.98);
+        backdrop-filter: blur(16px);
+        -webkit-backdrop-filter: blur(16px);
+        padding: 24px;
+        gap: 16px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+    }
+    
+    .navbar-premium.scrolled .navbar-links {
+        background: rgba(255, 255, 255, 0.98);
+    }
+    
+    .navbar-links.open {
+        display: flex !important;
+    }
+    
+    .hamburger-btn {
+        display: flex !important;
+    }
+    
+    .navbar-links a {
+        font-size: 0.8rem;
+        padding: 8px 0;
+    }
+    
+    .btn-nav-reservar {
+        width: 100%;
+        text-align: center;
+    }
+}
+
+/* 🔴 DESKTOP (≥769px) - Mostrar enlaces, ocultar hamburguesa */
+@media (min-width: 769px) {
+    .navbar-links {
+        display: flex !important;
+    }
+    
+    .hamburger-btn {
+        display: none !important;
+    }
+}
+
+/* ============================================
+   RESPONSIVE EXTRA PEQUEÑO
+   ============================================ */
+@media (max-width: 480px) {
+    .navbar-premium {
+        padding: 0 16px;
+        height: 64px;
+    }
+    
+    .logo-icon {
+        font-size: 1.4rem;
+    }
+    
+    .navbar-links a {
+        font-size: 0.75rem;
+    }
+}
+
+@media (max-width: 360px) {
+    .navbar-links {
+        padding: 16px;
+        gap: 12px;
+    }
+    
+    .navbar-links a {
+        font-size: 0.7rem;
+    }
+}
+</style>

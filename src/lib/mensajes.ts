@@ -77,7 +77,7 @@ Te recordamos que tienes que estar 10 minutos antes de la hora de tu reserva.
 
 Si no vas a poder asistir, por favor notifica al restaurante.
 
-BRASARGENT - El verdadero sabor argentino`;
+BRASARGENT - El mejor churrasco de Santa Cruz, Bolivia`;
 }
 
 // 🔴 PLANTILLA CORTA (Alternativa sin emojis)
@@ -114,7 +114,7 @@ Te recordamos que tienes que estar 10 minutos antes.
 
 Si no vas a poder asistir, por favor notifica al restaurante.
 
-BRASARGENT - El verdadero sabor argentino`;
+El mejor churrasco de Santa Cruz, Bolivia`;
 }
 
 // Compatibilidad retroactiva

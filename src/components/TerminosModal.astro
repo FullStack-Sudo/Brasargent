@@ -3,7 +3,18 @@
 // Modal de Términos y Condiciones con visualización ampliada e invocación obligatoria en cada visita a /sucursales
 ---
 
-<!-- 🔴 MODAL DE TÉRMINOS Y CONDICIONES (Se muestra siempre al ingresar a /sucursales) -->
+<!-- 🔴 SCRIPT INLINE PARA EVITAR PARPADEO AL CARGAR -->
+<script is:inline>
+  (function() {
+    try {
+      if (localStorage.getItem('brasargent_terminos_aceptados') === 'true') {
+        document.write('<style>#terminosModal { display: none !important; } #sucursalesContent { filter: none !important; pointer-events: auto !important; opacity: 1 !important; }</style>');
+      }
+    } catch(e) {}
+  })();
+</script>
+
+<!-- 🔴 MODAL DE TÉRMINOS Y CONDICIONES -->
 <div id="terminosModal" class="terminos-modal-overlay">
     <div class="terminos-modal-container">
         <!-- Botón de cerrar -->
@@ -94,16 +105,22 @@
         const lightboxModal = document.getElementById('lightboxModal');
         const btnCloseLightbox = document.getElementById('btnCloseLightbox');
 
-        // 🔴 TAREA 1: El modal siempre se muestra al ingresar a /sucursales
-        if (modal) {
-            modal.style.display = 'flex';
-        }
-        if (content) {
-            content.classList.add('blocked');
+        // 🔴 TAREA 1: Solo mostrar si el usuario NO ha aceptado antes (localStorage)
+        const yaAcepto = localStorage.getItem('brasargent_terminos_aceptados') === 'true';
+        
+        if (yaAcepto) {
+            // Ya aceptó — ocultar modal directamente y desbloquear el contenido
+            if (modal) modal.style.display = 'none';
+            if (content) content.classList.remove('blocked');
+        } else {
+            // Primera visita — mostrar modal y bloquear contenido
+            if (modal) modal.style.display = 'flex';
+            if (content) content.classList.add('blocked');
         }
 
-        // 🔴 Aceptar Términos: cierra el modal y desbloquea el contenido
+        // 🔴 Aceptar Términos: guardar en localStorage, cerrar modal y desbloquear el contenido
         function aceptarTerminos() {
+            localStorage.setItem('brasargent_terminos_aceptados', 'true');
             if (modal) {
                 modal.classList.add('terminos-modal-fade-out');
                 setTimeout(() => {
@@ -183,7 +200,7 @@
         display: flex;
         align-items: center;
         justify-content: center;
-        z-index: 9999;
+        z-index: 10001;
         padding: 16px;
         animation: terminosFadeIn 0.35s ease;
     }

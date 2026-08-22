@@ -43,6 +43,7 @@ if (userRole === 'admin') {
     if (modulosActivos['modulo_reservas']) {
         links.push({ href: '/admin/reservas', icon: '📅', label: 'Reservas', badge: pendientesCount > 0 ? pendientesCount : null });
     }
+    links.push({ href: '/admin/whatsapp', icon: '💬', label: 'OpenWA WhatsApp' });
     if (modulosActivos['modulo_clientes']) {
         links.push({ href: '/admin/clientes', icon: '👥', label: 'Clientes' });
     }
@@ -75,13 +76,22 @@ if (userRole === 'cocinero' && modulosActivos['modulo_cocina']) {
 ---
 
 <aside class="sidebar-compact">
-    <!-- Logo -->
+    <!-- Logo de la Empresa (Animación Parpadeo Lento entre blanca.png y negro.png) -->
     <div class="sidebar-logo">
-        <span class="logo-icon">🔥</span>
-        <div class="logo-title">
-            <span class="logo-text">BRAS<span>ARGENT</span></span>
-            <span class="logo-subtitle">{userRole === 'admin' ? '👑 Admin' : userRole === 'mesero' ? '🍽️ Mesero' : '👨‍🍳 Cocinero'}</span>
-        </div>
+        <a href="/admin/dashboard" class="sidebar-logo-link" aria-label="Brasargent Dashboard">
+            <div class="logo-blinking-wrapper">
+                <img 
+                    src="/img/logo/blanca.png" 
+                    alt="Brasargent Rodizio Logo" 
+                    class="logo-img logo-img-white"
+                />
+                <img 
+                    src="/img/logo/negro.png" 
+                    alt="Brasargent Rodizio Logo" 
+                    class="logo-img logo-img-black"
+                />
+            </div>
+        </a>
     </div>
 
     <!-- Usuario -->
@@ -149,10 +159,74 @@ if (userRole === 'cocinero' && modulosActivos['modulo_cocina']) {
 .sidebar-logo {
     display: flex;
     align-items: center;
-    gap: 8px;
-    padding: 12px 14px;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-    margin-bottom: 6px;
+    justify-content: center;
+    padding: 14px 12px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    margin-bottom: 8px;
+}
+
+.sidebar-logo-link {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-decoration: none;
+    width: 100%;
+}
+
+.sidebar-logo-img {
+    height: 46px;
+    width: auto;
+    max-width: 100%;
+    object-fit: contain;
+    transition: transform 0.3s ease;
+}
+
+/* Animación Parpadeo Lento (Blinking Cross-fade) */
+.logo-blinking-wrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 48px;
+    width: 100%;
+}
+
+.logo-img {
+    height: 44px;
+    width: auto;
+    max-width: 100%;
+    object-fit: contain;
+    transition: transform 0.3s ease;
+}
+
+.logo-blinking-wrapper:hover .logo-img {
+    transform: scale(1.05);
+}
+
+.logo-img-white {
+    position: relative;
+    z-index: 1;
+    animation: logoFadeWhite 6s ease-in-out infinite;
+}
+
+.logo-img-black {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 2;
+    opacity: 0;
+    animation: logoFadeBlack 6s ease-in-out infinite;
+}
+
+@keyframes logoFadeWhite {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0; }
+}
+
+@keyframes logoFadeBlack {
+    0%, 100% { opacity: 0; }
+    50% { opacity: 1; }
 }
 
 .logo-icon {
@@ -173,7 +247,7 @@ if (userRole === 'cocinero' && modulosActivos['modulo_cocina']) {
 }
 
 .logo-text span {
-    color: #9e2a2b;
+    color: #C9A87C;
 }
 
 .logo-subtitle {
@@ -266,14 +340,15 @@ if (userRole === 'cocinero' && modulosActivos['modulo_cocina']) {
 
 .nav-link.active,
 .sidebar-link.active {
-    background: rgba(158, 42, 43, 0.15) !important;
+    background: rgba(201, 168, 124, 0.08) !important;
     color: #fffaf0 !important;
     font-weight: 600;
+    border-left: 2px solid #C9A87C;
 }
 
 .nav-link.active .nav-icon,
 .sidebar-link.active .link-icon {
-    color: #9e2a2b;
+    color: #C9A87C;
 }
 
 .nav-icon,
@@ -388,4 +463,12 @@ if (userRole === 'cocinero' && modulosActivos['modulo_cocina']) {
         width: auto;
     }
 }
-</style>
+
+/* Ocultar sidebar en móviles para dar paso a la Bottom Navigation */
+@media (max-width: 768px) {
+    .sidebar-compact,
+    .admin-sidebar,
+    aside {
+        display: none !important;
+    }
+}

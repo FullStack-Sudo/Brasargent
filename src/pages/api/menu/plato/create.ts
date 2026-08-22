@@ -3,13 +3,13 @@ import { crearPlato } from '../../../../lib/queries/menu';
 import { z } from 'zod';
 
 const createPlatoSchema = z.object({
-    sucursal_id: z.number().int().positive(),
+    sucursal_id: z.coerce.number().int().positive(),
     nombre: z.string().min(1, "El nombre es requerido").max(100),
     descripcion: z.string().max(500).optional().default(""),
-    precio: z.number().positive("El precio debe ser mayor a 0"),
-    categoria_id: z.number().int().positive(),
-    destacado: z.number().int().optional().default(0),
-    sucursales: z.array(z.number()).optional().default([])
+    precio: z.coerce.number().positive("El precio debe ser mayor a 0"),
+    categoria_id: z.coerce.number().int().positive(),
+    destacado: z.coerce.number().int().optional().default(0),
+    sucursales: z.array(z.coerce.number()).optional().default([])
 });
 
 export const POST: APIRoute = async ({ request }) => {

@@ -134,31 +134,51 @@ const { sucursalId, sucursalNombre } = Astro.props;
             </div>
 
             <!-- Selector de Turno y Hora -->
-            <div class="form-row">
-                <div class="form-group">
-                    <label>
-                        Turno
-                        <span class="required">*</span>
-                    </label>
-                    <select id={`turnoReserva-${sucursalId}`} required>
-                        <option value="">Selecciona un turno</option>
-                        <option value="manana">☀️ Turno Mañana</option>
-                        <option value="noche">🌙 Turno Noche</option>
-                    </select>
-                    <span class="error-message" id={`errorTurno-${sucursalId}`}>Por favor selecciona un turno</span>
+            <div class="form-group">
+                <label class="field-label">
+                    🕐 Selecciona tu Turno
+                    <span class="required">*</span>
+                </label>
+                <div id={`turnosContainer-${sucursalId}`} class="turnos-grid-modern">
+                    <button type="button" class="turno-card selected" onclick={`seleccionarTurnoModal(${sucursalId}, 0, 'manana')`}>
+                        <div class="turno-icono">☀️</div>
+                        <div class="turno-info">
+                            <div class="turno-nombre">Turno Mañana</div>
+                            <div class="turno-horario">11:30 AM - 2:30 PM</div>
+                            <div class="turno-disponibilidad">
+                                <span class="turno-estado">✅ Disponible</span>
+                            </div>
+                        </div>
+                    </button>
+                    <button type="button" class="turno-card" onclick={`seleccionarTurnoModal(${sucursalId}, 1, 'tarde')`}>
+                        <div class="turno-icono">🌙</div>
+                        <div class="turno-info">
+                            <div class="turno-nombre">Turno Tarde</div>
+                            <div class="turno-horario">6:30 PM - 9:30 PM</div>
+                            <div class="turno-disponibilidad">
+                                <span class="turno-estado">✅ Disponible</span>
+                            </div>
+                        </div>
+                    </button>
                 </div>
-                <div class="form-group">
-                    <label>
-                        Hora de Llegada
-                        <span class="required">*</span>
-                    </label>
-                    <input 
-                        type="time" 
-                        id={`horaReserva-${sucursalId}`} 
-                        required
-                    />
-                    <span class="error-message" id={`errorHora-${sucursalId}`}>Por favor selecciona una hora</span>
+                <input type="hidden" id={`turnoReserva-${sucursalId}`} value="manana" />
+                <span class="error-message" id={`errorTurno-${sucursalId}`}>Por favor selecciona un turno</span>
+            </div>
+
+            <!-- Horas Disponibles -->
+            <div class="form-group">
+                <label class="field-label">
+                    🕐 Hora de Llegada
+                    <span class="required">*</span>
+                </label>
+                <div id={`infoTurno-${sucursalId}`} class="info-turno">☀️ Turno Mañana: 11:30 AM - 2:30 PM</div>
+                <div id={`rangoHorario-${sucursalId}`} class="rango-horario">📋 Horas disponibles: 11:30 - 14:30</div>
+                <div id={`horasContainer-${sucursalId}`} class="horas-grid">
+                    <!-- Generado dinámicamente -->
                 </div>
+                <span class="field-hint hora-seleccionada-info" id={`horaSeleccionadaInfo-${sucursalId}`}>Selecciona una hora disponible</span>
+                <span class="error-message" id={`errorHora-${sucursalId}`}>Por favor selecciona una hora</span>
+                <input type="hidden" id={`horaReserva-${sucursalId}`} value="" required />
             </div>
 
             <!-- Comentarios (Opcional) -->
@@ -205,6 +225,115 @@ const { sucursalId, sucursalNombre } = Astro.props;
 </div>
 
 <script>
+import { CONFIG_TURNOS, generarHorasTurno, validarHoraTurno } from '../lib/horarios';
+
+// ============================================
+// FUNCIONES DE HORARIOS Y TURNOS
+// ============================================
+
+window.actualizarHorasPorTurno = function(sucursalId, turnoKey) {
+    const config = CONFIG_TURNOS[turnoKey];
+    if (!config) return;
+    
+    const horasContainer = document.getElementById(`horasContainer-${sucursalId}`);
+    if (!horasContainer) return;
+    
+    const horasDisponibles = generarHorasTurno(turnoKey);
+    const horaActual = document.getElementById(`horaReserva-${sucursalId}`)?.value;
+    
+    // Actualizar información del turno
+    const infoTurno = document.getElementById(`infoTurno-${sucursalId}`);
+    if (infoTurno) {
+        infoTurno.textContent = `${config.icono} ${config.label}: ${config.descripcion}`;
+        infoTurno.style.color = '#9e2a2b';
+    }
+    
+    let html = '';
+    horasDisponibles.forEach(hora => {
+        const isSelected = hora === horaActual;
+        html += `
+            <button 
+                type="button" 
+                class="hora-option ${isSelected ? 'selected' : ''}"
+                data-hora="${hora}"
+                onclick="seleccionarHoraModal(${sucursalId}, this)"
+            >
+                ${hora}
+            </button>
+        `;
+    });
+    
+    horasContainer.innerHTML = html;
+    horasContainer.style.display = 'grid';
+    
+    // Mostrar mensaje de rango
+    const rangoMsg = document.getElementById(`rangoHorario-${sucursalId}`);
+    if (rangoMsg) {
+        rangoMsg.textContent = `📋 Horas disponibles: ${config.descripcion}`;
+        rangoMsg.style.display = 'block';
+    }
+};
+
+window.seleccionarTurnoModal = function(sucursalId, index, turnoKey) {
+    const turnoInput = document.getElementById(`turnoReserva-${sucursalId}`);
+    if (turnoInput) turnoInput.value = turnoKey;
+    
+    const turnosContainer = document.getElementById(`turnosContainer-${sucursalId}`);
+    if (turnosContainer) {
+        turnosContainer.querySelectorAll('.turno-card').forEach((card, i) => {
+            card.classList.toggle('selected', i === index);
+        });
+    }
+    
+    // Limpiar hora seleccionada al cambiar turno
+    const horaInput = document.getElementById(`horaReserva-${sucursalId}`);
+    if (horaInput) horaInput.value = '';
+    
+    const info = document.getElementById(`horaSeleccionadaInfo-${sucursalId}`);
+    if (info) {
+        info.textContent = 'Selecciona una hora disponible';
+        info.style.color = 'rgba(26,26,26,0.3)';
+    }
+    
+    // Actualizar parrilla de horas
+    window.actualizarHorasPorTurno(sucursalId, turnoKey);
+};
+
+window.seleccionarHoraModal = function(sucursalId, element) {
+    const hora = element.dataset.hora;
+    const turnoInput = document.getElementById(`turnoReserva-${sucursalId}`);
+    const turnoKey = turnoInput ? turnoInput.value : 'manana';
+    
+    const esValida = validarHoraTurno(turnoKey, hora);
+    if (!esValida) {
+        const config = CONFIG_TURNOS[turnoKey];
+        alert(`❌ La hora ${hora} no está disponible para ${config.label}.\nHoras permitidas: ${config.descripcion}`);
+        return;
+    }
+    
+    const horasContainer = document.getElementById(`horasContainer-${sucursalId}`);
+    if (horasContainer) {
+        horasContainer.querySelectorAll('.hora-option').forEach(btn => {
+            btn.classList.remove('selected');
+        });
+    }
+    
+    element.classList.add('selected');
+    
+    const horaInput = document.getElementById(`horaReserva-${sucursalId}`);
+    if (horaInput) horaInput.value = hora;
+    
+    // Ocultar error de hora
+    const errorHoraEl = document.getElementById(`errorHora-${sucursalId}`);
+    if (errorHoraEl) errorHoraEl.style.display = 'none';
+    
+    const info = document.getElementById(`horaSeleccionadaInfo-${sucursalId}`);
+    if (info) {
+        info.textContent = `✅ Hora seleccionada: ${hora}`;
+        info.style.color = '#10b981';
+    }
+};
+
 // ============================================
 // FUNCIONES GLOBALES PARA EL MODAL DE RESERVAS
 // ============================================
@@ -214,6 +343,12 @@ window.abrirModalPublico = function(sucursalId) {
     if (modal) {
         modal.classList.remove('hidden');
         document.body.style.overflow = 'hidden';
+        
+        // Inicializar horas del turno mañana por defecto
+        const turnoInput = document.getElementById(`turnoReserva-${sucursalId}`);
+        const turnoActual = turnoInput?.value || 'manana';
+        const index = turnoActual === 'tarde' ? 1 : 0;
+        window.seleccionarTurnoModal(sucursalId, index, turnoActual);
     }
 }
 
@@ -286,7 +421,7 @@ window.enviarFormularioReserva = async function(e, sucursalId, sucursalNombre) {
     // 🔴 VALIDAR TURNO Y HORA SELECCIONADOS
     const turnoInput = document.getElementById(`turnoReserva-${sucursalId}`);
     const horaInput  = document.getElementById(`horaReserva-${sucursalId}`);
-    const turnoSeleccionado = turnoInput?.value;
+    const turnoSeleccionado = turnoInput?.value || 'manana';
     const horaSeleccionada  = horaInput?.value;
 
     if (!turnoSeleccionado) {
@@ -298,7 +433,15 @@ window.enviarFormularioReserva = async function(e, sucursalId, sucursalNombre) {
     if (!horaSeleccionada) {
         const errorHoraEl = document.getElementById(`errorHora-${sucursalId}`);
         if (errorHoraEl) errorHoraEl.style.display = 'block';
+        alert('❌ Por favor selecciona una hora');
         isValid = false;
+    } else {
+        const esValida = validarHoraTurno(turnoSeleccionado, horaSeleccionada);
+        if (!esValida) {
+            const config = CONFIG_TURNOS[turnoSeleccionado];
+            alert(`❌ La hora ${horaSeleccionada} no está disponible para ${config?.label || 'el turno'}.\nHoras permitidas: ${config?.descripcion || ''}`);
+            isValid = false;
+        }
     }
 
     if (!isValid) return;
@@ -1550,5 +1693,110 @@ document.addEventListener('keydown', function(e) {
 
 .hora-option.selected .hora-disponibles {
     color: rgba(255, 255, 255, 0.6);
+}
+
+/* ============================================
+   ESTILOS DE TURNOS Y HORARIOS POR TURNO
+   ============================================ */
+.info-turno {
+    font-weight: 600;
+    font-size: 0.95rem;
+    color: #9e2a2b;
+    margin-bottom: 6px;
+    padding: 8px 12px;
+    background: rgba(158, 42, 43, 0.04);
+    border-radius: 8px;
+}
+
+.rango-horario {
+    font-size: 0.85rem;
+    color: rgba(26, 26, 26, 0.4);
+    margin-bottom: 10px;
+}
+
+.turnos-grid-modern {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 12px;
+    margin: 8px 0 16px;
+}
+
+.turno-card {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 14px 18px;
+    border: 2px solid rgba(26, 26, 26, 0.06);
+    border-radius: 12px;
+    background: white;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    text-align: left;
+    width: 100%;
+}
+
+.turno-card:hover {
+    border-color: #9e2a2b;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06);
+}
+
+.turno-card.selected {
+    border-color: #9e2a2b;
+    background: rgba(158, 42, 43, 0.04);
+}
+
+.turno-icono {
+    font-size: 2rem;
+    flex-shrink: 0;
+}
+
+.turno-nombre {
+    font-weight: 600;
+    font-size: 0.9rem;
+    color: #1a1a1a;
+}
+
+.turno-horario {
+    font-size: 0.75rem;
+    color: rgba(26, 26, 26, 0.4);
+}
+
+.turno-estado {
+    font-size: 0.7rem;
+    font-weight: 500;
+    color: #10b981;
+}
+
+.horas-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+    gap: 8px;
+    margin-top: 8px;
+}
+
+.hora-option {
+    padding: 10px 12px;
+    border: 1.5px solid rgba(26, 26, 26, 0.08);
+    border-radius: 8px;
+    text-align: center;
+    font-size: 0.85rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    background: white;
+    color: #1a1a1a;
+    font-family: 'Inter', sans-serif;
+}
+
+.hora-option:hover:not(.disabled) {
+    border-color: #9e2a2b;
+    background: rgba(158, 42, 43, 0.04);
+}
+
+.hora-option.selected {
+    border-color: #9e2a2b;
+    background: #9e2a2b;
+    color: white;
 }
 </style>

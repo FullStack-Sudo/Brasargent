@@ -1,0 +1,1429 @@
+---
+// src/pages/admin/whatsapp.astro
+// Panel de control de WhatsApp con OpenWA - Sesiones, Notificaciones y Reenvío de Errores
+import AdminLayout from '../../layouts/AdminLayout.astro';
+import pool from '../../lib/db';
+
+// Obtener logs de mensajes
+let logs: any[] = [];
+try {
+    const [rows] = await pool.query(`
+        SELECT 
+            id,
+            destinatario,
+            mensaje,
+            estado,
+            error,
+            fecha_envio,
+            fecha_reenvio
+        FROM logs_whatsapp
+        ORDER BY fecha_envio DESC
+        LIMIT 50
+    `) as any[];
+    logs = rows || [];
+} catch (e) {
+    console.error('Error al consultar logs_whatsapp:', e);
+    logs = [];
+}
+
+// Estadísticas
+let stats = { total: 0, enviados: 0, entregados: 0, errores: 0, reenviados: 0 };
+try {
+    const [rowsStats] = await pool.query(`
+        SELECT 
+            COUNT(*) as total,
+            SUM(CASE WHEN estado = 'enviado' THEN 1 ELSE 0 END) as enviados,
+            SUM(CASE WHEN estado = 'entregado' OR estado = 'leido' THEN 1 ELSE 0 END) as entregados,
+            SUM(CASE WHEN estado = 'error' THEN 1 ELSE 0 END) as errores,
+            SUM(CASE WHEN estado = 'reenviado' THEN 1 ELSE 0 END) as reenviados
+        FROM logs_whatsapp
+    `) as any[];
+    if (rowsStats && rowsStats.length > 0) {
+        stats = {
+            total: rowsStats[0].total || 0,
+            enviados: rowsStats[0].enviados || 0,
+            entregados: rowsStats[0].entregados || 0,
+            errores: rowsStats[0].errores || 0,
+            reenviados: rowsStats[0].reenviados || 0
+        };
+    }
+} catch (e) {
+    console.error('Error al consultar estadísticas de whatsapp:', e);
+}
+---
+
+<AdminLayout title="WhatsApp" description="Panel de control de mensajes y notificaciones">
+    <div class="whatsapp-dashboard">
+        <div class="page-header">
+            <div>
+                <h1>💬 WhatsApp OpenWA</h1>
+                <p>Gestión de mensajes, notificaciones automáticas y control de sesiones</p>
+            </div>
+            <button class="btn-refresh" id="refreshBtn">🔄 Actualizar</button>
+        </div>
+
+        <!-- Estadísticas -->
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-icon" style="background: rgba(59, 130, 246, 0.1); color: #3b82f6;">📨</div>
+                <div class="stat-info">
+                    <span class="stat-number">{stats.total}</span>
+                    <span class="stat-label">Total Mensajes</span>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon" style="background: rgba(16, 185, 129, 0.1); color: #10b981;">✅</div>
+                <div class="stat-info">
+                    <span class="stat-number">{stats.entregados}</span>
+                    <span class="stat-label">Entregados / Leídos</span>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon" style="background: rgba(239, 68, 68, 0.1); color: #ef4444;">❌</div>
+                <div class="stat-info">
+                    <span class="stat-number">{stats.errores}</span>
+                    <span class="stat-label">Errores</span>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon" style="background: rgba(168, 85, 247, 0.1); color: #a855f7;">🔄</div>
+                <div class="stat-info">
+                    <span class="stat-number">{stats.reenviados}</span>
+                    <span class="stat-label">Reenviados</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Estado de Sesión con Botón de Desconexión -->
+        <div class="section-card status-card">
+            <div class="section-header">
+                <h3>📱 Estado de Sesión OpenWA</h3>
+                <button id="btnDesconectar" class="btn-desconectar">
+                    🔴 Desconectar
+                </button>
+            </div>
+            <div class="session-status" id="sessionStatus">
+                <span class="status-indicator status-checking">⏳ Verificando conexión con OpenWA...</span>
+            </div>
+        </div>
+
+        <!-- Historial de Mensajes con Selección Múltiple -->
+        <div class="section-card">
+            <div class="section-header">
+                <h3>📋 Historial de Mensajes (Últimos 50)</h3>
+                <div class="acciones-masivas" id="accionesMasivas" style="display: none;">
+                    <button class="btn-accion btn-reenviar" onclick="reenviarSeleccionados()">
+                        🔄 Reenviar
+                    </button>
+                    <button class="btn-accion btn-editar" onclick="editarSeleccionados()">
+                        ✏️ Editar
+                    </button>
+                    <button class="btn-accion btn-chat" onclick="abrirChatOnline()">
+                        💬 Chat
+                    </button>
+                    <button class="btn-accion btn-eliminar" onclick="eliminarSeleccionados()">
+                        🗑️ Eliminar
+                    </button>
+                    <span class="seleccionados-info" id="seleccionadosInfo">0 seleccionados</span>
+                </div>
+            </div>
+
+            {logs.length === 0 ? (
+                <div class="empty-state">
+                    <span class="empty-icon">💬</span>
+                    <p>No hay registro de mensajes enviados</p>
+                    <span class="empty-sub">Los mensajes enviados por WhatsApp aparecerán aquí</span>
+                </div>
+            ) : (
+                <div class="table-wrapper">
+                    <table class="tabla-mensajes">
+                        <thead>
+                            <tr>
+                                <th style="width: 40px; text-align: center;">
+                                    <input type="checkbox" id="seleccionarTodos" onchange="toggleSeleccionarTodos()" />
+                                </th>
+                                <th>#</th>
+                                <th>Destinatario</th>
+                                <th>Mensaje</th>
+                                <th>Estado</th>
+                                <th>Fecha</th>
+                                <th>Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {logs.map((log: any, index: number) => {
+                                const esError = log.estado === 'error';
+                                return (
+                                    <tr class={esError ? 'row-error' : ''}>
+                                        <td style="text-align: center;">
+                                            <input 
+                                                type="checkbox" 
+                                                class="seleccionar-mensaje" 
+                                                data-id={log.id}
+                                                onchange="actualizarSeleccion()"
+                                            />
+                                        </td>
+                                        <td>{index + 1}</td>
+                                        <td>
+                                            <a href={`https://wa.me/${String(log.destinatario).replace(/\D/g, '')}`} 
+                                               target="_blank" 
+                                               class="whatsapp-num">
+                                                💬 +{log.destinatario}
+                                            </a>
+                                        </td>
+                                        <td class="mensaje-texto" title={log.mensaje}>
+                                            {log.mensaje}
+                                            {log.error && (
+                                                <small class="error-detalle">
+                                                    ⚠️ {log.error}
+                                                </small>
+                                            )}
+                                        </td>
+                                        <td>
+                                            <span class={`badge-estado ${log.estado}`}>
+                                                {log.estado === 'entregado' ? '✅ Entregado' :
+                                                 log.estado === 'enviado' ? '📨 Enviado' :
+                                                 log.estado === 'error' ? '❌ Error' :
+                                                 log.estado === 'reenviado' ? '🔄 Reenviado' :
+                                                 log.estado === 'leido' ? '👁️ Leído' :
+                                                 '⏳ Pendiente'}
+                                            </span>
+                                        </td>
+                                        <td>{new Date(log.fecha_envio).toLocaleString('es-ES')}</td>
+                                        <td>
+                                            <div class="acciones-individuales">
+                                                {esError && (
+                                                    <>
+                                                        <button class="btn-accion-sm btn-reenviar-sm" 
+                                                                onclick={`reenviarMensaje(${log.id})`}
+                                                                title="Reenviar mensaje">
+                                                            🔄
+                                                        </button>
+                                                        <button class="btn-accion-sm btn-editar-sm" 
+                                                                onclick={`editarMensaje(${log.id})`}
+                                                                title="Editar mensaje antes de reenviar">
+                                                            ✏️
+                                                        </button>
+                                                    </>
+                                                )}
+                                                <button class="btn-accion-sm btn-chat-sm" 
+                                                        onclick={`abrirChat('${log.destinatario}')`}
+                                                        title="Abrir chat en WhatsApp">
+                                                    💬
+                                                </button>
+                                                <button class="btn-accion-sm btn-eliminar-sm" 
+                                                        onclick={`eliminarMensaje(${log.id})`}
+                                                        title="Eliminar mensaje del historial">
+                                                    🗑️
+                                                </button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                );
+                            })}
+                        </tbody>
+                    </table>
+                </div>
+            )}
+        </div>
+    </div>
+
+    <!-- Modal Código QR -->
+    <div id="qrModal" class="modal-overlay" style="display: none;">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h3>📱 Escanea el código QR</h3>
+                <button type="button" class="btn-close" id="btnCloseQr">✕</button>
+            </div>
+            <div class="modal-body">
+                <p class="qr-desc">Abre WhatsApp en tu teléfono ➔ <strong>Dispositivos vinculados</strong> ➔ Vincular un dispositivo y escanea este código:</p>
+                <div class="qr-container">
+                    <img id="qrImage" src="" alt="Código QR WhatsApp" class="qr-img" />
+                </div>
+                <p class="qr-sub" id="qrStatusText">🔄 El código QR se actualiza automáticamente.</p>
+                <div style="margin-top: 14px;">
+                    <button type="button" id="btnResetQr" class="btn-reset-qr">
+                        🔄 Generar Nuevo Código QR
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de Edición de Mensaje -->
+    <div id="modalEditar" class="modal-overlay" style="display: none;">
+        <div class="modal-card modal-card-lg">
+            <div class="modal-header">
+                <h3>✏️ Editar Mensaje para Reenviar</h3>
+                <button type="button" class="btn-close" id="cerrarEdicion">✕</button>
+            </div>
+            <div class="modal-body">
+                <p class="qr-desc">Modifica el texto del mensaje antes de volver a enviarlo por WhatsApp:</p>
+                <textarea id="editarTexto" rows="6" class="editar-textarea" placeholder="Escribe el mensaje..."></textarea>
+            </div>
+            <div class="modal-footer">
+                <button type="button" id="guardarEdicion" class="btn-primary-action">💾 Guardar y Reenviar</button>
+                <button type="button" class="btn-secondary-action" id="cancelarEdicion">Cancelar</button>
+            </div>
+        </div>
+    </div>
+</AdminLayout>
+
+<script>
+let qrInterval: any = null;
+let mensajesSeleccionados: number[] = [];
+
+// ============================================
+// GESTIÓN DE SELECCIÓN MÚLTIPLE
+// ============================================
+
+function toggleSeleccionarTodos() {
+    const mainCb = document.getElementById('seleccionarTodos') as HTMLInputElement | null;
+    const checkboxes = document.querySelectorAll('.seleccionar-mensaje') as NodeListOf<HTMLInputElement>;
+    const todosChecked = mainCb?.checked || false;
+    
+    checkboxes.forEach(cb => {
+        if (!cb.disabled) {
+            cb.checked = todosChecked;
+        }
+    });
+    
+    actualizarSeleccion();
+}
+
+function actualizarSeleccion() {
+    const checkboxes = document.querySelectorAll('.seleccionar-mensaje:checked') as NodeListOf<HTMLInputElement>;
+    mensajesSeleccionados = Array.from(checkboxes).map(cb => parseInt(cb.dataset.id || '0')).filter(id => id > 0);
+    
+    const info = document.getElementById('seleccionadosInfo');
+    const acciones = document.getElementById('accionesMasivas');
+    
+    if (info && acciones) {
+        if (mensajesSeleccionados.length > 0) {
+            info.textContent = `${mensajesSeleccionados.length} seleccionados`;
+            acciones.style.display = 'flex';
+        } else {
+            acciones.style.display = 'none';
+        }
+    }
+}
+
+// ============================================
+// DESCONECTAR SESIÓN
+// ============================================
+
+async function desconectarSesion() {
+    if (!confirm('⚠️ ¿Estás seguro de desconectar la sesión de WhatsApp?\n\nSe cerrará la conexión actual y podrás vincular otro número de teléfono.')) {
+        return;
+    }
+
+    const btn = document.getElementById('btnDesconectar') as HTMLButtonElement | null;
+    if (btn) {
+        btn.textContent = '⏳ Desconectando...';
+        btn.disabled = true;
+    }
+
+    try {
+        const response = await fetch('/api/whatsapp/logout', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' }
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+            alert('✅ Sesión desconectada correctamente');
+            location.reload();
+        } else {
+            alert('❌ Error: ' + (result.error || 'No se pudo desconectar'));
+        }
+    } catch (error) {
+        alert('❌ Error de conexión con el servidor');
+    } finally {
+        if (btn) {
+            btn.textContent = '🔴 Desconectar';
+            btn.disabled = false;
+        }
+    }
+}
+
+// ============================================
+// CONECTAR WHATSAPP CON OPENWA
+// ============================================
+
+async function conectarWhatsApp() {
+    const btn = document.getElementById('btnConectar') as HTMLButtonElement | null;
+    if (btn) {
+        btn.textContent = '⏳ Conectando...';
+        btn.disabled = true;
+    }
+    
+    try {
+        const response = await fetch('/api/whatsapp/conectar', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' }
+        });
+        
+        const result = await response.json();
+        
+        if (result.success && result.qr) {
+            const modal = document.getElementById('qrModal');
+            const qrImg = document.getElementById('qrImage') as HTMLImageElement | null;
+            if (qrImg) {
+                qrImg.src = result.qr.startsWith('data:') ? result.qr : `data:image/png;base64,${result.qr}`;
+            }
+            if (modal) {
+                modal.style.display = 'flex';
+            }
+            iniciarAutoRefrescoQR();
+        } else {
+            alert('❌ Error: ' + (result.error || 'No se pudo generar el código QR'));
+        }
+    } catch (error) {
+        alert('❌ Error de conexión con el servidor');
+    } finally {
+        if (btn) {
+            btn.textContent = '📱 Conectar WhatsApp';
+            btn.disabled = false;
+        }
+    }
+}
+
+async function reiniciarWhatsApp() {
+    const btnReset = document.getElementById('btnResetQr') as HTMLButtonElement | null;
+    const statusText = document.getElementById('qrStatusText');
+    if (btnReset) {
+        btnReset.textContent = '⏳ Generando nuevo QR...';
+        btnReset.disabled = true;
+    }
+    if (statusText) statusText.textContent = '⏳ Limpiando sesión obsoleta...';
+
+    try {
+        const response = await fetch('/api/whatsapp/reiniciar', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' }
+        });
+        const result = await response.json();
+        if (result.success && result.qr) {
+            const qrImg = document.getElementById('qrImage') as HTMLImageElement | null;
+            if (qrImg) {
+                qrImg.src = result.qr.startsWith('data:') ? result.qr : `data:image/png;base64,${result.qr}`;
+            }
+            if (statusText) statusText.textContent = '✅ Nuevo código QR generado. Escanéalo ahora.';
+        } else {
+            if (statusText) statusText.textContent = '⚠️ Reintentando obtener QR...';
+        }
+    } catch (e) {
+        if (statusText) statusText.textContent = '❌ Error al reiniciar sesión';
+    } finally {
+        if (btnReset) {
+            btnReset.textContent = '🔄 Generar Nuevo Código QR';
+            btnReset.disabled = false;
+        }
+    }
+}
+
+function iniciarAutoRefrescoQR() {
+    if (qrInterval) clearInterval(qrInterval);
+    qrInterval = setInterval(async () => {
+        const modal = document.getElementById('qrModal');
+        const qrImg = document.getElementById('qrImage') as HTMLImageElement | null;
+        if (modal && modal.style.display !== 'none' && qrImg) {
+            try {
+                const res = await fetch('/api/whatsapp/conectar', { method: 'POST' });
+                const data = await res.json();
+                if (data.success && data.qr) {
+                    qrImg.src = data.qr.startsWith('data:') ? data.qr : `data:image/png;base64,${data.qr}`;
+                }
+            } catch (e) {}
+        } else {
+            cerrarQRModal();
+        }
+    }, 6000);
+}
+
+function cerrarQRModal() {
+    const modal = document.getElementById('qrModal');
+    if (modal) modal.style.display = 'none';
+    if (qrInterval) {
+        clearInterval(qrInterval);
+        qrInterval = null;
+    }
+}
+
+// ============================================
+// REENVIAR MENSAJES SELECCIONADOS (MASIVO)
+// ============================================
+
+async function reenviarSeleccionados() {
+    if (mensajesSeleccionados.length === 0) {
+        alert('⚠️ Selecciona al menos un mensaje con error');
+        return;
+    }
+
+    if (!confirm(`¿Reenviar ${mensajesSeleccionados.length} mensajes seleccionados por WhatsApp?`)) {
+        return;
+    }
+
+    const btn = document.querySelector('.btn-reenviar') as HTMLButtonElement | null;
+    if (btn) {
+        btn.textContent = '⏳ Reenviando...';
+        btn.disabled = true;
+    }
+
+    try {
+        const response = await fetch('/api/whatsapp/reenviar', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                mensajes: mensajesSeleccionados.map(id => ({ id })),
+                accion: 'reenviar'
+            })
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+            alert(`✅ ${result.mensaje}`);
+            location.reload();
+        } else {
+            alert('❌ Error: ' + (result.error || 'No se pudo reenviar'));
+        }
+    } catch (error) {
+        alert('❌ Error de conexión con el servidor');
+    } finally {
+        if (btn) {
+            btn.textContent = '🔄 Reenviar';
+            btn.disabled = false;
+        }
+    }
+}
+
+// ============================================
+// EDITAR MENSAJE (INDIVIDUAL O MASIVO)
+// ============================================
+
+function editarSeleccionados() {
+    if (mensajesSeleccionados.length === 0) {
+        alert('⚠️ Selecciona al menos un mensaje con error');
+        return;
+    }
+
+    const primerId = mensajesSeleccionados[0];
+    editarMensaje(primerId);
+}
+
+function editarMensaje(id: number) {
+    const modal = document.getElementById('modalEditar');
+    const textarea = document.getElementById('editarTexto') as HTMLTextAreaElement | null;
+    const cb = document.querySelector(`.seleccionar-mensaje[data-id="${id}"]`);
+    
+    if (!modal || !textarea || !cb) return;
+
+    const row = cb.closest('tr');
+    if (!row) return;
+
+    const textoElem = row.querySelector('.mensaje-texto');
+    const textoActual = textoElem ? textoElem.childNodes[0].textContent?.trim() || '' : '';
+
+    textarea.value = textoActual;
+    modal.dataset.id = String(id);
+    modal.style.display = 'flex';
+}
+
+function cerrarModalEditar() {
+    const modal = document.getElementById('modalEditar');
+    if (modal) modal.style.display = 'none';
+}
+
+// ============================================
+// CHAT ONLINE (ABRIR WHATSAPP WEB/APP)
+// ============================================
+
+function abrirChatOnline() {
+    if (mensajesSeleccionados.length === 0) {
+        alert('⚠️ Selecciona al menos un mensaje');
+        return;
+    }
+
+    const primerId = mensajesSeleccionados[0];
+    const cb = document.querySelector(`.seleccionar-mensaje[data-id="${primerId}"]`);
+    if (!cb) return;
+
+    const row = cb.closest('tr');
+    if (!row) return;
+
+    const linkNum = row.querySelector('.whatsapp-num');
+    const telefono = linkNum ? linkNum.textContent?.replace(/\D/g, '') || '' : '';
+
+    if (telefono) {
+        abrirChat(telefono);
+    }
+}
+
+function abrirChat(telefono: string) {
+    const numeroLimpio = String(telefono).replace(/\D/g, '');
+    const numeroFinal = numeroLimpio.startsWith('591') || numeroLimpio.length > 8 ? numeroLimpio : `591${numeroLimpio}`;
+    const url = `https://wa.me/${numeroFinal}`;
+    window.open(url, '_blank');
+}
+
+async function reenviarMensaje(id: number) {
+    if (!confirm('¿Reenviar este mensaje por WhatsApp?')) return;
+    
+    try {
+        const response = await fetch('/api/whatsapp/reenviar', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                mensajes: [{ id }],
+                accion: 'reenviar'
+            })
+        });
+
+        const result = await response.json();
+        if (result.success) {
+            alert('✅ Mensaje reenviado exitosamente');
+            location.reload();
+        } else {
+            alert('❌ Error: ' + (result.error || 'No se pudo reenviar'));
+        }
+    } catch (error) {
+        alert('❌ Error de conexión con el servidor');
+    }
+}
+
+// ============================================
+// ELIMINAR MENSAJES (INDIVIDUAL O MASIVO)
+// ============================================
+
+async function eliminarMensaje(id: number) {
+    if (!confirm('🗑️ ¿Estás seguro de eliminar este mensaje del historial?')) return;
+    
+    try {
+        const response = await fetch('/api/whatsapp/eliminar', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ id })
+        });
+
+        const result = await response.json();
+        if (result.success) {
+            alert('✅ Mensaje eliminado correctamente');
+            location.reload();
+        } else {
+            alert('❌ Error: ' + (result.error || 'No se pudo eliminar el mensaje'));
+        }
+    } catch (error) {
+        alert('❌ Error de conexión con el servidor');
+    }
+}
+
+async function eliminarSeleccionados() {
+    if (mensajesSeleccionados.length === 0) {
+        alert('⚠️ Selecciona al menos un mensaje para eliminar');
+        return;
+    }
+
+    if (!confirm(`🗑️ ¿Estás seguro de eliminar los ${mensajesSeleccionados.length} mensajes seleccionados del historial?`)) {
+        return;
+    }
+
+    const btn = document.querySelector('.btn-eliminar') as HTMLButtonElement | null;
+    if (btn) {
+        btn.textContent = '⏳ Eliminando...';
+        btn.disabled = true;
+    }
+
+    try {
+        const response = await fetch('/api/whatsapp/eliminar', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ ids: mensajesSeleccionados })
+        });
+
+        const result = await response.json();
+        if (result.success) {
+            alert(`✅ ${result.mensaje}`);
+            location.reload();
+        } else {
+            alert('❌ Error: ' + (result.error || 'No se pudieron eliminar los mensajes'));
+        }
+    } catch (error) {
+        alert('❌ Error de conexión con el servidor');
+    } finally {
+        if (btn) {
+            btn.textContent = '🗑️ Eliminar';
+            btn.disabled = false;
+        }
+    }
+}
+
+// Event Listeners
+document.getElementById('guardarEdicion')?.addEventListener('click', async function() {
+    const modal = document.getElementById('modalEditar');
+    const textarea = document.getElementById('editarTexto') as HTMLTextAreaElement | null;
+    const btn = document.getElementById('guardarEdicion') as HTMLButtonElement | null;
+    
+    if (!modal || !textarea) return;
+    
+    const id = parseInt(modal.dataset.id || '0');
+    const texto = textarea.value.trim();
+    
+    if (!id) {
+        alert('⚠️ No hay mensaje seleccionado');
+        return;
+    }
+    if (!texto) {
+        alert('⚠️ El mensaje no puede estar vacío');
+        return;
+    }
+
+    if (btn) {
+        btn.textContent = '⏳ Guardando y reenviando...';
+        btn.disabled = true;
+    }
+
+    try {
+        const response = await fetch('/api/whatsapp/reenviar', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                mensajes: [{ id }],
+                accion: 'editar',
+                nuevoTexto: texto
+            })
+        });
+
+        const result = await response.json();
+        
+        if (result.success) {
+            alert('✅ Mensaje editado y reenviado correctamente');
+            cerrarModalEditar();
+            location.reload();
+        } else {
+            alert('❌ Error: ' + (result.error || 'No se pudo reenviar'));
+        }
+    } catch (error) {
+        alert('❌ Error de conexión con el servidor');
+    } finally {
+        if (btn) {
+            btn.textContent = '💾 Guardar y Reenviar';
+            btn.disabled = false;
+        }
+    }
+});
+
+document.getElementById('cerrarEdicion')?.addEventListener('click', cerrarModalEditar);
+document.getElementById('cancelarEdicion')?.addEventListener('click', cerrarModalEditar);
+document.getElementById('btnDesconectar')?.addEventListener('click', desconectarSesion);
+
+(window as any).conectarWhatsApp = conectarWhatsApp;
+(window as any).reiniciarWhatsApp = reiniciarWhatsApp;
+(window as any).cerrarQRModal = cerrarQRModal;
+(window as any).desconectarSesion = desconectarSesion;
+(window as any).toggleSeleccionarTodos = toggleSeleccionarTodos;
+(window as any).actualizarSeleccion = actualizarSeleccion;
+(window as any).reenviarSeleccionados = reenviarSeleccionados;
+(window as any).editarSeleccionados = editarSeleccionados;
+(window as any).abrirChatOnline = abrirChatOnline;
+(window as any).reenviarMensaje = reenviarMensaje;
+(window as any).editarMensaje = editarMensaje;
+(window as any).abrirChat = abrirChat;
+(window as any).eliminarMensaje = eliminarMensaje;
+(window as any).eliminarSeleccionados = eliminarSeleccionados;
+
+// ============================================
+// VERIFICAR ESTADO DE CONEXIÓN
+// ============================================
+
+async function verificarConexion() {
+    const statusEl = document.getElementById('sessionStatus');
+    if (!statusEl) return;
+
+    try {
+        const response = await fetch('/api/whatsapp/status');
+        const data = await response.json();
+        
+        if (data.connected) {
+            statusEl.innerHTML = `
+                <div class="session-info">
+                    <span class="status-indicator status-connected">🟢 Conectado</span>
+                    <span class="status-detail">Sesión activa: <strong>${data.session}</strong></span>
+                    ${data.phone ? `<span class="status-detail">Teléfono: <strong>+${data.phone}</strong> ${data.pushName ? `(${data.pushName})` : ''}</span>` : ''}
+                </div>
+            `;
+            cerrarQRModal();
+        } else {
+            statusEl.innerHTML = `
+                <div class="session-info">
+                    <span class="status-indicator status-disconnected">🔴 Desconectado</span>
+                    <span class="status-detail">Comprueba la sesión en OpenWA o escanea el código QR</span>
+                    <button id="btnConectar" class="btn-conectar">
+                        📱 Conectar WhatsApp
+                    </button>
+                </div>
+            `;
+            document.getElementById('btnConectar')?.addEventListener('click', conectarWhatsApp);
+        }
+    } catch (error) {
+        statusEl.innerHTML = `
+            <div class="session-info">
+                <span class="status-indicator status-error">⚠️ Error de conexión</span>
+                <span class="status-detail">No se pudo verificar el servicio OpenWA</span>
+            </div>
+        `;
+    }
+}
+
+document.getElementById('btnCloseQr')?.addEventListener('click', cerrarQRModal);
+document.getElementById('btnResetQr')?.addEventListener('click', reiniciarWhatsApp);
+document.getElementById('qrModal')?.addEventListener('click', (e) => {
+    if (e.target === e.currentTarget) cerrarQRModal();
+});
+document.getElementById('modalEditar')?.addEventListener('click', (e) => {
+    if (e.target === e.currentTarget) cerrarModalEditar();
+});
+
+// Botón actualizar
+document.getElementById('refreshBtn')?.addEventListener('click', () => {
+    verificarConexion();
+    window.location.reload();
+});
+
+// Verificar periódicamente cada 10 segundos
+setInterval(verificarConexion, 10000);
+document.addEventListener('DOMContentLoaded', verificarConexion);
+</script>
+
+<style>
+/* ============================================
+   WHATSAPP DASHBOARD - ESTILOS MEJORADOS
+   ============================================ */
+.whatsapp-dashboard {
+    padding: 24px;
+    max-width: 1400px;
+    margin: 0 auto;
+}
+
+.page-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 24px;
+}
+
+.page-header h1 {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.8rem;
+    color: #1a1a1a;
+    margin: 0;
+}
+
+.page-header p {
+    color: rgba(26, 26, 26, 0.5);
+    margin: 4px 0 0;
+}
+
+.btn-refresh {
+    padding: 10px 20px;
+    background: #9e2a2b;
+    color: #fffaf0;
+    border: none;
+    border-radius: 8px;
+    font-size: 0.9rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-family: 'Inter', sans-serif;
+}
+
+.btn-refresh:hover {
+    background: #7a2021;
+    transform: translateY(-1px);
+}
+
+/* Stats Grid */
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 16px;
+    margin-bottom: 24px;
+}
+
+.stat-card {
+    background: white;
+    padding: 20px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+
+.stat-icon {
+    font-size: 1.5rem;
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.stat-info {
+    display: flex;
+    flex-direction: column;
+}
+
+.stat-number {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #1a1a1a;
+}
+
+.stat-label {
+    font-size: 0.8rem;
+    color: rgba(26, 26, 26, 0.5);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+/* Status Card */
+.status-card {
+    margin-bottom: 24px;
+    padding: 20px 24px;
+}
+
+.section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+}
+
+.section-header h3 {
+    margin: 0;
+    font-size: 1.1rem;
+    color: #1a1a1a;
+    font-family: 'Inter', sans-serif;
+}
+
+.btn-desconectar {
+    padding: 8px 16px;
+    background: rgba(239, 68, 68, 0.1);
+    color: #ef4444;
+    border: 1px solid rgba(239, 68, 68, 0.2);
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 0.85rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-family: 'Inter', sans-serif;
+}
+
+.btn-desconectar:hover {
+    background: #ef4444;
+    color: white;
+}
+
+.session-status {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 18px;
+    background: rgba(255, 250, 240, 0.5);
+    border-radius: 10px;
+    border: 1px solid rgba(26, 26, 26, 0.06);
+}
+
+.session-info {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    flex-wrap: wrap;
+}
+
+.status-indicator {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-weight: 600;
+    font-size: 0.95rem;
+}
+
+.status-checking { color: #f59e0b; }
+.status-connected { color: #10b981; }
+.status-disconnected { color: #ef4444; }
+.status-error { color: #ef4444; }
+
+.status-detail {
+    color: rgba(26, 26, 26, 0.6);
+    font-size: 0.9rem;
+}
+
+/* Section card */
+.section-card {
+    background: white;
+    border-radius: 12px;
+    padding: 20px 24px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+    margin-bottom: 24px;
+}
+
+/* Acciones Masivas */
+.acciones-masivas {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.btn-accion {
+    padding: 6px 14px;
+    border-radius: 8px;
+    border: none;
+    font-size: 0.82rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-family: 'Inter', sans-serif;
+}
+
+.btn-reenviar {
+    background: rgba(59, 130, 246, 0.1);
+    color: #3b82f6;
+}
+
+.btn-reenviar:hover {
+    background: #3b82f6;
+    color: white;
+}
+
+.btn-editar {
+    background: rgba(245, 158, 11, 0.1);
+    color: #d97706;
+}
+
+.btn-editar:hover {
+    background: #f59e0b;
+    color: white;
+}
+
+.btn-chat {
+    background: rgba(16, 185, 129, 0.1);
+    color: #10b981;
+}
+
+.btn-chat:hover {
+    background: #10b981;
+    color: white;
+}
+
+.btn-eliminar {
+    background: rgba(239, 68, 68, 0.1);
+    color: #ef4444;
+}
+
+.btn-eliminar:hover {
+    background: #ef4444;
+    color: white;
+}
+
+.seleccionados-info {
+    font-size: 0.8rem;
+    color: rgba(26, 26, 26, 0.5);
+    font-weight: 500;
+    margin-left: 6px;
+}
+
+/* Table */
+.table-wrapper {
+    overflow-x: auto;
+}
+
+.tabla-mensajes {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.tabla-mensajes thead {
+    background: #f8f5f0;
+}
+
+.tabla-mensajes th {
+    padding: 12px 16px;
+    text-align: left;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: rgba(26, 26, 26, 0.5);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    border-bottom: 1px solid rgba(26, 26, 26, 0.06);
+}
+
+.tabla-mensajes td {
+    padding: 12px 16px;
+    font-size: 0.9rem;
+    color: #1a1a1a;
+    border-bottom: 1px solid rgba(26, 26, 26, 0.04);
+    vertical-align: middle;
+}
+
+.tabla-mensajes tr.row-error td {
+    background: rgba(239, 68, 68, 0.03);
+}
+
+.tabla-mensajes tr:hover td {
+    background: rgba(255, 250, 240, 0.3);
+}
+
+.whatsapp-num {
+    color: #25d366;
+    text-decoration: none;
+    font-weight: 500;
+}
+
+.whatsapp-num:hover {
+    text-decoration: underline;
+}
+
+.mensaje-texto {
+    max-width: 360px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-size: 0.85rem;
+    color: rgba(26, 26, 26, 0.8);
+}
+
+/* Acciones individuales por fila */
+.acciones-individuales {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.btn-accion-sm {
+    width: 30px;
+    height: 30px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.85rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+}
+
+.btn-reenviar-sm {
+    background: rgba(59, 130, 246, 0.1);
+    color: #3b82f6;
+}
+
+.btn-reenviar-sm:hover {
+    background: #3b82f6;
+    color: white;
+    transform: scale(1.08);
+}
+
+.btn-editar-sm {
+    background: rgba(245, 158, 11, 0.1);
+    color: #d97706;
+}
+
+.btn-editar-sm:hover {
+    background: #f59e0b;
+    color: white;
+    transform: scale(1.08);
+}
+
+.btn-chat-sm {
+    background: rgba(16, 185, 129, 0.1);
+    color: #10b981;
+}
+
+.btn-chat-sm:hover {
+    background: #10b981;
+    color: white;
+    transform: scale(1.08);
+}
+
+.btn-eliminar-sm {
+    background: rgba(239, 68, 68, 0.1);
+    color: #ef4444;
+}
+
+.btn-eliminar-sm:hover {
+    background: #ef4444;
+    color: white;
+    transform: scale(1.08);
+}
+
+/* Badges de estado */
+.badge-estado {
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    display: inline-block;
+}
+
+.badge-estado.entregado {
+    background: rgba(16, 185, 129, 0.1);
+    color: #10b981;
+}
+
+.badge-estado.enviado {
+    background: rgba(59, 130, 246, 0.1);
+    color: #3b82f6;
+}
+
+.badge-estado.error {
+    background: rgba(239, 68, 68, 0.1);
+    color: #ef4444;
+}
+
+.badge-estado.reenviado {
+    background: rgba(168, 85, 247, 0.1);
+    color: #a855f7;
+}
+
+.badge-estado.leido {
+    background: rgba(139, 92, 246, 0.1);
+    color: #8b5cf6;
+}
+
+.badge-estado.pendiente {
+    background: rgba(245, 158, 11, 0.1);
+    color: #f59e0b;
+}
+
+.empty-state {
+    text-align: center;
+    padding: 48px 24px;
+}
+
+.empty-icon {
+    font-size: 3rem;
+    display: block;
+    margin-bottom: 12px;
+}
+
+.empty-state p {
+    font-size: 1.1rem;
+    font-weight: 500;
+    color: #1a1a1a;
+    margin: 0;
+}
+
+.empty-sub {
+    color: rgba(26, 26, 26, 0.3);
+    font-size: 0.9rem;
+}
+
+/* Botón Conectar */
+.btn-conectar {
+    padding: 8px 16px;
+    background: #10b981;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 0.85rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    margin-left: auto;
+    font-family: 'Inter', sans-serif;
+}
+
+.btn-conectar:hover {
+    background: #059669;
+    transform: translateY(-1px);
+}
+
+.btn-conectar:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+/* Modal General */
+.modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(4px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+    padding: 20px;
+}
+
+.modal-card {
+    background: white;
+    border-radius: 16px;
+    max-width: 440px;
+    width: 100%;
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+    overflow: hidden;
+    animation: modalPop 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.modal-card-lg {
+    max-width: 580px;
+}
+
+@keyframes modalPop {
+    from { opacity: 0; transform: scale(0.95); }
+    to { opacity: 1; transform: scale(1); }
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px 20px;
+    border-bottom: 1px solid rgba(26, 26, 26, 0.06);
+}
+
+.modal-header h3 {
+    margin: 0;
+    font-size: 1.1rem;
+    font-family: 'Inter', sans-serif;
+    color: #1a1a1a;
+}
+
+.btn-close {
+    background: transparent;
+    border: none;
+    font-size: 1.2rem;
+    cursor: pointer;
+    color: #6b7280;
+    padding: 4px 8px;
+    border-radius: 6px;
+}
+
+.btn-close:hover {
+    background: #f3f4f6;
+    color: #111827;
+}
+
+.modal-body {
+    padding: 20px;
+}
+
+.modal-footer {
+    padding: 16px 20px;
+    background: #f9fafb;
+    border-top: 1px solid rgba(26, 26, 26, 0.06);
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+}
+
+.editar-textarea {
+    width: 100%;
+    border: 1.5px solid rgba(26, 26, 26, 0.12);
+    border-radius: 10px;
+    padding: 12px 14px;
+    font-family: 'Inter', sans-serif;
+    font-size: 0.9rem;
+    color: #1a1a1a;
+    resize: vertical;
+    outline: none;
+    box-sizing: border-box;
+}
+
+.editar-textarea:focus {
+    border-color: #9e2a2b;
+    box-shadow: 0 0 0 3px rgba(158, 42, 43, 0.1);
+}
+
+.btn-primary-action {
+    padding: 10px 20px;
+    background: #9e2a2b;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 0.88rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-family: 'Inter', sans-serif;
+}
+
+.btn-primary-action:hover {
+    background: #7a2021;
+}
+
+.btn-secondary-action {
+    padding: 10px 18px;
+    background: transparent;
+    color: #4b5563;
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+    font-weight: 500;
+    font-size: 0.88rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-family: 'Inter', sans-serif;
+}
+
+.btn-secondary-action:hover {
+    background: #f3f4f6;
+}
+
+.qr-desc {
+    font-size: 0.9rem;
+    color: #4b5563;
+    margin-bottom: 16px;
+    line-height: 1.4;
+}
+
+.qr-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 16px;
+    background: #f9fafb;
+    border-radius: 12px;
+    border: 1px solid #e5e7eb;
+    margin-bottom: 16px;
+}
+
+.qr-img {
+    max-width: 260px;
+    width: 100%;
+    height: auto;
+    border-radius: 8px;
+}
+
+.qr-sub {
+    font-size: 0.8rem;
+    color: #9ca3af;
+    margin: 0;
+}
+
+.btn-reset-qr {
+    padding: 8px 14px;
+    background: rgba(158, 42, 43, 0.08);
+    color: #9e2a2b;
+    border: 1px solid rgba(158, 42, 43, 0.2);
+    border-radius: 8px;
+    font-size: 0.82rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-family: 'Inter', sans-serif;
+}
+
+.btn-reset-qr:hover {
+    background: rgba(158, 42, 43, 0.16);
+}
+
+.btn-reset-qr:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+</style>

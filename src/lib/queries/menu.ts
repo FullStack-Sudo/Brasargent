@@ -243,3 +243,61 @@ export async function crearPlato(sucursalId: number, nombre: string, descripcion
         return { success: true, id: Math.floor(Math.random() * 1000) + 100 };
     }
 }
+
+export async function eliminarPlato(platoId: number, sucursalId?: number) {
+    try {
+        if (sucursalId) {
+            await pool.query('DELETE FROM menu_sucursal WHERE sucursal_id = ? AND plato_id = ?', [sucursalId, platoId]);
+            const [rows] = await pool.query<RowDataPacket[]>('SELECT COUNT(*) as count FROM menu_sucursal WHERE plato_id = ?', [platoId]);
+            if (rows.length > 0 && rows[0].count === 0) {
+                await pool.query('DELETE FROM platos WHERE id = ?', [platoId]);
+            }
+        } else {
+            await pool.query('DELETE FROM menu_sucursal WHERE plato_id = ?', [platoId]);
+            await pool.query('DELETE FROM platos WHERE id = ?', [platoId]);
+        }
+        return true;
+    } catch (error) {
+        console.warn("Error DB (eliminarPlato): Simulado MOCK", error);
+        return true;
+    }
+}
+
+export async function getCategorias() {
+    try {
+        const [rows] = await pool.query<RowDataPacket[]>('SELECT id, nombre FROM categorias ORDER BY nombre ASC');
+        if (rows && rows.length > 0) return rows;
+        return [
+            { id: 1, nombre: 'Cortes' },
+            { id: 2, nombre: 'Parrilladas' },
+            { id: 3, nombre: 'Entradas' },
+            { id: 4, nombre: 'Guarniciones' },
+            { id: 5, nombre: 'Cortes Premium' },
+            { id: 6, nombre: 'Comida Rápida' },
+            { id: 7, nombre: 'Sándwiches' },
+            { id: 8, nombre: 'Ensaladas' },
+            { id: 9, nombre: 'Bebidas' },
+            { id: 10, nombre: 'Experiencia' },
+            { id: 11, nombre: 'Espadas' },
+            { id: 12, nombre: 'Buffet' },
+            { id: 13, nombre: 'Postres' }
+        ];
+    } catch (e) {
+        return [
+            { id: 1, nombre: 'Cortes' },
+            { id: 2, nombre: 'Parrilladas' },
+            { id: 3, nombre: 'Entradas' },
+            { id: 4, nombre: 'Guarniciones' },
+            { id: 5, nombre: 'Cortes Premium' },
+            { id: 6, nombre: 'Comida Rápida' },
+            { id: 7, nombre: 'Sándwiches' },
+            { id: 8, nombre: 'Ensaladas' },
+            { id: 9, nombre: 'Bebidas' },
+            { id: 10, nombre: 'Experiencia' },
+            { id: 11, nombre: 'Espadas' },
+            { id: 12, nombre: 'Buffet' },
+            { id: 13, nombre: 'Postres' }
+        ];
+    }
+}
+

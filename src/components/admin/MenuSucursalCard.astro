@@ -9,6 +9,7 @@ interface Props {
         telefono: string;
         horario: string;
         capacidad: number;
+        capacidad_total?: number;
         total_platos: number;
         disponibles: number;
         agotados: number;
@@ -66,7 +67,7 @@ const colorClass = conceptColors[sucursal.id] || 'text-gray-900';
         </p>
         <p class="text-sm text-gray-600 flex items-center gap-3">
             <span class="text-lg leading-none">💺</span>
-            <span>Capacidad: {sucursal.capacidad} personas</span>
+            <span>Capacidad: {sucursal.capacidad_total || sucursal.capacidad} cubiertos</span>
         </p>
     </div>
 

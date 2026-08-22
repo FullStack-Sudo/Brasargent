@@ -1,10 +1,11 @@
 ---
 // Componente de Sucursales con diseño futurista
-import pool from '../lib/db';
+import pool from "../lib/db";
+import { agruparHorarios } from "../lib/horarios";
 
 let sucursales = [];
 try {
-  const [rows] = await pool.query(`
+  const [rows] = (await pool.query(`
       SELECT 
           id,
           nombre as name,
@@ -22,7 +23,7 @@ try {
       FROM sucursales
       WHERE activo = 1
       ORDER BY nombre
-  `) as any[];
+  `)) as any[];
 
   sucursales = rows.map((s: any) => {
     let image = "/img/sucursales/beni.jpeg";
@@ -30,45 +31,38 @@ try {
     let featured = false;
     let mapUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(s.name + " " + s.address)}`;
 
-    if (s.name.includes("Churrasqueria") || s.name.includes("Churrasquería") || s.type.includes("Churrasquería")) {
-        image = "/img/sucursales/beni.jpeg";
-        footerLogo = "/img/logo/LOGO1SF.png";
+    if (
+      s.name.includes("Churrasqueria") ||
+      s.name.includes("Churrasquería") ||
+      s.type.includes("Churrasquería")
+    ) {
+      image = "/img/sucursales/beni.jpeg";
+      footerLogo = "/img/logo/LOGO1SF.png";
+      mapUrl = "https://maps.app.goo.gl/9pjKcgmrKJvESw2f7?g_st=ac";
     } else if (s.name.includes("Fast Grill") || s.type.includes("Fast Grill")) {
-        image = "/img/sucursales/fassGrill.jpeg";
-        featured = true;
-        footerLogo = "/img/logo/LOGO2SF.png";
+      image = "/img/sucursales/fassGrill.jpeg";
+      featured = true;
+      footerLogo = "/img/logo/LOGO2SF.png";
+      mapUrl = "https://maps.app.goo.gl/vZBQXjJqVpYPaL9TA?g_st=ac";
     } else if (s.name.includes("Rodizio")) {
-        image = "/img/sucursales/RODIZIO.webp";
-        footerLogo = "/img/logo/LOGO3SF.png";
+      image = "/img/sucursales/RODIZIO.webp";
+      footerLogo = "/img/logo/LOGO3SF.png";
+      mapUrl = "https://maps.app.goo.gl/YL5CTgSqqguhKezc6?g_st=ac";
     }
 
-    let hours: string[] | string = ["Horario no configurado"];
+    let hours: string[] | string = agruparHorarios(s.horarios);
     let status = "";
-    try {
-        if (s.horarios) {
-            const h = typeof s.horarios === 'string' ? JSON.parse(s.horarios) : s.horarios;
-            const diaMap: Record<string, string> = { 'lunes': 'Lunes', 'martes': 'Martes', 'miercoles': 'Mié', 'jueves': 'Jueves', 'viernes': 'Viernes', 'sabado': 'Sábado', 'domingo': 'Domingo' };
-            const partes = [];
-            for (const [dia, info] of Object.entries(h) as any) {
-                if (info.activo && info.bloques && info.bloques.length > 0) {
-                    const blq = info.bloques.map((b: any) => `${b.inicio} - ${b.fin}`).join(' y ');
-                    partes.push(`${diaMap[dia]}: ${blq}`);
-                }
-            }
-            if (partes.length > 0) hours = partes;
-        }
-    } catch(e) {}
 
     return {
-        ...s,
-        image,
-        mapUrl,
-        footerLogo,
-        featured,
-        hours,
-        status,
-        rating: s.rating || 4.5,
-        reviews: s.reviews ? s.reviews.toString() : "0"
+      ...s,
+      image,
+      mapUrl,
+      footerLogo,
+      featured,
+      hours,
+      status,
+      rating: s.rating || 4.5,
+      reviews: s.reviews ? s.reviews.toString() : "0",
     };
   });
 } catch (error) {
@@ -172,70 +166,87 @@ try {
                   {sucursal.type}
                 </p>
 
-                {/* Dirección */}
-                <div class="flex flex-col items-center gap-2 mb-5 text-center px-4">
-                  <div class="w-10 h-10 flex items-center justify-center bg-[#d4af37]/10 rounded-full mb-1">
+                {/* 🔴 DETALLES CON ICONOS ALINEADOS */}
+                <div class="w-full bg-[#fffaf0]/60 rounded-xl p-4 my-4 border border-[#d4af37]/20 space-y-3">
+                  {/* Ubicación con pin SVG */}
+                  <div class="flex items-center gap-2.5 text-left">
                     <svg
-                      class="w-5 h-5 text-[#d4af37]"
+                      class="w-4 h-4 text-[#6b7280] shrink-0"
+                      width="16"
+                      height="16"
+                      viewBox="0 0 24 24"
                       fill="none"
                       stroke="currentColor"
-                      viewBox="0 0 24 24"
+                      stroke-width="2"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
                     >
-                      <path
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                        stroke-width="2.5"
-                        d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"
-                      />
-                      <path
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                        stroke-width="2.5"
-                        d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"
-                      />
+                      <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
+                      <circle cx="12" cy="10" r="3" />
                     </svg>
+                    <span class="text-gray-800 text-sm font-medium leading-tight">
+                      {sucursal.address}
+                    </span>
                   </div>
-                  <p class="text-gray-600 text-sm font-medium leading-relaxed">
-                    {sucursal.address}
-                  </p>
-                </div>
 
-                {/* Horario */}
-                {sucursal.hours && (
-                  <div class="flex flex-col items-center gap-2 mb-6 text-center">
-                    <div class="w-10 h-10 flex items-center justify-center bg-[#9e2a2b]/10 rounded-full mb-1">
+                  {/* Horario con reloj SVG */}
+                  {sucursal.hours && (
+                    <div class="flex items-start gap-2.5 text-left">
                       <svg
-                        class="w-5 h-5 text-[#9e2a2b]"
+                        class="w-4 h-4 text-[#6b7280] shrink-0 mt-0.5"
+                        width="16"
+                        height="16"
+                        viewBox="0 0 24 24"
                         fill="none"
                         stroke="currentColor"
-                        viewBox="0 0 24 24"
+                        stroke-width="2"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
                       >
-                        <path
-                          stroke-linecap="round"
-                          stroke-linejoin="round"
-                          stroke-width="2.5"
-                          d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
-                        />
+                        <circle cx="12" cy="12" r="10" />
+                        <polyline points="12 6 12 12 16 14" />
                       </svg>
-                    </div>
-                    <div class="text-sm font-medium px-4">
-                      {sucursal.status && (
-                        <span class="text-red-500 font-black block mb-1">
-                          {sucursal.status}
-                        </span>
-                      )}
-                      <div class="text-gray-500 leading-relaxed italic text-xs space-y-1">
-                        {Array.isArray(sucursal.hours) ? (
-                          sucursal.hours.map((line: string) => (
-                            <div class="block">{line}</div>
-                          ))
-                        ) : (
-                          <span>{sucursal.hours}</span>
+                      <div class="text-sm font-medium">
+                        {sucursal.status && (
+                          <span class="text-red-500 font-black block mb-1">
+                            {sucursal.status}
+                          </span>
                         )}
+                        <div class="text-gray-700 leading-relaxed text-xs space-y-1">
+                          {Array.isArray(sucursal.hours) ? (
+                            sucursal.hours.map((line: string) => (
+                              <div class="block">{line}</div>
+                            ))
+                          ) : (
+                            <span>{sucursal.hours}</span>
+                          )}
+                        </div>
                       </div>
                     </div>
-                  </div>
-                )}
+                  )}
+
+                  {/* Teléfono con ícono SVG */}
+                  {sucursal.whatsapp && (
+                    <div class="flex items-center gap-2.5 text-left">
+                      <svg
+                        class="w-4 h-4 text-[#6b7280] shrink-0"
+                        width="16"
+                        height="16"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="2"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                      >
+                        <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z" />
+                      </svg>
+                      <span class="text-gray-800 text-sm font-medium">
+                        {sucursal.whatsapp}
+                      </span>
+                    </div>
+                  )}
+                </div>
 
                 {/* Testimonial */}
                 {sucursal.testimonial && (
@@ -255,9 +266,9 @@ try {
                 {/* Spacer superior para centrar botones */}
                 <div class="grow" />
 
-                {/* Botones de Acción - Circulares - Centrados */}
-                <div class="flex flex-row flex-nowrap gap-4 md:gap-6 items-center justify-center py-6">
-                  {/* Botón Ver Ubicación - Verde Google (Circular) */}
+                {/* 🔴 ICONOS EN EL PIE DE CADA TARJETA (HORIZONTAL Y RESPONSIVO) */}
+                <div class="flex flex-row items-center justify-around w-full max-w-xs mx-auto pt-4 pb-2 px-2 gap-2 sm:gap-4">
+                  {/* Icono Ubicación */}
                   <a
                     href={
                       sucursal.mapUrl ||
@@ -265,87 +276,69 @@ try {
                     }
                     target="_blank"
                     rel="noopener noreferrer"
-                    class="w-16 h-16 flex items-center justify-center bg-[#34A853] text-white rounded-full hover:bg-[#2d9348] hover:shadow-2xl hover:shadow-[#34A853]/60 transition-all duration-300 hover:scale-110 group"
+                    class="flex items-center justify-center cursor-pointer transition-transform duration-300 hover:scale-115 p-1 group shrink-0 focus:outline-none"
                     title="Ver ubicación en Google Maps"
+                    data-gif-container
                   >
-                    <svg
-                      class="w-7 h-7 group-hover:scale-110 transition-transform duration-300"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                        stroke-width="2"
-                        d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"
-                      />
-                      <path
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                        stroke-width="2"
-                        d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"
-                      />
-                    </svg>
+                    <img
+                      src="/img/iconos/comida-de-la-ubicacion.gif"
+                      alt="Ubicación"
+                      class="gif-hover w-9 h-9 sm:w-10 sm:h-10 object-contain shrink-0"
+                    />
                   </a>
 
-                  {/* Botón Ver Menú - Rojo Vino (Circular) - Abre Modal */}
+                  {/* Icono Menú */}
                   <button
                     type="button"
                     data-modal-open="menu-modal"
                     data-sucursal-name={sucursal.name}
-                    class="w-16 h-16 flex items-center justify-center bg-[#9e2a2b] text-white rounded-full hover:bg-[#8a2426] hover:shadow-2xl hover:shadow-[#9e2a2b]/60 transition-all duration-300 hover:scale-110 group"
+                    class="flex items-center justify-center cursor-pointer transition-transform duration-300 hover:scale-115 p-1 group shrink-0 focus:outline-none"
                     title="Ver nuestro menú"
+                    data-gif-container
                   >
-                    <svg
-                      class="w-7 h-7 group-hover:scale-110 transition-transform duration-300"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                        stroke-width="2"
-                        d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"
-                      />
-                    </svg>
+                    <img
+                      src="/img/iconos/menu.gif"
+                      alt="Menú"
+                      class="gif-hover w-9 h-9 sm:w-10 sm:h-10 object-contain shrink-0"
+                    />
                   </button>
 
-                  {/* Botón WhatsApp - Verde WhatsApp (Circular) */}
+                  {/* Icono WhatsApp */}
                   <a
                     href={`https://wa.me/${sucursal.whatsapp}?text=${encodeURIComponent(`Hola, me gustaría hacer una consulta sobre ${sucursal.name}`)}`}
                     target="_blank"
                     rel="noopener noreferrer"
-                    class="w-16 h-16 flex items-center justify-center bg-[#25D366] text-white rounded-full hover:bg-[#20ba5a] hover:shadow-2xl hover:shadow-[#25D366]/60 transition-all duration-300 hover:scale-110 group"
+                    class="flex items-center justify-center cursor-pointer transition-transform duration-300 hover:scale-115 p-1 group shrink-0 focus:outline-none"
                     title="Contactar por WhatsApp"
                   >
-                    <svg
-                      class="w-7 h-7 group-hover:scale-110 transition-transform duration-300"
-                      fill="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z" />
-                    </svg>
+                    <img
+                      src="/img/iconos/wp.png"
+                      alt="WhatsApp"
+                      class="w-9 h-9 sm:w-10 sm:h-10 object-contain shrink-0"
+                    />
                   </a>
 
-                  <!-- Botón Reservar - Dorado (Circular/Pill) -->
+                  {/* Icono Reservar */}
                   {sucursal.permite_reservas === 1 && (
-                    <button 
-                        class="btn-reservar w-16 h-16 flex items-center justify-center bg-[#d4af37] text-white rounded-full hover:bg-[#b8941f] hover:shadow-2xl hover:shadow-[#d4af37]/60 transition-all duration-300 hover:scale-110 group" 
-                        onclick={`abrirModalReserva(${sucursal.id}, '${sucursal.name}')`}
-                        data-sucursal-id={sucursal.id}
-                        title="Reservar mesa"
+                    <button
+                      type="button"
+                      class="flex items-center justify-center cursor-pointer transition-transform duration-300 hover:scale-115 p-1 group shrink-0 focus:outline-none"
+                      onclick={`abrirModalReserva(${sucursal.id}, '${sucursal.name}')`}
+                      data-sucursal-id={sucursal.id}
+                      title="Reservar mesa"
+                      data-gif-container
                     >
-                        <svg class="w-7 h-7 group-hover:scale-110 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
-                        </svg>
+                      <img
+                        src="/img/iconos/reserva.gif"
+                        alt="Reservar"
+                        class="gif-hover w-9 h-9 sm:w-10 sm:h-10 object-contain shrink-0"
+                      />
                     </button>
                   )}
                 </div>
 
                 {/* Spacer inferior para centrar botones */}
-                <div class="grow"></div>
+                <div class="grow" />
               </div>
             </div>
           ))
@@ -379,7 +372,7 @@ try {
   {/* Modal del Menú */}
   <div
     id="menu-modal"
-    class="fixed inset-0 z-100 hidden items-center justify-center bg-black/60 shadow-2xl"
+    class="fixed inset-0 z-[10000] hidden items-center justify-center bg-black/75 backdrop-blur-md p-2 sm:p-4 md:p-8 shadow-2xl"
     data-modal="menu-modal"
   >
     <div
@@ -480,17 +473,82 @@ try {
 </section>
 
 <script>
-// ============================================
-// MODAL DE RESERVA - CON VALIDACIÓN DE HORARIOS
-// ============================================
+  // ============================================
+  // GIF HOVER ANIMATION CONTROLLER (FROZEN UNLESS HOVERED)
+  // ============================================
+  function initGifHover() {
+    const containers = document.querySelectorAll("[data-gif-container]");
+    containers.forEach((container) => {
+      if (container.hasAttribute("data-gif-inited")) return;
+      container.setAttribute("data-gif-inited", "true");
 
-window.abrirModalReserva = function(sucursalId, sucursalNombre) {
-    // Verificar si ya existe un modal abierto
-    const existente = document.getElementById('modalReservaCliente');
-    if (existente) {
-        existente.remove();
+      const img = container.querySelector("img.gif-hover");
+      if (!img) return;
+
+      // Create static canvas for frame 1
+      const canvas = document.createElement("canvas");
+      canvas.className =
+        (img.className || "").replace("gif-hover", "") +
+        " gif-static-canvas pointer-events-none";
+      canvas.style.display = "block";
+
+      img.style.display = "none";
+
+      function drawFirstFrame() {
+        if (!img.naturalWidth || !img.naturalHeight) return;
+        canvas.width = img.naturalWidth;
+        canvas.height = img.naturalHeight;
+        const ctx = canvas.getContext("2d");
+        if (ctx) {
+          ctx.clearRect(0, 0, canvas.width, canvas.height);
+          ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        }
+      }
+
+      if (img.complete && img.naturalWidth > 0) {
+        drawFirstFrame();
+      } else {
+        img.addEventListener("load", drawFirstFrame);
+      }
+
+      container.insertBefore(canvas, img);
+
+      // Play animation on hover enter
+      container.addEventListener("mouseenter", () => {
+        canvas.style.display = "none";
+        img.style.display = "block";
+        const currentSrc = img.src;
+        img.src = "";
+        img.src = currentSrc;
+      });
+
+      // Freeze animation on hover leave
+      container.addEventListener("mouseleave", () => {
+        img.style.display = "none";
+        canvas.style.display = "block";
+      });
+    });
+  }
+
+  if (typeof window !== "undefined") {
+    if (document.readyState === "loading") {
+      document.addEventListener("DOMContentLoaded", initGifHover);
+    } else {
+      initGifHover();
     }
-    
+  }
+
+  // ============================================
+  // MODAL DE RESERVA - CON VALIDACIÓN DE HORARIOS
+  // ============================================
+
+  window.abrirModalReserva = function (sucursalId, sucursalNombre) {
+    // Verificar si ya existe un modal abierto
+    const existente = document.getElementById("modalReservaCliente");
+    if (existente) {
+      existente.remove();
+    }
+
     const modalHTML = `
         <div class="modal-overlay" id="modalReservaCliente" onclick="window.cerrarModalReserva()">
             <div class="modal-container" onclick="event.stopPropagation()">
@@ -533,7 +591,7 @@ window.abrirModalReserva = function(sucursalId, sucursalNombre) {
                     </div>                    
                     <!-- Fecha -->
                     <div class="form-group">
-                        <label>📅 Fecha <span class="required">*</span></label>
+                        <label>📅 Fecha de Reserva <span class="required">*</span></label>
                         <input type="date" id="fechaReserva" required />
                         <span class="field-hint">Selecciona el día de tu reserva</span>
                     </div>
@@ -565,12 +623,12 @@ window.abrirModalReserva = function(sucursalId, sucursalNombre) {
                         <input type="hidden" id="horaReserva" required />
                     </div>
 
-                    <!-- 🔴 ALERTA DE DÍA SIN RESERVAS (DOMINGOS Y FERIADOS) -->
+                    <!-- 🔴 ALERTA DE DÍA SIN RESERVAS (DOMINGOS Y FERIADOS - OCULTA POR DEFECTO) -->
                     <div id="festivoAviso" class="alerta-sin-reservas hidden">
                         <div class="alerta-icono">📋</div>
                         <div class="alerta-contenido">
                             <strong>Día Sin Reservas</strong>
-                            <p id="festivoMotivo">Los domingos, días feriados y fechas cívicas trabajamos por orden de llegada (SIN reservas).</p>
+                            <p id="festivoMotivo">Los domingos trabajamos por orden de llegada (SIN reservas).</p>
                             <p class="alerta-mensaje">Te esperamos con la mejor atención.</p>
                         </div>
                     </div>
@@ -647,148 +705,183 @@ window.abrirModalReserva = function(sucursalId, sucursalNombre) {
             </div>
         </div>
     `;
-    
+
     // Insertar modal en el DOM
-    document.body.insertAdjacentHTML('beforeend', modalHTML);
-    document.body.classList.add('modal-open');
-    
+    document.body.insertAdjacentHTML("beforeend", modalHTML);
+    document.body.classList.add("modal-open");
+
     // Configurar fecha mínima de acuerdo al huso horario de Bolivia (en-CA garantiza formato YYYY-MM-DD sin bidi)
-    const fechaInput = document.getElementById('fechaReserva');
-    const hoyBolivia = new Intl.DateTimeFormat('en-CA', {
-        timeZone: 'America/La_Paz',
-        year: 'numeric',
-        month: '2-digit',
-        day: '2-digit'
+    const fechaInput = document.getElementById(
+      "fechaReserva",
+    ) as HTMLInputElement;
+    const hoyBolivia = new Intl.DateTimeFormat("en-CA", {
+      timeZone: "America/La_Paz",
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
     }).format(new Date());
     fechaInput.min = hoyBolivia;
     fechaInput.value = hoyBolivia;
-    
-    // Cargar turnos (estáticos en UI local) cuando cambie la fecha
-    fechaInput.addEventListener('change', function() {
-        window._cargarTurnosModal(sucursalId, this.value);
+
+    // Cargar turnos cuando cambie la fecha
+    fechaInput.addEventListener("change", function () {
+      window._cargarTurnosModal(sucursalId, this.value);
     });
-    
+
     // Cargar turnos inmediatamente
     window._cargarTurnosModal(sucursalId, hoyBolivia);
-    
+
     // Manejar envío
-    document.getElementById('formReservaCliente').addEventListener('submit', async function(e) {
+    document
+      .getElementById("formReservaCliente")
+      .addEventListener("submit", async function (e) {
         e.preventDefault();
         await window.enviarReserva(sucursalId, sucursalNombre);
-    });
-}
+      });
+  };
 
-window._cargarTurnosModal = async function(sucursalId, fecha) {
-    const containerEl  = document.getElementById('turnosContainer');
-    const gridEl       = document.getElementById('turnosGrid');
-    const horasWrap    = document.getElementById('horasWrapper');
-    const turnoInput   = document.getElementById('turnoReserva');
-    const horaInput    = document.getElementById('horaReserva');
-    const festivoAviso = document.getElementById('festivoAviso');
-    const festivoMotivo= document.getElementById('festivoMotivo');
-    const precioContainer = document.getElementById('precioContainer');
-    const btnEnviar    = document.getElementById('btnEnviarReserva');
+  window._cargarTurnosModal = async function (sucursalId, fecha) {
+    const containerEl = document.getElementById("turnosContainer");
+    const gridEl = document.getElementById("turnosGrid");
+    const horasWrap = document.getElementById("horasWrapper");
+    const turnoInput = document.getElementById("turnoReserva");
+    const horaInput = document.getElementById("horaReserva");
+    const festivoAviso = document.getElementById("festivoAviso");
+    const festivoMotivo = document.getElementById("festivoMotivo");
+    const precioContainer = document.getElementById("precioContainer");
+    const btnEnviar = document.getElementById("btnEnviarReserva");
+    const fechaInput = document.getElementById(
+      "fechaReserva",
+    ) as HTMLInputElement;
 
     // Reset estado
-    if (containerEl) containerEl.classList.remove('hidden');
-    if (horasWrap) horasWrap.classList.add('hidden');
-    if (gridEl) gridEl.innerHTML = '<div class="turnos-loading" style="padding: 1rem; text-align: center;"><div class="loading-spinner" style="border: 2px solid rgba(0,0,0,0.1); border-left-color: #9e2a2b; border-radius: 50%; width: 20px; height: 20px; animation: spin 1s linear infinite; display: inline-block;"></div></div>';
-    
-    const _relojH = document.getElementById('relojHora');
-    const _relojM = document.getElementById('relojMinuto');
-    if (_relojH) _relojH.innerHTML = '';
-    if (_relojM) _relojM.innerHTML = '';
-    
-    if (turnoInput) turnoInput.value = '';
-    if (horaInput) horaInput.value = '';
+    if (containerEl) containerEl.classList.remove("hidden");
+    if (horasWrap) horasWrap.classList.add("hidden");
+    if (gridEl)
+      gridEl.innerHTML =
+        '<div class="turnos-loading" style="padding: 1rem; text-align: center;"><div class="loading-spinner" style="border: 2px solid rgba(0,0,0,0.1); border-left-color: #9e2a2b; border-radius: 50%; width: 20px; height: 20px; animation: spin 1s linear infinite; display: inline-block;"></div></div>';
+
+    const _relojH = document.getElementById("relojHora");
+    const _relojM = document.getElementById("relojMinuto");
+    if (_relojH) _relojH.innerHTML = "";
+    if (_relojM) _relojM.innerHTML = "";
+
+    if (turnoInput) turnoInput.value = "";
+    if (horaInput) horaInput.value = "";
 
     // 🔴 1. Validar si la fecha permite reservas (Domingos/Festivos)
     try {
-        const valRes = await fetch(`/api/precios/validar-reserva?sucursal_id=${sucursalId}&fecha=${fecha}`);
-        const valData = await valRes.json();
+      const valRes = await fetch(
+        `/api/precios/validar-reserva?sucursal_id=${sucursalId}&fecha=${fecha}`,
+      );
+      const valData = await valRes.json();
 
-        const personasSections = document.querySelectorAll('.personas-section');
-        const grupoBadges = document.querySelectorAll('.badge-grupo');
-        const grupoBanner = document.querySelector('.grupo-grande-banner');
-        const comentariosSection = document.querySelector('.comentarios-section');
+      const personasSections = document.querySelectorAll(".personas-section");
+      const grupoBadges = document.querySelectorAll(".badge-grupo");
+      const grupoBanner = document.querySelector(".grupo-grande-banner");
+      const comentariosSection = document.querySelector(".comentarios-section");
 
-        if (valData.success && !valData.permite_reservas) {
-            if (festivoAviso) festivoAviso.classList.remove('hidden');
-            if (containerEl) containerEl.classList.add('hidden');
-            if (horasWrap) horasWrap.classList.add('hidden');
-            if (precioContainer) precioContainer.classList.add('hidden');
-            
-            // Ocultar sección de Adultos y Niños
-            personasSections.forEach(sec => (sec as HTMLElement).style.display = 'none');
-            // Ocultar badge de personas
-            grupoBadges.forEach(b => (b as HTMLElement).style.display = 'none');
-            // Ocultar banner de grupos grandes
-            if (grupoBanner) (grupoBanner as HTMLElement).style.display = 'none';
-            // Ocultar caja de comentarios
-            if (comentariosSection) (comentariosSection as HTMLElement).style.display = 'none';
+      if (valData.success && !valData.permite_reservas) {
+        if (fechaInput) fechaInput.classList.add("fecha-invalida-bloqueada");
+        if (festivoMotivo)
+          festivoMotivo.innerHTML =
+            valData.motivo ||
+            "Los domingos, días feriados y fechas cívicas trabajamos por orden de llegada (SIN reservas).";
+        if (festivoAviso) festivoAviso.classList.remove("hidden");
+        if (containerEl) containerEl.classList.add("hidden");
+        if (horasWrap) horasWrap.classList.add("hidden");
+        if (precioContainer) precioContainer.classList.add("hidden");
 
-            if (btnEnviar) {
-                (btnEnviar as HTMLButtonElement).disabled = true;
-                (btnEnviar as HTMLElement).style.display = 'none';
-            }
-            return;
-        } else {
-            if (festivoAviso) festivoAviso.classList.add('hidden');
-            
-            // Restaurar visualización en días normales
-            personasSections.forEach(sec => (sec as HTMLElement).style.display = '');
-            grupoBadges.forEach(b => (b as HTMLElement).style.display = '');
-            if (grupoBanner) (grupoBanner as HTMLElement).style.display = '';
-            if (comentariosSection) (comentariosSection as HTMLElement).style.display = '';
+        // Ocultar sección de Adultos y Niños
+        personasSections.forEach(
+          (sec) => ((sec as HTMLElement).style.display = "none"),
+        );
+        // Ocultar badge de personas
+        grupoBadges.forEach((b) => ((b as HTMLElement).style.display = "none"));
+        // Ocultar banner de grupos grandes
+        if (grupoBanner) (grupoBanner as HTMLElement).style.display = "none";
+        // Ocultar caja de comentarios
+        if (comentariosSection)
+          (comentariosSection as HTMLElement).style.display = "none";
 
-            if (btnEnviar) {
-                (btnEnviar as HTMLButtonElement).disabled = false;
-                (btnEnviar as HTMLElement).style.display = '';
-            }
+        if (btnEnviar) {
+          (btnEnviar as HTMLButtonElement).disabled = true;
+          (btnEnviar as HTMLElement).style.display = "none";
         }
+        return;
+      } else {
+        if (fechaInput) fechaInput.classList.remove("fecha-invalida-bloqueada");
+        if (festivoAviso) festivoAviso.classList.add("hidden");
+
+        // Restaurar visualización en días normales
+        personasSections.forEach(
+          (sec) => ((sec as HTMLElement).style.display = ""),
+        );
+        grupoBadges.forEach((b) => ((b as HTMLElement).style.display = ""));
+        if (grupoBanner) (grupoBanner as HTMLElement).style.display = "";
+        if (comentariosSection)
+          (comentariosSection as HTMLElement).style.display = "";
+
+        if (btnEnviar) {
+          (btnEnviar as HTMLButtonElement).disabled = false;
+          (btnEnviar as HTMLElement).style.display = "";
+        }
+      }
     } catch (err) {
-        console.error('Error validando feriado:', err);
+      console.error("Error validando feriado:", err);
     }
 
     // 🔴 2. Obtener Precios por cubierto para esta fecha
     try {
-        const pRes = await fetch(`/api/precios?sucursal_id=${sucursalId}&fecha=${fecha}&hora=12:00`);
-        const pData = await pRes.json();
-        if (pData.success && precioContainer) {
-            precioContainer.classList.remove('hidden');
-            const elAdulto = document.getElementById('precioAdulto');
-            const elNino = document.getElementById('precioNino');
-            if (elAdulto) elAdulto.textContent = `${pData.precio_adulto} Bs Adultos`;
-            if (elNino) elNino.textContent = `${pData.precio_nino} Bs Niños (${pData.edad_minima || 5}-${pData.edad_maxima || 10} años)`;
-        }
+      const pRes = await fetch(
+        `/api/precios?sucursal_id=${sucursalId}&fecha=${fecha}&hora=12:00`,
+      );
+      const pData = await pRes.json();
+      if (pData.success && precioContainer) {
+        precioContainer.classList.remove("hidden");
+        const elAdulto = document.getElementById("precioAdulto");
+        const elNino = document.getElementById("precioNino");
+        if (elAdulto)
+          elAdulto.textContent = `${pData.precio_adulto} Bs Adultos`;
+        if (elNino)
+          elNino.textContent = `${pData.precio_nino} Bs Niños (${pData.edad_minima || 5}-${pData.edad_maxima || 10} años)`;
+      }
     } catch (err) {
-        console.error('Error cargando precio:', err);
+      console.error("Error cargando precio:", err);
     }
 
     try {
-        const response = await fetch(`/api/reservas/horas-disponibles?sucursal_id=${sucursalId}&fecha=${fecha}`);
-        const result = await response.json();
-        
-        if (!result.success || !result.data || !result.data.turnos) {
-            if (gridEl) gridEl.innerHTML = '<span class="error-message" style="color: #ef4444; font-size: 0.9rem;">No se pudieron cargar los horarios para esta fecha.</span>';
-            return;
-        }
+      const response = await fetch(
+        `/api/reservas/horas-disponibles?sucursal_id=${sucursalId}&fecha=${fecha}`,
+      );
+      const result = await response.json();
 
-        const data = result.data;
-        window._turnoData = data;
+      if (!result.success || !result.data || !result.data.turnos) {
+        if (gridEl)
+          gridEl.innerHTML =
+            '<span class="error-message" style="color: #ef4444; font-size: 0.9rem;">No se pudieron cargar los horarios para esta fecha.</span>';
+        return;
+      }
 
-        const iconos = { manana: '☀️', tarde: '🌙', noche: '🌙', continuo: '🔁' };
-        let html = '';
-        
-        if (data.turnos.length === 0) {
-            html = '<span style="color: #666; font-size: 0.9rem; grid-column: 1 / -1; text-align: center; padding: 1rem;">No hay atención configurada en esta fecha.</span>';
-        } else {
-            data.turnos.forEach(turno => {
-                const icono = iconos[turno.tipo] || '🌙';
-                const labelTurno = (turno.label || '').replace('Turno Tarde', 'Turno Noche');
-                
-                // Renderizamos la tarjeta limpia, sin bloqueos ni barras de capacidad
-                html += `
+      const data = result.data;
+      window._turnoData = data;
+
+      const iconos = { manana: "☀️", tarde: "🌙", noche: "🌙", continuo: "🔁" };
+      let html = "";
+
+      if (data.turnos.length === 0) {
+        html =
+          '<span style="color: #666; font-size: 0.9rem; grid-column: 1 / -1; text-align: center; padding: 1rem;">No hay atención configurada en esta fecha.</span>';
+      } else {
+        data.turnos.forEach((turno) => {
+          const icono = iconos[turno.tipo] || "🌙";
+          const labelTurno = (turno.label || "").replace(
+            "Turno Tarde",
+            "Turno Noche",
+          );
+
+          // Renderizamos la tarjeta limpia, sin bloqueos ni barras de capacidad
+          html += `
                     <button
                         type="button"
                         class="turno-card"
@@ -802,141 +895,223 @@ window._cargarTurnosModal = async function(sucursalId, fecha) {
                         </div>
                     </button>
                 `;
-            });
-        }
+        });
+      }
 
-        if (gridEl) gridEl.innerHTML = html;
-        
+      if (gridEl) gridEl.innerHTML = html;
     } catch (error) {
-        console.error('Error cargando turnos:', error);
-        if (gridEl) gridEl.innerHTML = '<span class="error-message" style="color: #ef4444; font-size: 0.9rem;">Error de conexión. Intenta de nuevo.</span>';
+      console.error("Error cargando turnos:", error);
+      if (gridEl)
+        gridEl.innerHTML =
+          '<span class="error-message" style="color: #ef4444; font-size: 0.9rem;">Error de conexión. Intenta de nuevo.</span>';
     }
-}
+  };
 
-// Alias para mantener compatibilidad
-window._cargarHorasModal = window._cargarTurnosModal;
+  // Alias para mantener compatibilidad
+  window._cargarHorasModal = window._cargarTurnosModal;
 
-// ============================================
-// SELECCIONAR TURNO Y CARGAR RELOJ DIGITAL
-// ============================================
+  // ============================================
+  // SELECCIONAR TURNO Y CARGAR RELOJ DIGITAL
+  // ============================================
 
-window._seleccionarTurnoModal = function(element) {
-    if (element.disabled || element.classList.contains('turno-card--disabled')) return;
+  window._seleccionarTurnoModal = function (element) {
+    if (element.disabled || element.classList.contains("turno-card--disabled"))
+      return;
 
-    const gridEl      = document.getElementById('turnosGrid');
-    const horasWrap   = document.getElementById('horasWrapper');
-    const turnoInput  = document.getElementById('turnoReserva');
-    const horaInput   = document.getElementById('horaReserva');
-    
-    const selectHora  = document.getElementById('relojHora');
-    const selectMin   = document.getElementById('relojMinuto');
-    const relojInfo   = document.getElementById('relojInfo');
+    const gridEl = document.getElementById("turnosGrid");
+    const horasWrap = document.getElementById("horasWrapper");
+    const turnoInput = document.getElementById("turnoReserva");
+    const horaInput = document.getElementById("horaReserva");
+
+    const selectHora = document.getElementById("relojHora");
+    const selectMin = document.getElementById("relojMinuto");
+    const relojInfo = document.getElementById("relojInfo");
 
     // Deseleccionar todos
-    gridEl.querySelectorAll('.turno-card').forEach(c => c.classList.remove('turno-card--selected'));
-    element.classList.add('turno-card--selected');
+    gridEl
+      .querySelectorAll(".turno-card")
+      .forEach((c) => c.classList.remove("turno-card--selected"));
+    element.classList.add("turno-card--selected");
 
     const tipoTurno = element.dataset.turnoTipo;
     turnoInput.value = tipoTurno;
 
     // Ocultar error de turno
-    const errorTurno = document.getElementById('errorTurno');
-    if (errorTurno) errorTurno.style.display = 'none';
+    const errorTurno = document.getElementById("errorTurno");
+    if (errorTurno) errorTurno.style.display = "none";
 
     // Limpiar hora seleccionada anterior
-    horaInput.value = '';
-    
+    horaInput.value = "";
+
     // Obtener horas del turno seleccionado
     const data = window._turnoData;
     if (!data) return;
 
-    const turno = data.turnos.find(t => t.tipo === tipoTurno);
+    const turno = data.turnos.find((t) => t.tipo === tipoTurno);
     if (!turno) return;
 
-    // Extraer horas únicas (HH)
-    const horasUnicas = [...new Set(turno.horas.map(h => h.hora.split(':')[0]))].sort();
+    // CONFIGURACIÓN DE HORARIOS POR TURNO
+    const CONFIG_TURNOS = {
+      manana: {
+        label: "Turno Mañana",
+        hora_apertura: "11:30",
+        hora_cierre: "15:00",
+        hora_limite_reserva: "14:30",
+        horas_permitidas: ["11", "12", "13", "14"],
+      },
+      tarde: {
+        label: "Turno Tarde / Noche",
+        hora_apertura: "18:30",
+        hora_cierre: "22:00",
+        hora_limite_reserva: "21:30",
+        horas_permitidas: ["18", "19", "20", "21"],
+      },
+      noche: {
+        label: "Turno Noche",
+        hora_apertura: "18:30",
+        hora_cierre: "22:00",
+        hora_limite_reserva: "21:30",
+        horas_permitidas: ["18", "19", "20", "21"],
+      },
+    };
 
-    // Llenar select de horas
-    selectHora.innerHTML = horasUnicas.map(h => `<option value="${h}">${h}</option>`).join('');
+    // Extraer horas únicas permitidas para el turno seleccionado
+    const cfgTurno = CONFIG_TURNOS[tipoTurno] || CONFIG_TURNOS["manana"];
+    const horasEnTurno = turno.horas.map((h) => h.hora.split(":")[0]);
+    const horasFiltradas = horasEnTurno.filter((h) =>
+      cfgTurno.horas_permitidas.includes(h),
+    );
+    const horasUnicas = [
+      ...new Set(
+        horasFiltradas.length > 0 ? horasFiltradas : cfgTurno.horas_permitidas,
+      ),
+    ].sort();
 
-    // Función para actualizar minutos según la hora seleccionada
+    // Llenar select de horas y seleccionar la hora de apertura por defecto (11 o 18)
+    const [aperturaHStr, aperturaMStr] = cfgTurno.hora_apertura.split(":");
+    selectHora.innerHTML = horasUnicas
+      .map((h) => `<option value="${h}">${h}</option>`)
+      .join("");
+    if (horasUnicas.includes(aperturaHStr)) {
+      selectHora.value = aperturaHStr;
+    }
+
+    // Función para actualizar minutos según la hora seleccionada (restringiendo a rango de apertura/límite)
     function actualizarMinutos() {
-        const horaSel = selectHora.value;
-        const horasDelTurno = turno.horas.filter(h => h.hora.startsWith(horaSel + ':'));
-        
-        let minutos = Array.from({length: 60}, (_, i) => String(i).padStart(2, '0'));
-        if (horasDelTurno.length > 0) {
-            const minsSlot = [...new Set(horasDelTurno.map(h => h.hora.split(':')[1]))].sort();
-            if (minsSlot.length > 0) {
-                minutos = minsSlot;
-            }
-        }
+      const [apH, apM] = cfgTurno.hora_apertura.split(":").map(Number);
+      const [limH, limM] = (
+        cfgTurno.hora_limite_reserva || cfgTurno.hora_cierre
+      )
+        .split(":")
+        .map(Number);
+      const horaSel = parseInt(selectHora.value, 10);
 
-        selectMin.innerHTML = minutos.map(min => {
-            return `<option value="${min}">${min}</option>`;
-        }).join('');
+      let minInicio = 0;
+      let minFin = 59;
 
-        actualizarValorFinal();
+      if (horaSel === apH) {
+        minInicio = apM;
+      }
+      if (horaSel === limH) {
+        minFin = limM;
+      }
+
+      const minutos = [];
+      for (let i = minInicio; i <= minFin; i++) {
+        minutos.push(String(i).padStart(2, "0"));
+      }
+
+      const prevMin = selectMin.value;
+      selectMin.innerHTML = minutos
+        .map((min) => `<option value="${min}">${min}</option>`)
+        .join("");
+
+      if (minutos.includes(prevMin)) {
+        selectMin.value = prevMin;
+      } else {
+        selectMin.value = String(minInicio).padStart(2, "0");
+      }
+
+      actualizarValorFinal();
     }
 
     // Función para actualizar el valor final de la hora y su cupo
     function actualizarValorFinal() {
-        const horaSel = selectHora.value;
-        const minSel = selectMin.value;
-        if (!horaSel || !minSel) {
-            horaInput.value = '';
-            if (relojInfo) relojInfo.innerHTML = '';
-            return;
+      const horaSel = selectHora.value;
+      const minSel = selectMin.value;
+      if (!horaSel || !minSel) {
+        horaInput.value = "";
+        if (relojInfo) relojInfo.innerHTML = "";
+        return;
+      }
+
+      const horaCompleta = `${horaSel}:${minSel}`;
+      const limiteMax = cfgTurno.hora_limite_reserva || cfgTurno.hora_cierre;
+
+      // Verificar si la hora está dentro del rango del turno
+      if (horaCompleta < cfgTurno.hora_apertura || horaCompleta > limiteMax) {
+        horaInput.value = "";
+        if (relojInfo) {
+          relojInfo.style.display = "block";
+          relojInfo.style.color = "#d97706";
+          relojInfo.style.padding = "8px 12px";
+          relojInfo.style.borderRadius = "8px";
+          relojInfo.style.background = "#fffbeb";
+          relojInfo.style.border = "1px solid #fcd34d";
+          relojInfo.innerHTML = `⚠️ <strong>Hora fuera de turno:</strong> ${cfgTurno.label} opera desde las <strong>${cfgTurno.hora_apertura}</strong> hasta las <strong>${limiteMax}</strong>.`;
         }
+        return;
+      }
 
-        const horaCompleta = `${horaSel}:${minSel}`;
-        horaInput.value = horaCompleta;
+      horaInput.value = horaCompleta;
 
-        const hObj = turno.horas.find(h => h.hora === horaCompleta) || (data.horas || []).find(h => h.hora === horaCompleta);
+      const hObj =
+        turno.horas.find((h) => h.hora === horaCompleta) ||
+        (data.horas || []).find((h) => h.hora === horaCompleta);
 
-        let capInfo = horasWrap.querySelector('.capacidad-info');
-        if (!capInfo) {
-            capInfo = document.createElement('div');
-            capInfo.className = 'capacidad-info';
-            horasWrap.appendChild(capInfo);
-        }
+      let capInfo = horasWrap.querySelector(".capacidad-info");
+      if (!capInfo) {
+        capInfo = document.createElement("div");
+        capInfo.className = "capacidad-info";
+        horasWrap.appendChild(capInfo);
+      }
 
-        if (hObj) {
-            if (hObj.disponibles <= 0) {
-                if (relojInfo) {
-                    relojInfo.style.display = 'block';
-                    relojInfo.style.color = '#ef4444';
-                    relojInfo.style.padding = '8px 12px';
-                    relojInfo.style.borderRadius = '8px';
-                    relojInfo.style.background = '#fef2f2';
-                    relojInfo.style.border = '1px solid #fca5a5';
-                    relojInfo.innerHTML = `⚠️ <strong>Agotado:</strong> No hay cubiertos disponibles a las <strong>${horaCompleta}</strong>. Elige otro horario.`;
-                }
-                capInfo.innerHTML = `
+      if (hObj) {
+        if (hObj.disponibles <= 0) {
+          if (relojInfo) {
+            relojInfo.style.display = "block";
+            relojInfo.style.color = "#ef4444";
+            relojInfo.style.padding = "8px 12px";
+            relojInfo.style.borderRadius = "8px";
+            relojInfo.style.background = "#fef2f2";
+            relojInfo.style.border = "1px solid #fca5a5";
+            relojInfo.innerHTML = `⚠️ <strong>Agotado:</strong> No hay cubiertos disponibles a las <strong>${horaCompleta}</strong>. Elige otro horario.`;
+          }
+          capInfo.innerHTML = `
                     <span class="info-disponibles" style="color: #ef4444; font-weight: 700;">⚠️ 0 cubiertos disponibles a las ${horaCompleta}</span>
                     <span class="info-total">📋 Capacidad total: ${data.capacidad_total}</span>
                 `;
-            } else {
-                if (relojInfo) {
-                    relojInfo.style.display = 'none';
-                    relojInfo.innerHTML = '';
-                }
-                capInfo.innerHTML = `
+        } else {
+          if (relojInfo) {
+            relojInfo.style.display = "none";
+            relojInfo.innerHTML = "";
+          }
+          capInfo.innerHTML = `
                     <span class="info-disponibles" style="color: #16a34a; font-weight: 600;">🪑 ${hObj.disponibles} cubiertos disponibles a las ${horaCompleta}</span>
                     <span class="info-total">📋 Capacidad total: ${data.capacidad_total}</span>
                 `;
-            }
-        } else {
-            if (relojInfo) relojInfo.style.display = 'none';
-            capInfo.innerHTML = `
+        }
+      } else {
+        if (relojInfo) relojInfo.style.display = "none";
+        capInfo.innerHTML = `
                 <span class="info-disponibles">🪑 ${data.disponibles_hoy} cubiertos disponibles hoy</span>
                 <span class="info-total">📋 Capacidad total: ${data.capacidad_total}</span>
             `;
-        }
+      }
 
-        // Limpiar error de hora
-        const errorHora = document.getElementById('errorHora');
-        if (errorHora) errorHora.style.display = 'none';
+      // Limpiar error de hora
+      const errorHora = document.getElementById("errorHora");
+      if (errorHora) errorHora.style.display = "none";
     }
 
     // Bindear eventos
@@ -947,157 +1122,187 @@ window._seleccionarTurnoModal = function(element) {
     actualizarMinutos();
 
     // Mostrar sección con animación
-    horasWrap.classList.remove('hidden');
-    horasWrap.classList.add('horas-animate-in');
-    setTimeout(() => horasWrap.classList.remove('horas-animate-in'), 400);
-}
+    horasWrap.classList.remove("hidden");
+    horasWrap.classList.add("horas-animate-in");
+    setTimeout(() => horasWrap.classList.remove("horas-animate-in"), 400);
+  };
 
-// ============================================
-// SELECCIONAR HORA (Mantenido por compatibilidad)
-// ============================================
+  // ============================================
+  // SELECCIONAR HORA (Mantenido por compatibilidad)
+  // ============================================
 
-window._seleccionarHoraModal = function(element) {
+  window._seleccionarHoraModal = function (element) {
     // Obsoleto por el nuevo Reloj Digital
-}
+  };
 
-// ============================================
-// CAMBIAR CANTIDAD ADULTOS/NIÑOS/BEBÉS
-// ============================================
+  // ============================================
+  // CAMBIAR CANTIDAD ADULTOS/NIÑOS/BEBÉS
+  // ============================================
 
-window._cambiarCantidad = function(inputId, delta, min = 0, max = 500) {
+  window._cambiarCantidad = function (inputId, delta, min = 0, max = 500) {
     const input = document.getElementById(inputId);
     if (!input) return;
     let valor = (parseInt(input.value) || 0) + delta;
     valor = Math.max(min, Math.min(max, valor));
     input.value = valor;
-}
+  };
 
-// ============================================
-// ENVIAR RESERVA - CON NIÑOS, TURNO Y VALIDACIÓN DE HORA
-// ============================================
+  // ============================================
+  // ENVIAR RESERVA - CON NIÑOS, TURNO Y VALIDACIÓN DE HORA
+  // ============================================
 
-window.enviarReserva = async function(sucursalId, sucursalNombre) {
-    const btn = document.getElementById('btnEnviarReserva');
-    btn.classList.add('loading');
+  window.enviarReserva = async function (sucursalId, sucursalNombre) {
+    const btn = document.getElementById("btnEnviarReserva");
+    btn.classList.add("loading");
     btn.disabled = true;
-    
-    const nombre = document.getElementById('nombreCliente').value.trim();
-    const telefono = document.getElementById('telefonoCliente').value.trim();
-    const codigoPais = document.getElementById('codigoPais').value;
-    const fecha = document.getElementById('fechaReserva').value;
-    const turno = document.getElementById('turnoReserva').value;
-    const hora = document.getElementById('horaReserva').value;
-    const personas = parseInt(document.getElementById('personasReserva').value);
-    const observaciones = document.getElementById('observacionesReserva').value.trim();
-    
+
+    const nombre = document.getElementById("nombreCliente").value.trim();
+    const telefono = document.getElementById("telefonoCliente").value.trim();
+    const codigoPais = document.getElementById("codigoPais").value;
+    const fecha = document.getElementById("fechaReserva").value;
+    const turno = document.getElementById("turnoReserva").value;
+    const hora = document.getElementById("horaReserva").value;
+    const personas = parseInt(document.getElementById("personasReserva").value);
+    const observaciones = document
+      .getElementById("observacionesReserva")
+      .value.trim();
+
     // 👶 Campos de niños
-    const cantidadNinos = parseInt(document.getElementById('cantidadNinos')?.value) || 0;
-    const necesitaSilla = document.getElementById('necesitaSilla')?.checked || false;
-    
+    const cantidadNinos =
+      parseInt(document.getElementById("cantidadNinos")?.value) || 0;
+    const necesitaSilla =
+      document.getElementById("necesitaSilla")?.checked || false;
+
     // Validaciones en cliente
     if (!nombre || nombre.length < 3) {
-        alert('❌ Por favor ingresa tu nombre completo');
-        btn.classList.remove('loading'); btn.disabled = false;
-        return;
+      alert("❌ Por favor ingresa tu nombre completo");
+      btn.classList.remove("loading");
+      btn.disabled = false;
+      return;
     }
-    
+
     if (!telefono || telefono.length < 7) {
-        alert('❌ Por favor ingresa un número de teléfono válido');
-        btn.classList.remove('loading'); btn.disabled = false;
-        return;
+      alert("❌ Por favor ingresa un número de teléfono válido");
+      btn.classList.remove("loading");
+      btn.disabled = false;
+      return;
     }
-    
+
     if (!fecha) {
-        alert('❌ Por favor selecciona una fecha');
-        btn.classList.remove('loading'); btn.disabled = false;
-        return;
+      alert("❌ Por favor selecciona una fecha");
+      btn.classList.remove("loading");
+      btn.disabled = false;
+      return;
     }
 
     if (!turno) {
-        alert('❌ Por favor selecciona un turno (Mañana/Noche)');
-        btn.classList.remove('loading'); btn.disabled = false;
-        return;
+      alert("❌ Por favor selecciona un turno (Mañana/Noche)");
+      btn.classList.remove("loading");
+      btn.disabled = false;
+      return;
     }
-    
+
     if (!hora) {
-        alert('❌ Por favor selecciona una hora disponible de las opciones mostradas');
-        btn.classList.remove('loading'); btn.disabled = false;
-        return;
+      alert(
+        "❌ Por favor selecciona una hora disponible de las opciones mostradas",
+      );
+      btn.classList.remove("loading");
+      btn.disabled = false;
+      return;
     }
-    
+
     if (!personas || personas < 1) {
-        alert('❌ Por favor ingresa el número de personas');
-        btn.classList.remove('loading'); btn.disabled = false;
-        return;
+      alert("❌ Por favor ingresa el número de personas");
+      btn.classList.remove("loading");
+      btn.disabled = false;
+      return;
     }
-    
+
     const data = {
-        sucursal_id: sucursalId,
-        nombre_cliente: nombre,
-        telefono: telefono,
-        codigo_pais: codigoPais,
-        telefono_completo: `${codigoPais}${telefono}`,
-        fecha: fecha,
-        turno: turno,
-        hora: hora,
-        numero_personas: personas,
-        cantidad_ninos: cantidadNinos,
-        necesita_silla_bebe: necesitaSilla,
-        observaciones: observaciones || null
+      sucursal_id: sucursalId,
+      nombre_cliente: nombre,
+      telefono: telefono,
+      codigo_pais: codigoPais,
+      telefono_completo: `${codigoPais}${telefono}`,
+      fecha: fecha,
+      turno: turno,
+      hora: hora,
+      numero_personas: personas,
+      cantidad_ninos: cantidadNinos,
+      necesita_silla_bebe: necesitaSilla,
+      observaciones: observaciones || null,
     };
-    
+
     try {
-        const response = await fetch('/api/reservas/cliente', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(data)
-        });
-        
-        const result = await response.json();
-        
-        if (result.success) {
-            window.cerrarModalReserva();
-            window.mostrarModalConfirmacion(sucursalNombre, nombre, fecha, hora, personas, cantidadNinos, necesitaSilla, result.numero_reserva);
-        } else {
-            alert('❌ ' + (result.error || 'Error al solicitar la reserva'));
-            btn.classList.remove('loading');
-            btn.disabled = false;
-        }
-    } catch (error) {
-        alert('❌ Error de conexión. Intenta de nuevo.');
-        btn.classList.remove('loading');
+      const response = await fetch("/api/reservas/cliente", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        window.cerrarModalReserva();
+        window.mostrarModalConfirmacion(
+          sucursalNombre,
+          nombre,
+          fecha,
+          hora,
+          personas,
+          cantidadNinos,
+          necesitaSilla,
+          result.numero_reserva,
+        );
+      } else {
+        alert("❌ " + (result.error || "Error al solicitar la reserva"));
+        btn.classList.remove("loading");
         btn.disabled = false;
+      }
+    } catch (error) {
+      alert("❌ Error de conexión. Intenta de nuevo.");
+      btn.classList.remove("loading");
+      btn.disabled = false;
     }
-}
+  };
 
-// ============================================
-// CERRAR MODAL
-// ============================================
+  // ============================================
+  // CERRAR MODAL
+  // ============================================
 
-window.cerrarModalReserva = function() {
-    const modal = document.getElementById('modalReservaCliente');
+  window.cerrarModalReserva = function () {
+    const modal = document.getElementById("modalReservaCliente");
     if (modal) {
-        modal.style.opacity = '0';
-        setTimeout(() => {
-            modal.remove();
-            document.body.classList.remove('modal-open');
-        }, 300);
+      modal.style.opacity = "0";
+      setTimeout(() => {
+        modal.remove();
+        document.body.classList.remove("modal-open");
+      }, 300);
     }
-}
+  };
 
-// ============================================
-// MODAL DE CONFIRMACIÓN
-// ============================================
+  // ============================================
+  // MODAL DE CONFIRMACIÓN
+  // ============================================
 
-window.mostrarModalConfirmacion = function(sucursalNombre, nombreCliente, fecha, hora, personas, ninos, silla, numeroReserva) {
+  window.mostrarModalConfirmacion = function (
+    sucursalNombre,
+    nombreCliente,
+    fecha,
+    hora,
+    personas,
+    ninos,
+    silla,
+    numeroReserva,
+  ) {
     // Construir HTML de niños si aplica
-    let ninosHTML = '';
+    let ninosHTML = "";
     if (ninos > 0) {
-        ninosHTML += `<div class="confirmacion-item"><span class="confirmacion-label">👧 Niños:</span><span class="confirmacion-valor">${ninos}</span></div>`;
+      ninosHTML += `<div class="confirmacion-item"><span class="confirmacion-label">👧 Niños:</span><span class="confirmacion-valor">${ninos}</span></div>`;
     }
-    let prepHTML = '';
+    let prepHTML = "";
     if (silla) {
-        prepHTML = `<div class="confirmacion-item"><span class="confirmacion-label">📋 Preparación:</span><span class="confirmacion-valor">🪑 Silla para niños</span></div>`;
+      prepHTML = `<div class="confirmacion-item"><span class="confirmacion-label">📋 Preparación:</span><span class="confirmacion-valor">🪑 Silla para niños</span></div>`;
     }
 
     const modalHTML = `
@@ -1111,21 +1316,25 @@ window.mostrarModalConfirmacion = function(sucursalNombre, nombreCliente, fecha,
                         💬 Espera tu mensaje de confirmación por <strong>WhatsApp</strong>
                     </p>
                     <div class="confirmacion-detalles">
-                        ${numeroReserva ? `
+                        ${
+                          numeroReserva
+                            ? `
                         <div class="confirmacion-item" style="border-bottom: 1px dashed rgba(26,26,26,0.12); padding-bottom: 8px; margin-bottom: 8px;">
                             <span class="confirmacion-label" style="font-weight: 700; color: #9e2a2b;">📋 Nº de Reserva:</span>
                             <span class="confirmacion-valor" style="font-family: monospace; font-weight: 700; color: #9e2a2b; background: rgba(158,42,43,0.1); padding: 3px 10px; border-radius: 6px; font-size: 1.05rem;">
                                 ${numeroReserva}
                             </span>
                         </div>
-                        ` : ''}
+                        `
+                            : ""
+                        }
                         <div class="confirmacion-item">
                             <span class="confirmacion-label">Cliente:</span>
                             <span class="confirmacion-valor">${nombreCliente}</span>
                         </div>
                         <div class="confirmacion-item">
                             <span class="confirmacion-label">Fecha:</span>
-                            <span class="confirmacion-valor">${new Date(fecha + 'T12:00:00').toLocaleDateString('es-ES')}</span>
+                            <span class="confirmacion-valor">${new Date(fecha + "T12:00:00").toLocaleDateString("es-ES")}</span>
                         </div>
                         <div class="confirmacion-item">
                             <span class="confirmacion-label">Hora:</span>
@@ -1145,92 +1354,124 @@ window.mostrarModalConfirmacion = function(sucursalNombre, nombreCliente, fecha,
             </div>
         </div>
     `;
-    
-    document.body.insertAdjacentHTML('beforeend', modalHTML);
-    document.body.classList.add('modal-open');
-    
+
+    document.body.insertAdjacentHTML("beforeend", modalHTML);
+    document.body.classList.add("modal-open");
+
     setTimeout(() => {
-        window.cerrarModalConfirmacion();
+      window.cerrarModalConfirmacion();
     }, 8000);
-}
+  };
 
-window.cerrarModalConfirmacion = function() {
-    const modal = document.getElementById('modalConfirmacion');
+  window.cerrarModalConfirmacion = function () {
+    const modal = document.getElementById("modalConfirmacion");
     if (modal) {
-        modal.style.opacity = '0';
-        setTimeout(() => {
-            modal.remove();
-            document.body.classList.remove('modal-open');
-        }, 300);
+      modal.style.opacity = "0";
+      setTimeout(() => {
+        modal.remove();
+        document.body.classList.remove("modal-open");
+      }, 300);
     }
-}
+  };
 
-// Cerrar con ESC
-document.addEventListener('keydown', function(e) {
-    if (e.key === 'Escape') {
-        window.cerrarModalReserva();
-        window.cerrarModalConfirmacion();
+  // Cerrar con ESC
+  document.addEventListener("keydown", function (e) {
+    if (e.key === "Escape") {
+      window.cerrarModalReserva();
+      window.cerrarModalConfirmacion();
     }
-});
+  });
 </script>
 
 <style is:global>
-/* ============================================
+  /* ============================================
+   ESTILOS DE FECHAS DESHABILITADAS / BLOQUEADAS
+   ============================================ */
+  .fecha-invalida-bloqueada {
+    background-color: #fef2f2 !important;
+    border-color: #ef4444 !important;
+    color: #991b1b !important;
+    font-weight: 700 !important;
+    box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.2) !important;
+  }
+
+  .fechas-bloqueadas-resumen {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 6px;
+  }
+
+  .badge-fecha-deshabilitada {
+    background: #fdf2f2;
+    color: #991b1b;
+    border: 1px dashed #fca5a5;
+    padding: 3px 8px;
+    border-radius: 10px;
+    font-size: 0.73rem;
+    font-weight: 600;
+  }
+
+  /* ============================================
    ESTILOS DE GRUPOS GRANDES Y AVISOS DE DISPONIBILIDAD
    ============================================ */
-.label-with-badge {
+  .label-with-badge {
     display: flex;
     align-items: center;
     justify-content: space-between;
     margin-bottom: 4px;
-}
+  }
 
-.badge-grupo {
+  .badge-grupo {
     font-size: 0.72rem;
     font-weight: 600;
     color: #15803d;
     background: #dcfce7;
     padding: 2px 8px;
     border-radius: 12px;
-}
+  }
 
-.grupo-grande-banner {
-    background: linear-gradient(135deg, rgba(158, 42, 43, 0.05), rgba(158, 42, 43, 0.1));
+  .grupo-grande-banner {
+    background: linear-gradient(
+      135deg,
+      rgba(158, 42, 43, 0.05),
+      rgba(158, 42, 43, 0.1)
+    );
     border: 1px dashed rgba(158, 42, 43, 0.3);
     border-radius: 12px;
     padding: 12px 14px;
     margin: 12px 0 16px;
-}
+  }
 
-.grupo-banner-header {
+  .grupo-banner-header {
     display: flex;
     align-items: flex-start;
     gap: 10px;
-}
+  }
 
-.grupo-banner-header .banner-icon {
+  .grupo-banner-header .banner-icon {
     font-size: 1.4rem;
     line-height: 1;
-}
+  }
 
-.grupo-banner-header strong {
+  .grupo-banner-header strong {
     font-size: 0.85rem;
     color: #9e2a2b;
     display: block;
     margin-bottom: 2px;
-}
+  }
 
-.grupo-banner-header p {
+  .grupo-banner-header p {
     font-size: 0.78rem;
     color: #4b5563;
     margin: 0;
     line-height: 1.3;
-}
+  }
 
-/* ============================================
+  /* ============================================
    ESTILOS DEL MODAL (PÚBLICO)
    ============================================ */
-.modal-overlay {
+  .modal-overlay {
     position: fixed;
     inset: 0;
     background: rgba(0, 0, 0, 0.6);
@@ -1238,12 +1479,12 @@ document.addEventListener('keydown', function(e) {
     display: flex;
     align-items: center;
     justify-content: center;
-    z-index: 9999;
+    z-index: 10000;
     padding: 20px;
     animation: fadeIn 0.3s ease;
-}
+  }
 
-.modal-container {
+  .modal-container {
     background: #fffaf0;
     border-radius: 20px;
     max-width: 520px;
@@ -1252,56 +1493,60 @@ document.addEventListener('keydown', function(e) {
     overflow-y: auto;
     box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
     animation: slideUp 0.3s ease;
-}
+  }
 
-@keyframes fadeIn {
-    from { opacity: 0; }
-    to { opacity: 1; }
-}
-
-@keyframes slideUp {
+  @keyframes fadeIn {
     from {
-        opacity: 0;
-        transform: translateY(20px);
+      opacity: 0;
     }
     to {
-        opacity: 1;
-        transform: translateY(0);
+      opacity: 1;
     }
-}
+  }
 
-.modal-header {
+  @keyframes slideUp {
+    from {
+      opacity: 0;
+      transform: translateY(20px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .modal-header {
     padding: 20px 24px 16px;
     border-bottom: 1px solid rgba(26, 26, 26, 0.06);
     display: flex;
     align-items: center;
     justify-content: space-between;
-}
+  }
 
-.modal-title {
+  .modal-title {
     display: flex;
     align-items: center;
     gap: 12px;
-}
+  }
 
-.modal-title .icon {
+  .modal-title .icon {
     font-size: 1.8rem;
-}
+  }
 
-.modal-title h2 {
+  .modal-title h2 {
     font-size: 1.3rem;
     font-weight: 700;
     color: #1a1a1a;
     margin: 0;
-}
+  }
 
-.modal-title p {
+  .modal-title p {
     color: rgba(26, 26, 26, 0.4);
     font-size: 0.85rem;
     margin: 2px 0 0;
-}
+  }
 
-.modal-close {
+  .modal-close {
     background: transparent;
     border: none;
     width: 36px;
@@ -1314,96 +1559,96 @@ document.addEventListener('keydown', function(e) {
     font-size: 1.2rem;
     color: #1a1a1a;
     transition: all 0.3s ease;
-}
+  }
 
-.modal-close:hover {
+  .modal-close:hover {
     background: rgba(26, 26, 26, 0.06);
-}
+  }
 
-.modal-body {
+  .modal-body {
     padding: 20px 24px;
-}
+  }
 
-.form-row {
+  .form-row {
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 16px;
-}
+  }
 
-.form-group {
+  .form-group {
     margin-bottom: 16px;
-}
+  }
 
-.form-group label {
+  .form-group label {
     display: block;
     font-weight: 500;
     color: #1a1a1a;
     font-size: 0.85rem;
     margin-bottom: 4px;
-}
+  }
 
-.form-group .required {
+  .form-group .required {
     color: #9e2a2b;
-}
+  }
 
-.form-group .optional {
+  .form-group .optional {
     color: rgba(26, 26, 26, 0.3);
     font-weight: 400;
-}
+  }
 
-.form-group input,
-.form-group select,
-.form-group textarea {
+  .form-group input,
+  .form-group select,
+  .form-group textarea {
     width: 100%;
     padding: 10px 14px;
     border: 1.5px solid rgba(26, 26, 26, 0.1);
     border-radius: 10px;
     font-size: 0.95rem;
-    font-family: 'Inter', sans-serif;
+    font-family: "Inter", sans-serif;
     transition: all 0.3s ease;
     background: white;
     color: #1a1a1a;
-}
+  }
 
-.form-group input:focus,
-.form-group textarea:focus {
+  .form-group input:focus,
+  .form-group textarea:focus {
     outline: none;
     border-color: #9e2a2b;
     box-shadow: 0 0 0 4px rgba(158, 42, 43, 0.08);
-}
+  }
 
-.telefono-wrapper {
+  .telefono-wrapper {
     display: flex;
     gap: 8px;
-}
+  }
 
-.telefono-wrapper .codigo-pais {
+  .telefono-wrapper .codigo-pais {
     width: 120px;
     min-width: 120px;
     padding: 10px 12px;
     border: 1.5px solid rgba(26, 26, 26, 0.1);
     border-radius: 10px;
     font-size: 0.9rem;
-    font-family: 'Inter', sans-serif;
+    font-family: "Inter", sans-serif;
     background: white;
     color: #1a1a1a;
     cursor: pointer;
-}
+  }
 
-.telefono-wrapper input {
+  .telefono-wrapper input {
     flex: 1;
-}
+  }
 
-.modal-footer {
+  .modal-footer {
     padding: 16px 24px 20px;
     border-top: 1px solid rgba(26, 26, 26, 0.06);
     display: flex;
     justify-content: flex-end;
     gap: 12px;
-}
+  }
 
-.btn-cancel,
-.btn-save {
+  .btn-cancel,
+  .btn-save {
     padding: 10px 28px;
     border: none;
     border-radius: 10px;
@@ -1411,108 +1656,118 @@ document.addEventListener('keydown', function(e) {
     font-weight: 500;
     cursor: pointer;
     transition: all 0.3s ease;
-    font-family: 'Inter', sans-serif;
-}
+    font-family: "Inter", sans-serif;
+  }
 
-.btn-cancel {
+  .btn-cancel {
     background: transparent;
     color: #1a1a1a;
     border: 1.5px solid rgba(26, 26, 26, 0.1);
-}
+  }
 
-.btn-cancel:hover {
+  .btn-cancel:hover {
     background: rgba(26, 26, 26, 0.04);
-}
+  }
 
-.btn-save {
+  .btn-save {
     background: #9e2a2b;
     color: #fffaf0;
     box-shadow: 0 4px 16px rgba(158, 42, 43, 0.2);
-}
+  }
 
-.btn-save:hover {
+  .btn-save:hover {
     transform: scale(1.02);
     box-shadow: 0 6px 24px rgba(158, 42, 43, 0.3);
-}
+  }
 
-.btn-save.loading {
+  .btn-save.loading {
     opacity: 0.7;
     cursor: not-allowed;
-}
+  }
 
-.btn-save.loading .btn-text {
+  .btn-save.loading .btn-text {
     display: none;
-}
+  }
 
-.btn-save.loading .btn-spinner {
+  .btn-save.loading .btn-spinner {
     display: inline;
-}
+  }
 
-.btn-spinner {
+  .btn-spinner {
     display: none;
-}
+  }
 
-/* Modal de Confirmación */
-.modal-confirmacion-container {
+  /* Modal de Confirmación */
+  .modal-confirmacion-container {
     max-width: 420px;
-}
+  }
 
-.modal-confirmacion-content {
+  .modal-confirmacion-content {
     padding: 32px 28px;
     text-align: center;
-}
+  }
 
-.confirmacion-icono {
+  .confirmacion-icono {
     font-size: 4rem;
     margin-bottom: 12px;
     animation: bounceIn 0.6s cubic-bezier(0.4, 0, 0.2, 1);
-}
+  }
 
-@keyframes bounceIn {
-    0% { transform: scale(0); opacity: 0; }
-    50% { transform: scale(1.2); opacity: 1; }
-    70% { transform: scale(0.9); }
-    100% { transform: scale(1); }
-}
+  @keyframes bounceIn {
+    0% {
+      transform: scale(0);
+      opacity: 0;
+    }
+    50% {
+      transform: scale(1.2);
+      opacity: 1;
+    }
+    70% {
+      transform: scale(0.9);
+    }
+    100% {
+      transform: scale(1);
+    }
+  }
 
-.modal-confirmacion-content h2 {
-    font-family: 'Playfair Display', serif;
+  .modal-confirmacion-content h2 {
+    font-family: "Playfair Display", serif;
     font-size: 1.5rem;
     color: #1a1a1a;
     margin: 0 0 8px;
-}
+  }
 
-.modal-confirmacion-content p {
+  .modal-confirmacion-content p {
     color: rgba(26, 26, 26, 0.6);
     font-size: 0.95rem;
     margin: 0 0 16px;
-}
+  }
 
-.confirmacion-detalles {
+  .confirmacion-detalles {
     background: rgba(255, 250, 240, 0.5);
     border-radius: 10px;
     padding: 12px 16px;
     margin: 12px 0 20px;
     text-align: left;
-}
+  }
 
-.confirmacion-item {
+  .confirmacion-item {
     display: flex;
     justify-content: space-between;
     padding: 4px 0;
     font-size: 0.9rem;
-}
+  }
 
-.confirmacion-label {
+  .confirmacion-label {
     color: rgba(26, 26, 26, 0.4);
-}
+  }
 
-.confirmacion-valor {
+  .confirmacion-valor {
     color: #1a1a1a;
     font-weight: 500;
-}
+  }
 
-.btn-confirmacion {
+  .btn-confirmacion {
     background: #9e2a2b;
     color: #fffaf0;
     border: none;
@@ -1522,51 +1777,51 @@ document.addEventListener('keydown', function(e) {
     font-weight: 600;
     cursor: pointer;
     transition: all 0.3s ease;
-    font-family: 'Inter', sans-serif;
+    font-family: "Inter", sans-serif;
     width: 100%;
-}
+  }
 
-.btn-confirmacion:hover {
+  .btn-confirmacion:hover {
     transform: scale(1.02);
     box-shadow: 0 8px 30px rgba(158, 42, 43, 0.3);
-}
+  }
 
-/* Responsive */
-@media (max-width: 480px) {
+  /* Responsive */
+  @media (max-width: 480px) {
     .modal-container {
-        margin: 10px;
-        border-radius: 16px;
+      margin: 10px;
+      border-radius: 16px;
     }
-    
+
     .form-row {
-        grid-template-columns: 1fr;
-        gap: 0;
+      grid-template-columns: 1fr;
+      gap: 0;
     }
-    
+
     .telefono-wrapper {
-        flex-direction: column;
+      flex-direction: column;
     }
-    
+
     .telefono-wrapper .codigo-pais {
-        width: 100%;
-        min-width: unset;
+      width: 100%;
+      min-width: unset;
     }
-    
+
     .modal-footer {
-        flex-direction: column-reverse;
+      flex-direction: column-reverse;
     }
-    
+
     .btn-cancel,
     .btn-save {
-        width: 100%;
-        text-align: center;
+      width: 100%;
+      text-align: center;
     }
-}
+  }
 
-/* ============================================
+  /* ============================================
    HORAS DISPONIBLES - BOTONES DINÁMICOS
    ============================================ */
-.horas-grid {
+  .horas-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(85px, 1fr));
     gap: 8px;
@@ -1574,9 +1829,9 @@ document.addEventListener('keydown', function(e) {
     max-height: 220px;
     overflow-y: auto;
     padding: 4px;
-}
+  }
 
-.hora-option {
+  .hora-option {
     padding: 10px 8px;
     border: 1.5px solid rgba(26, 26, 26, 0.08);
     border-radius: 10px;
@@ -1587,43 +1842,43 @@ document.addEventListener('keydown', function(e) {
     transition: all 0.3s ease;
     background: white;
     color: #1a1a1a;
-    font-family: 'Inter', sans-serif;
-}
+    font-family: "Inter", sans-serif;
+  }
 
-.hora-option:hover {
+  .hora-option:hover {
     border-color: #9e2a2b;
     background: rgba(158, 42, 43, 0.04);
     transform: scale(1.03);
-}
+  }
 
-.hora-option.selected {
+  .hora-option.selected {
     border-color: #9e2a2b;
     background: #9e2a2b;
     color: white;
     box-shadow: 0 4px 12px rgba(158, 42, 43, 0.3);
-}
+  }
 
-.hora-option .hora-disponibles {
+  .hora-option .hora-disponibles {
     display: block;
     font-size: 0.6rem;
     color: rgba(26, 26, 26, 0.3);
     font-weight: 400;
     margin-top: 2px;
-}
+  }
 
-.hora-option.selected .hora-disponibles {
+  .hora-option.selected .hora-disponibles {
     color: rgba(255, 255, 255, 0.6);
-}
+  }
 
-.horas-loading {
+  .horas-loading {
     text-align: center;
     padding: 20px;
     color: rgba(26, 26, 26, 0.3);
     font-size: 0.85rem;
     grid-column: 1 / -1;
-}
+  }
 
-.horas-error {
+  .horas-error {
     color: #ef4444;
     font-size: 0.85rem;
     text-align: center;
@@ -1632,34 +1887,34 @@ document.addEventListener('keydown', function(e) {
     background: rgba(239, 68, 68, 0.04);
     border-radius: 10px;
     border: 1px solid rgba(239, 68, 68, 0.1);
-}
+  }
 
-.field-hint {
+  .field-hint {
     display: block;
     color: rgba(26, 26, 26, 0.3);
     font-size: 0.75rem;
     margin-top: 4px;
-}
+  }
 
-@media (max-width: 480px) {
+  @media (max-width: 480px) {
     .horas-grid {
-        grid-template-columns: repeat(auto-fill, minmax(70px, 1fr));
-        gap: 6px;
+      grid-template-columns: repeat(auto-fill, minmax(70px, 1fr));
+      gap: 6px;
     }
-}
+  }
 
-/* ============================================
+  /* ============================================
    CANTIDAD DE NIÑOS Y BEBÉS
    ============================================ */
-.cantidad-wrapper {
+  .cantidad-wrapper {
     display: flex;
     align-items: center;
     gap: 8px;
     margin-top: 8px;
     margin-bottom: 8px;
-}
+  }
 
-.btn-cantidad {
+  .btn-cantidad {
     display: flex;
     align-items: center;
     justify-content: center;
@@ -1672,29 +1927,29 @@ document.addEventListener('keydown', function(e) {
     transition: all 0.2s ease;
     border: none;
     user-select: none;
-}
+  }
 
-.btn-menos {
+  .btn-menos {
     background-color: #ef4444; /* Rojo */
     color: white;
-}
+  }
 
-.btn-menos:hover {
+  .btn-menos:hover {
     background-color: #dc2626;
     transform: scale(1.05);
-}
+  }
 
-.btn-mas {
+  .btn-mas {
     background-color: #10b981; /* Verde */
     color: white;
-}
+  }
 
-.btn-mas:hover {
+  .btn-mas:hover {
     background-color: #059669;
     transform: scale(1.05);
-}
+  }
 
-.cantidad-wrapper input[type="number"] {
+  .cantidad-wrapper input[type="number"] {
     width: 70px !important;
     height: 40px !important;
     padding: 0 8px !important;
@@ -1706,24 +1961,24 @@ document.addEventListener('keydown', function(e) {
     background: white !important;
     color: #1a1a1a !important;
     -moz-appearance: textfield;
-}
+  }
 
-.cantidad-wrapper input[type="number"]::-webkit-outer-spin-button,
-.cantidad-wrapper input[type="number"]::-webkit-inner-spin-button {
+  .cantidad-wrapper input[type="number"]::-webkit-outer-spin-button,
+  .cantidad-wrapper input[type="number"]::-webkit-inner-spin-button {
     -webkit-appearance: none;
     margin: 0;
-}
+  }
 
-.cantidad-label {
+  .cantidad-label {
     font-size: 0.9rem;
     color: rgba(26, 26, 26, 0.4);
     font-weight: 500;
     margin-left: 6px;
     text-transform: capitalize;
-}
+  }
 
-/* --- Estilos de Turnos --- */
-.turnos-loading {
+  /* --- Estilos de Turnos --- */
+  .turnos-loading {
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -1731,8 +1986,8 @@ document.addEventListener('keydown', function(e) {
     padding: 16px;
     color: rgba(26, 26, 26, 0.4);
     font-size: 0.9rem;
-}
-.turnos-error {
+  }
+  .turnos-error {
     display: flex;
     align-items: center;
     gap: 8px;
@@ -1743,23 +1998,23 @@ document.addEventListener('keydown', function(e) {
     border-radius: 12px;
     font-size: 0.9rem;
     margin-bottom: 12px;
-}
-.turnos-error-icon {
+  }
+  .turnos-error-icon {
     font-size: 1.2rem;
-}
-.turnos-grid {
+  }
+  .turnos-grid {
     display: grid;
     grid-template-columns: 1fr;
     gap: 12px;
     margin-top: 8px;
     margin-bottom: 16px;
-}
-@media (min-width: 480px) {
+  }
+  @media (min-width: 480px) {
     .turnos-grid {
-        grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+      grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
     }
-}
-.turno-card {
+  }
+  .turno-card {
     background: #ffffff;
     border: 1.5px solid rgba(26, 26, 26, 0.08);
     border-radius: 14px;
@@ -1773,18 +2028,18 @@ document.addEventListener('keydown', function(e) {
     position: relative;
     overflow: hidden;
     outline: none;
-}
-.turno-card:hover:not(.turno-card--disabled) {
+  }
+  .turno-card:hover:not(.turno-card--disabled) {
     transform: translateY(-2px);
     border-color: #9e2a2b;
     box-shadow: 0 6px 18px rgba(158, 42, 43, 0.08);
-}
-.turno-card--selected {
+  }
+  .turno-card--selected {
     border-color: #9e2a2b !important;
     background: rgba(158, 42, 43, 0.02) !important;
     box-shadow: 0 4px 16px rgba(158, 42, 43, 0.06);
-}
-.turno-card--selected::after {
+  }
+  .turno-card--selected::after {
     content: "✓";
     position: absolute;
     top: 6px;
@@ -1799,76 +2054,76 @@ document.addEventListener('keydown', function(e) {
     display: flex;
     align-items: center;
     justify-content: center;
-}
-.turno-card--disabled {
+  }
+  .turno-card--disabled {
     opacity: 0.45;
     cursor: not-allowed;
     background: #f9f9f9;
-}
-.turno-icono {
+  }
+  .turno-icono {
     font-size: 1.6rem;
     margin-bottom: 6px;
-}
-.turno-info {
+  }
+  .turno-info {
     display: flex;
     flex-direction: column;
     gap: 2px;
     margin-bottom: 8px;
-}
-.turno-nombre {
+  }
+  .turno-nombre {
     font-weight: 700;
     font-size: 0.9rem;
     color: #1a1a1a;
-}
-.turno-horario {
+  }
+  .turno-horario {
     font-size: 0.75rem;
     color: rgba(26, 26, 26, 0.4);
-}
-.turno-badge {
+  }
+  .turno-badge {
     width: 100%;
     margin-top: auto;
-}
-.turno-pct-bar {
+  }
+  .turno-pct-bar {
     width: 100%;
     height: 4px;
     background: rgba(26, 26, 26, 0.06);
     border-radius: 2px;
     overflow: hidden;
     margin-bottom: 4px;
-}
-.turno-pct-fill {
+  }
+  .turno-pct-fill {
     height: 100%;
     background: #10b981;
     border-radius: 2px;
     transition: width 0.3s ease;
-}
-.turno-casi-lleno .turno-pct-fill {
+  }
+  .turno-casi-lleno .turno-pct-fill {
     background: #f59e0b;
-}
-.turno-lleno .turno-pct-fill {
+  }
+  .turno-lleno .turno-pct-fill {
     background: #ef4444;
-}
-.turno-badge-label {
+  }
+  .turno-badge-label {
     font-size: 0.7rem;
     font-weight: 600;
-}
-.turno-disponible .turno-badge-label {
+  }
+  .turno-disponible .turno-badge-label {
     color: #10b981;
-}
-.turno-casi-lleno .turno-badge-label {
+  }
+  .turno-casi-lleno .turno-badge-label {
     color: #f59e0b;
-}
-.turno-lleno .turno-badge-label {
+  }
+  .turno-lleno .turno-badge-label {
     color: #ef4444;
-}
+  }
 
-/* --- Estilos de Reloj Digital y Capacidad --- */
-.horas-wrapper {
+  /* --- Estilos de Reloj Digital y Capacidad --- */
+  .horas-wrapper {
     margin-top: 16px;
     border-top: 1px dashed rgba(26, 26, 26, 0.08);
     padding-top: 16px;
-}
-.reloj-digital-container {
+  }
+  .reloj-digital-container {
     display: flex;
     align-items: center;
     justify-content: center;
@@ -1880,8 +2135,8 @@ document.addEventListener('keydown', function(e) {
     max-width: 240px;
     margin: 8px auto 12px;
     box-shadow: 0 4px 16px rgba(0, 0, 0, 0.02);
-}
-.reloj-select {
+  }
+  .reloj-select {
     font-size: 1.4rem !important;
     font-weight: 700 !important;
     border: 1px solid rgba(26, 26, 26, 0.15) !important;
@@ -1892,29 +2147,31 @@ document.addEventListener('keydown', function(e) {
     cursor: pointer;
     outline: none !important;
     transition: all 0.2s ease;
-}
-.reloj-select:hover {
+  }
+  .reloj-select:hover {
     border-color: #9e2a2b !important;
     background: rgba(158, 42, 43, 0.02) !important;
-}
-.reloj-select:focus {
+  }
+  .reloj-select:focus {
     border-color: #9e2a2b !important;
     box-shadow: 0 0 0 3px rgba(158, 42, 43, 0.1) !important;
-}
-.reloj-select:focus {
+  }
+  .reloj-select:focus {
     box-shadow: none !important;
     border: none !important;
-}
-.reloj-colon {
+  }
+  .reloj-colon {
     font-size: 1.6rem;
     font-weight: 800;
     color: #9e2a2b;
     animation: blink 1s step-start infinite;
-}
-@keyframes blink {
-    50% { opacity: 0; }
-}
-.capacidad-info {
+  }
+  @keyframes blink {
+    50% {
+      opacity: 0;
+    }
+  }
+  .capacidad-info {
     width: 100%;
     background: #fdfaf2;
     border: 1px solid rgba(245, 158, 11, 0.15);
@@ -1925,75 +2182,77 @@ document.addEventListener('keydown', function(e) {
     gap: 12px;
     font-size: 0.85rem;
     margin-top: 12px;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.01);
-}
-.info-disponibles {
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.01);
+  }
+  .info-disponibles {
     font-weight: 700;
     color: #10b981;
-}
-.info-total {
+  }
+  .info-total {
     font-weight: 500;
     color: rgba(26, 26, 26, 0.5);
-}
+  }
 
-/* --- Reloj Info (disponibilidad debajo del reloj) --- */
-.reloj-info {
+  /* --- Reloj Info (disponibilidad debajo del reloj) --- */
+  .reloj-info {
     text-align: center;
     font-size: 0.85rem;
     padding: 8px 12px;
     border-radius: 10px;
     transition: all 0.3s ease;
     min-height: 20px;
-}
-.reloj-info.disponible {
+  }
+  .reloj-info.disponible {
     color: #10b981;
     background: rgba(16, 185, 129, 0.06);
     border: 1px solid rgba(16, 185, 129, 0.12);
-}
-.reloj-info.lleno {
+  }
+  .reloj-info.lleno {
     color: #ef4444;
     background: rgba(239, 68, 68, 0.06);
     border: 1px solid rgba(239, 68, 68, 0.12);
-}
+  }
 
-/* --- Loading Spinner --- */
-.loading-spinner {
+  /* --- Loading Spinner --- */
+  .loading-spinner {
     width: 28px;
     height: 28px;
     border: 3px solid rgba(158, 42, 43, 0.15);
     border-top-color: #9e2a2b;
     border-radius: 50%;
     animation: spin 0.8s linear infinite;
-}
-@keyframes spin {
-    to { transform: rotate(360deg); }
-}
+  }
+  @keyframes spin {
+    to {
+      transform: rotate(360deg);
+    }
+  }
 
-/* --- Sección Niños/Bebés --- */
-.form-section {
+  /* --- Sección Niños/Bebés --- */
+  .form-section {
     margin-top: 8px;
     padding-top: 12px;
     border-top: 1px dashed rgba(26, 26, 26, 0.08);
-}
-.section-desc {
+  }
+  .section-desc {
     font-size: 0.8rem;
     color: rgba(26, 26, 26, 0.4);
     margin: 0 0 12px;
     text-align: center;
-}
+  }
 
-/* --- Centrado de selectores de personas --- */
-.personas-section {
+  /* --- Centrado de selectores de personas --- */
+  .personas-section {
     max-width: 320px;
     margin-left: auto;
     margin-right: auto;
-}
-.personas-section .cantidad-wrapper {
+  }
+  .personas-section .cantidad-wrapper {
     justify-content: center;
-}
-.personas-section label {
+  }
+  .personas-section label {
     text-align: center;
-}
+  }
 </style>
 
 <script>
@@ -2374,12 +2633,12 @@ document.addEventListener('keydown', function(e) {
 </script>
 
 <style>
-  @keyframes gradient {   
+  @keyframes gradient {
     .modal-container-reserva {
-        max-width: 100%;
-        margin: 10px;
+      max-width: 100%;
+      margin: 10px;
     }
-}
+  }
 </style>
 
 <style>
