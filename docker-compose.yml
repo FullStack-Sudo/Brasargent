@@ -1,0 +1,77 @@
+version: '3.8'
+
+services:
+  # ============================================
+  # APP BRASARGENT
+  # ============================================
+  app:
+    build: .
+    container_name: brasargent-app
+    restart: unless-stopped
+    ports:
+      - "4321:4321"
+    environment:
+      - NODE_ENV=production
+      - DB_HOST=db
+      - DB_PORT=3306
+      - DB_USER=${DB_USER}
+      - DB_PASSWORD=${DB_PASSWORD}
+      - DB_NAME=${DB_NAME}
+      - OPENWA_API_URL=http://openwa:2785/api
+      - OPENWA_API_KEY=${OPENWA_API_KEY}
+      - OPENWA_ADMIN_KEY=${OPENWA_ADMIN_KEY}
+      - OPENWA_DEFAULT_SESSION=${OPENWA_DEFAULT_SESSION:-brasargent}
+    depends_on:
+      - db
+      - openwa
+    networks:
+      - brasargent-network
+
+  # ============================================
+  # BASE DE DATOS MYSQL
+  # ============================================
+  db:
+    image: mysql:8.0
+    container_name: brasargent-db
+    restart: unless-stopped
+    ports:
+      - "3306:3306"
+    environment:
+      - MYSQL_ROOT_PASSWORD=${DB_ROOT_PASSWORD}
+      - MYSQL_DATABASE=${DB_NAME}
+      - MYSQL_USER=${DB_USER}
+      - MYSQL_PASSWORD=${DB_PASSWORD}
+    volumes:
+      - mysql-data:/var/lib/mysql
+      - ./database/init.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - brasargent-network
+    command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
+
+  # ============================================
+  # OPENWA - WHATSAPP API
+  # ============================================
+  openwa:
+    image: rmyndharis/openwa:latest
+    container_name: brasargent-openwa
+    restart: unless-stopped
+    ports:
+      - "2785:2785"
+    environment:
+      - NODE_ENV=production
+      - DATABASE_URL=sqlite:./data/openwa.db
+      - API_KEY=${OPENWA_API_KEY}
+      - ADMIN_KEY=${OPENWA_ADMIN_KEY}
+      - WEBHOOK_URL=http://app:4321/api/webhooks/whatsapp
+    volumes:
+      - openwa-data:/app/data
+    networks:
+      - brasargent-network
+
+volumes:
+  mysql-data:
+  openwa-data:
+
+networks:
+  brasargent-network:
+    driver: bridge
