@@ -291,6 +291,7 @@ try {
                   <button
                     type="button"
                     data-modal-open="menu-modal"
+                    data-sucursal-id={sucursal.id}
                     data-sucursal-name={sucursal.name}
                     class="flex items-center justify-center cursor-pointer transition-transform duration-300 hover:scale-115 p-1 group shrink-0 focus:outline-none"
                     title="Ver nuestro menú"
@@ -376,8 +377,8 @@ try {
     data-modal="menu-modal"
   >
     <div
-      class="relative max-w-7xl w-full mx-auto bg-white/90 backdrop-blur-md rounded-[40px] border border-gray-200 shadow-5xl overflow-hidden animate-modal-enter transition-all duration-500 bg-cover bg-center bg-no-repeat"
-      style="background-image: url('/img/fondo/modalSucursal.svg');"
+      class="relative max-w-7xl w-full mx-auto backdrop-blur-md rounded-[40px] border border-gray-200/50 shadow-5xl overflow-hidden animate-modal-enter transition-all duration-500"
+      style="background: #f2ebed; background: radial-gradient(circle, rgba(242, 235, 237, 1) 0%, rgba(176, 174, 174, 1) 100%);"
     >
       <!-- Tech Accents -->
       <div
@@ -2465,6 +2466,109 @@ try {
       },
     };
 
+    const renderLiveMenu = (platos: any[]) => {
+      if (!menuItemsContainer || !menuNav) return;
+
+      const categoriasMap: Record<string, any[]> = {};
+      platos.forEach((plato) => {
+        const cat = plato.categoria || "General";
+        if (!categoriasMap[cat]) categoriasMap[cat] = [];
+        categoriasMap[cat].push(plato);
+      });
+
+      let navHtml = "";
+      let isFirst = true;
+      for (const [catName, list] of Object.entries(categoriasMap)) {
+        const sectionId = "cat-" + catName.toLowerCase().replace(/[^a-z0-9]/g, "-");
+        navHtml += `
+          <button
+            data-section="${sectionId}"
+            class="menu-nav-btn group relative px-4 md:px-8 py-5 text-xs md:text-base font-black transition-all duration-300 flex-shrink-0 focus:outline-none tracking-[0.1em] md:tracking-[0.15em] uppercase ${isFirst ? "text-[#9e2a2b] border-b-4 border-[#9e2a2b]" : "text-gray-400 border-b-4 border-transparent hover:text-[#9e2a2b]"}"
+            role="tab"
+          >
+            ${catName}
+            <span class="ml-1 text-[11px] font-bold opacity-75">(${list.length})</span>
+            <span
+              class="absolute inset-x-0 bottom-[-4px] h-1 bg-[#9e2a2b] transform ${isFirst ? "scale-x-100" : "scale-x-0"} group-hover:scale-x-100 transition-transform duration-300"
+            ></span>
+          </button>
+        `;
+        isFirst = false;
+      }
+      menuNav.innerHTML = navHtml;
+
+      const newNavButtons = menuNav.querySelectorAll(".menu-nav-btn");
+      newNavButtons.forEach((button) => {
+        button.addEventListener("click", () => {
+          const sectionId = button.getAttribute("data-section");
+          if (!sectionId || !menuContent) return;
+          const section = document.getElementById(sectionId);
+          if (section) {
+            const offsetTop = section.offsetTop - menuContent.offsetTop - 20;
+            menuContent.scrollTo({ top: offsetTop, behavior: "smooth" });
+          }
+        });
+      });
+
+      let html = '<div class="space-y-16">';
+
+      for (const [catName, list] of Object.entries(categoriasMap)) {
+        const sectionId = "cat-" + catName.toLowerCase().replace(/[^a-z0-9]/g, "-");
+        html += `
+          <div id="${sectionId}" class="menu-section scroll-mt-32">
+            <h4 class="text-3xl font-black text-[#9e2a2b] mb-10 pb-4 border-b-2 border-[#9e2a2b]/20 tracking-tight flex items-center gap-4">
+              <span class="w-2 h-8 bg-[#9e2a2b] rounded-full"></span>
+              ${catName}
+              <span class="text-xs bg-[#9e2a2b]/10 text-[#9e2a2b] font-bold px-3 py-1 rounded-full">${list.length}</span>
+            </h4>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        `;
+
+        list.forEach((item) => {
+          const isAgotado = item.disponible === 0 || item.disponible === false;
+          const isDestacado = item.destacado === 1 || item.destacado === true;
+          const precioNum = typeof item.precio === 'number' ? item.precio : parseFloat(item.precio || 0);
+          const precioFormatted = isNaN(precioNum) ? (item.precio || '') : (precioNum % 1 === 0 ? precioNum.toFixed(0) : precioNum.toFixed(2));
+
+          html += `
+            <div class="group/item relative bg-white/80 backdrop-blur-sm p-4 rounded-2xl border border-gray-100 shadow-sm hover:shadow-md transition-all duration-300 flex items-center gap-4 ${isAgotado ? "opacity-60 bg-gray-50/80" : ""}">
+              ${item.imagen_url ? `
+                <img src="${item.imagen_url}" alt="${item.nombre}" class="w-20 h-20 object-cover rounded-xl shrink-0 border border-gray-200 shadow-sm" />
+              ` : `
+                <div class="w-20 h-20 bg-gray-100 rounded-xl shrink-0 flex items-center justify-center text-2xl border border-gray-200 text-gray-400">
+                  🍽️
+                </div>
+              `}
+              <div class="flex-1 min-w-0">
+                <div class="flex items-center gap-2 flex-wrap mb-1">
+                  <span class="text-gray-900 font-bold tracking-wide uppercase text-base block">
+                    ${item.nombre}
+                  </span>
+                  ${isDestacado ? `<span class="bg-amber-100 text-amber-800 text-[10px] font-black px-2 py-0.5 rounded-full border border-amber-200">⭐ DESTACADO</span>` : ""}
+                  ${isAgotado ? `<span class="bg-red-100 text-red-700 text-[10px] font-black px-2 py-0.5 rounded-full border border-red-200">❌ AGOTADO</span>` : ""}
+                </div>
+                ${item.descripcion ? `<p class="text-gray-500 text-sm font-medium leading-relaxed line-clamp-2">${item.descripcion}</p>` : ""}
+              </div>
+              <div class="text-right shrink-0">
+                ${precioFormatted ? `<span class="text-[#9e2a2b] font-black text-xl whitespace-nowrap">Bs. ${precioFormatted}</span>` : ""}
+              </div>
+            </div>
+          `;
+        });
+
+        html += `
+            </div>
+          </div>
+        `;
+      }
+
+      html += "</div>";
+      menuItemsContainer.innerHTML = html;
+
+      const sections = document.querySelectorAll(".menu-section");
+      sections.forEach((section) => observer.observe(section));
+    };
+
     const renderMenu = (sucursalName: string) => {
       const menu = MENUS[sucursalName] || MENUS["Churrasqueria"];
       if (!menuItemsContainer || !menuNav) return;
@@ -2565,6 +2669,58 @@ try {
       sections.forEach((section) => observer.observe(section));
     };
 
+    const loadAndRenderMenu = async (sucursalId: number, sucursalName: string) => {
+      if (!menuItemsContainer || !menuNav) return;
+
+      menuNav.innerHTML = `
+        <div class="py-4 text-xs md:text-sm font-semibold text-gray-400 animate-pulse">
+          Cargando categorías...
+        </div>
+      `;
+      menuItemsContainer.innerHTML = `
+        <div class="flex flex-col items-center justify-center py-20 gap-4">
+          <div class="w-12 h-12 border-4 border-[#9e2a2b] border-t-transparent rounded-full animate-spin"></div>
+          <p class="text-gray-600 font-bold text-base">Cargando menú de la sucursal...</p>
+        </div>
+      `;
+
+      try {
+        const res = await fetch(`/api/menu/sucursal/${sucursalId}`);
+        const json = await res.json();
+
+        if (json.success && json.data && Array.isArray(json.data.platos) && json.data.platos.length > 0) {
+          renderLiveMenu(json.data.platos);
+        } else {
+          if (MENUS[sucursalName]) {
+            renderMenu(sucursalName);
+          } else {
+            menuNav.innerHTML = '';
+            menuItemsContainer.innerHTML = `
+              <div class="text-center py-16 bg-white/80 rounded-3xl border border-gray-100 shadow-sm">
+                <span class="text-5xl block mb-4">🍽️</span>
+                <h3 class="text-xl font-bold text-gray-900">No hay platos registrados</h3>
+                <p class="text-gray-500 mt-2">Esta sucursal aún no tiene elementos registrados en su menú.</p>
+              </div>
+            `;
+          }
+        }
+      } catch (error) {
+        console.error("Error al cargar menú:", error);
+        if (MENUS[sucursalName]) {
+          renderMenu(sucursalName);
+        } else {
+          menuNav.innerHTML = '';
+          menuItemsContainer.innerHTML = `
+            <div class="text-center py-16 bg-white/80 rounded-3xl border border-gray-100 shadow-sm">
+              <span class="text-5xl block mb-4">⚠️</span>
+              <h3 class="text-xl font-bold text-gray-900">Error al cargar el menú</h3>
+              <p class="text-gray-500 mt-2">Inténtalo de nuevo más tarde.</p>
+            </div>
+          `;
+        }
+      }
+    };
+
     const updateActiveButton = (sectionId: string) => {
       const currentNavButtons = document.querySelectorAll(".menu-nav-btn");
       currentNavButtons.forEach((btn) => {
@@ -2601,15 +2757,22 @@ try {
 
     openButtons.forEach((button) => {
       button.addEventListener("click", () => {
+        const sucursalId = button.getAttribute("data-sucursal-id");
         const sucursalName = button.getAttribute("data-sucursal-name");
+
         if (modalSucursalName && sucursalName) {
           modalSucursalName.textContent = sucursalName;
-          renderMenu(sucursalName);
         }
         modal?.classList.remove("hidden");
         modal?.classList.add("flex");
         document.body.style.overflow = "hidden";
         if (menuContent) menuContent.scrollTop = 0;
+
+        if (sucursalId) {
+          loadAndRenderMenu(Number(sucursalId), sucursalName || "");
+        } else if (sucursalName) {
+          renderMenu(sucursalName);
+        }
       });
     });
 

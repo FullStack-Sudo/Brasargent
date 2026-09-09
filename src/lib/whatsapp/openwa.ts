@@ -285,6 +285,17 @@ class OpenWAClient {
                 return { success: true };
             }
 
+            // Si la sesión ya está desconectada o el motor no está cargado, detener la sesión limpiamente
+            if (session.status === 'disconnected' || session.engineLoaded === false) {
+                try {
+                    await fetch(`${this.apiUrl}/sessions/${session.id}/stop`, {
+                        method: 'POST',
+                        headers: this.getHeaders()
+                    });
+                } catch (e) {}
+                return { success: true };
+            }
+
             const response = await fetch(`${this.apiUrl}/sessions/${session.id}/logout`, {
                 method: 'POST',
                 headers: this.getHeaders()
@@ -292,6 +303,16 @@ class OpenWAClient {
 
             if (!response.ok) {
                 const errorText = await response.text();
+                // Si la sesión no estaba iniciada, llamar a /stop y retornar éxito (ya está desconectado)
+                if (response.status === 400 || errorText.includes('Session is not started') || errorText.includes('not started')) {
+                    try {
+                        await fetch(`${this.apiUrl}/sessions/${session.id}/stop`, {
+                            method: 'POST',
+                            headers: this.getHeaders()
+                        });
+                    } catch (e) {}
+                    return { success: true };
+                }
                 return { success: false, error: errorText };
             }
 
