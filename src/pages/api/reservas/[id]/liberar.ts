@@ -2,11 +2,12 @@ import type { APIRoute } from 'astro';
 import { query } from '../../../../lib/db';
 import { liberarCubiertosAlCancelar } from '../../../../lib/cubiertos';
 
-export const POST: APIRoute = async ({ params, cookies }) => {
+export const POST: APIRoute = async ({ params, locals, cookies }) => {
     try {
         const { id } = params;
 
-        // Verificar sesión admin
+        // Verificar sesión admin o locals usuario
+        const usuario = locals.usuario;
         const session = cookies.get('session');
         if (!session || session.value !== 'authenticated') {
             return new Response(JSON.stringify({
@@ -21,6 +22,8 @@ export const POST: APIRoute = async ({ params, cookies }) => {
                 r.id,
                 r.sucursal_id,
                 r.cubiertos_reservados,
+                r.numero_personas,
+                r.cantidad_ninos,
                 r.estado,
                 r.nombre_cliente,
                 s.nombre AS sucursal_nombre
@@ -39,6 +42,14 @@ export const POST: APIRoute = async ({ params, cookies }) => {
             }), { status: 404 });
         }
 
+        // Verificar pertenencia a la sucursal del admin (si no es super admin)
+        if (usuario && !usuario.es_super_admin && usuario.sucursal_id && usuario.sucursal_id !== reserva.sucursal_id) {
+            return new Response(JSON.stringify({
+                success: false,
+                error: 'No tienes permisos para modificar reservas de otra sucursal'
+            }), { status: 403 });
+        }
+
         // Verificar que la reserva esté confirmada o en_curso
         if (reserva.estado !== 'confirmada' && reserva.estado !== 'en_curso') {
             return new Response(JSON.stringify({
@@ -47,13 +58,7 @@ export const POST: APIRoute = async ({ params, cookies }) => {
             }), { status: 409 });
         }
 
-        // Verificar que tenga cubiertos asignados
-        if (!reserva.cubiertos_reservados || reserva.cubiertos_reservados === 0) {
-            return new Response(JSON.stringify({
-                success: false,
-                error: 'Esta reserva no tiene cubiertos asignados'
-            }), { status: 409 });
-        }
+        const cubiertosLiberar = reserva.cubiertos_reservados || (parseInt(reserva.numero_personas || '0', 10) + parseInt(reserva.cantidad_ninos || '0', 10));
 
         // 🔴 ACTUALIZAR RESERVA A "COMPLETADA"
         await query(
@@ -67,29 +72,33 @@ export const POST: APIRoute = async ({ params, cookies }) => {
         // 🔴 LIBERAR CUBIERTOS
         await liberarCubiertosAlCancelar(
             reserva.sucursal_id,
-            reserva.cubiertos_reservados
+            cubiertosLiberar
         );
 
         // 🔴 REGISTRAR EN LOGS
-        await query(
-            `INSERT INTO logs_actividad 
-             (usuario_id, accion, tabla_afectada, registro_id, detalles) 
-             VALUES (?, 'CUBIERTOS_LIBERADOS', 'reservas', ?, ?)`,
-            [
-                1, // admin_id
-                reserva.id,
-                JSON.stringify({
-                    cliente: reserva.nombre_cliente,
-                    sucursal: reserva.sucursal_nombre,
-                    cubiertos_liberados: reserva.cubiertos_reservados
-                })
-            ]
-        );
+        try {
+            await query(
+                `INSERT INTO logs_actividad 
+                 (usuario_id, accion, tabla_afectada, registro_id, detalles) 
+                 VALUES (?, 'CUBIERTOS_LIBERADOS', 'reservas', ?, ?)`,
+                [
+                    usuario?.id || 1,
+                    reserva.id,
+                    JSON.stringify({
+                        cliente: reserva.nombre_cliente,
+                        sucursal: reserva.sucursal_nombre,
+                        cubiertos_liberados: cubiertosLiberar
+                    })
+                ]
+            );
+        } catch (logErr) {
+            console.error('Error al guardar log de actividad:', logErr);
+        }
 
         return new Response(JSON.stringify({
             success: true,
-            mensaje: `Mesa liberada. ${reserva.cubiertos_reservados} cubiertos disponibles nuevamente`,
-            cubiertos_liberados: reserva.cubiertos_reservados
+            mensaje: `Mesa liberada con éxito. ${cubiertosLiberar} cubiertos disponibles nuevamente para ${reserva.sucursal_nombre}.`,
+            cubiertos_liberados: cubiertosLiberar
         }), { status: 200 });
 
     } catch (error: any) {

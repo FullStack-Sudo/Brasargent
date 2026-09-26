@@ -5,13 +5,23 @@ import AdminLayout from '../../layouts/AdminLayout.astro';
 import pool from '../../lib/db';
 import { esAceptable } from '../../lib/reservas';
 
+// Obtener usuario actual desde locals (seteado en middleware)
+const usuario = Astro.locals.usuario;
+const esSuperAdmin = usuario?.es_super_admin === true || usuario?.es_super_admin === 1;
+const userSucursalId = usuario?.sucursal_id;
+
 // Obtener parámetros de filtro
 const url = new URL(Astro.request.url);
-const sucursalId = url.searchParams.get('sucursal') || '';
+let sucursalId = url.searchParams.get('sucursal') || '';
 const estado = url.searchParams.get('estado') || '';
 const fechaParam = url.searchParams.get('fecha') || '';
 const fechaInicio = url.searchParams.get('fecha_inicio') || fechaParam || '';
 const fechaFin = url.searchParams.get('fecha_fin') || fechaParam || '';
+
+// Si NO es Super Admin, forzar sucursal asignada
+if (!esSuperAdmin && userSucursalId) {
+    sucursalId = String(userSucursalId);
+}
 
 // Construir query de reservas
 let sql = `
@@ -29,6 +39,7 @@ let sql = `
         r.necesita_silla_bebe,
         r.necesita_menu_infantil,
         r.estado,
+        r.personas_asistentes,
         r.observaciones,
         r.created_at,
         r.fecha_confirmacion,
@@ -47,7 +58,7 @@ const params: any[] = [];
 
 if (sucursalId) {
     sql += ` AND r.sucursal_id = ?`;
-    params.push(parseInt(sucursalId));
+    params.push(parseInt(sucursalId, 10));
 }
 
 if (estado) {
@@ -71,9 +82,15 @@ const [reservasRows] = await pool.query(sql, params) as any[];
 const reservas = reservasRows;
 
 // Obtener sucursales para el filtro
-const [sucursalesRows] = await pool.query(
-    `SELECT id, nombre FROM sucursales WHERE activo = 1 ORDER BY nombre`
-) as any[];
+let sucursalesQuery = `SELECT id, nombre FROM sucursales WHERE activo = 1`;
+const sucursalesParams: any[] = [];
+if (!esSuperAdmin && userSucursalId) {
+    sucursalesQuery += ` AND id = ?`;
+    sucursalesParams.push(userSucursalId);
+}
+sucursalesQuery += ` ORDER BY nombre`;
+
+const [sucursalesRows] = await pool.query(sucursalesQuery, sucursalesParams) as any[];
 const sucursales = sucursalesRows;
 
 // Estadísticas
@@ -100,6 +117,7 @@ const estadoBadge = (estado: string) => {
     const clases = {
         'pendiente': 'badge-pendiente',
         'confirmada': 'badge-confirmada',
+        'en_curso': 'badge-en-curso',
         'rechazada': 'badge-rechazada',
         'cancelada': 'badge-cancelada'
     };
@@ -110,6 +128,7 @@ const estadoTexto = (estado: string) => {
     const textos = {
         'pendiente': '⏳ Pendiente',
         'confirmada': '✅ Confirmada',
+        'en_curso': '🟢 En Curso',
         'rechazada': '❌ Rechazada',
         'cancelada': '⏰ Cancelada'
     };
@@ -179,6 +198,7 @@ const getColorSucursal = (nombre: string): string => {
                         <option value="">Todos</option>
                         <option value="pendiente" selected={estado === 'pendiente'}>Pendiente</option>
                         <option value="confirmada" selected={estado === 'confirmada'}>Confirmada</option>
+                        <option value="en_curso" selected={estado === 'en_curso'}>En Curso (Llegaron)</option>
                         <option value="rechazada" selected={estado === 'rechazada'}>Rechazada</option>
                         <option value="cancelada" selected={estado === 'cancelada'}>Cancelada</option>
                     </select>
@@ -265,6 +285,11 @@ const getColorSucursal = (nombre: string): string => {
                                                 ⏳ Esperando ventana (24h)
                                             </span>
                                         )}
+                                        {reserva.personas_asistentes && (
+                                            <span style="display: block; font-size: 0.7rem; color: #059669; margin-top: 3px; font-weight: 600;">
+                                                🙋‍♂️ {reserva.personas_asistentes} presentes
+                                            </span>
+                                        )}
                                     </td>
                                     <td>
                                         <div class="acciones-btns">
@@ -278,6 +303,20 @@ const getColorSucursal = (nombre: string): string => {
                                                     <button class="btn-rechazar" 
                                                             onclick={`rechazarReserva(${reserva.id})`}>
                                                         ❌
+                                                    </button>
+                                                </>
+                                            )}
+                                            {(reserva.estado === 'confirmada' || reserva.estado === 'en_curso') && (
+                                                <>
+                                                    <button class={`btn-asistencia ${reserva.estado === 'en_curso' ? 'btn-en-curso' : ''}`}
+                                                            onclick={`registrarAsistencia(${reserva.id}, '${String(reserva.nombre_cliente).replace(/'/g, "\\'")}', ${reserva.cubiertos_reservados || (parseInt(reserva.numero_personas) + parseInt(reserva.cantidad_ninos || 0))})`}
+                                                            title={reserva.estado === 'en_curso' ? 'Llegada registrada. Clic para modificar asistencia' : 'Registrar llegada del cliente (Asistencia)'}>
+                                                        🙋‍♂️
+                                                    </button>
+                                                    <button class="btn-liberar-mesa"
+                                                            onclick={`liberarMesa(${reserva.id}, '${String(reserva.nombre_cliente).replace(/'/g, "\\'")}', ${reserva.cubiertos_reservados || 0})`}
+                                                            title="Liberar cubiertos de la mesa (Finalizar servicio)">
+                                                        🔓
                                                     </button>
                                                 </>
                                             )}
@@ -536,9 +575,88 @@ window.borrarReserva = async function(id) {
         }
     }
 }
+
+window.registrarAsistencia = async function(id, nombreCliente, cubiertosReservados) {
+    const numInput = prompt(
+        `📍 Registrar llegada del cliente:\n${nombreCliente}\n\n` +
+        `¿Cuántas personas asistieron en total?\n` +
+        `(Cubiertos reservados: ${cubiertosReservados})`,
+        cubiertosReservados
+    );
+    
+    if (numInput === null) return;
+    const personas = parseInt(numInput, 10);
+    if (isNaN(personas) || personas < 1) {
+        alert('⚠️ Por favor ingresa un número de personas válido (mínimo 1).');
+        return;
+    }
+    
+    try {
+        const response = await fetch(`/api/reservas/${id}/asistencia`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ personas_asistentes: personas })
+        });
+        
+        const result = await response.json();
+        if (result.success) {
+            alert(`✅ ${result.mensaje}`);
+            location.reload();
+        } else {
+            alert(`❌ Error: ${result.error}`);
+        }
+    } catch (error) {
+        alert('❌ Error de conexión al registrar la asistencia.');
+    }
+}
+
+window.liberarMesa = async function(id, nombreCliente, cubiertos) {
+    if (!confirm(`🔓 ¿Deseas liberar la mesa de ${nombreCliente}?\n\nEsta acción marcará el servicio como completado y liberará los cubiertos en tu sucursal.`)) {
+        return;
+    }
+
+    try {
+        const response = await fetch(`/api/reservas/${id}/liberar`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' }
+        });
+
+        const result = await response.json();
+        if (result.success) {
+            alert(`✅ ${result.mensaje || 'Mesa liberada exitosamente.'}`);
+            location.reload();
+        } else {
+            alert(`❌ Error: ${result.error}`);
+        }
+    } catch (error) {
+        alert('❌ Error de conexión al intentar liberar la mesa.');
+    }
+}
 </script>
 
 <style is:global>
+.badge-en-curso { background: rgba(16, 185, 129, 0.15); color: #059669; }
+.row-estado-en_curso { border-left: 3px solid #059669; }
+.btn-liberar-mesa {
+    background: rgba(239, 68, 68, 0.1);
+    color: #ef4444;
+}
+.btn-liberar-mesa:hover {
+    background: rgba(239, 68, 68, 0.2);
+    transform: scale(1.1);
+}
+.btn-asistencia {
+    background: rgba(59, 130, 246, 0.1);
+    color: #3b82f6;
+}
+.btn-asistencia:hover {
+    background: rgba(59, 130, 246, 0.2);
+    transform: scale(1.1);
+}
+.btn-asistencia.btn-en-curso {
+    background: rgba(16, 185, 129, 0.2);
+    color: #059669;
+}
 /* ============================================
    MODAL DE DETALLES - ESTILOS (GLOBALES PARA JS)
    ============================================ */

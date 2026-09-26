@@ -25,14 +25,25 @@ configuracion.forEach((item: any) => {
     modulosActivos[item.clave] = item.valor === 'true';
 });
 
-const userRole = Astro.cookies.get('user_role')?.value || 'admin';
-const userName = Astro.cookies.get('user_name')?.value || 'Administrador';
+// Usuario desde locals o cookies
+const usuario = Astro.locals.usuario;
+const esSuperAdmin = usuario?.es_super_admin === true || usuario?.es_super_admin === 1 || Astro.cookies.get('es_super_admin')?.value === 'true';
+const userSucursalId = usuario?.sucursal_id || (Astro.cookies.get('user_sucursal')?.value ? parseInt(Astro.cookies.get('user_sucursal')!.value, 10) : null);
+const userRole = usuario?.rol || Astro.cookies.get('user_role')?.value || 'admin';
+const userName = usuario?.nombre || Astro.cookies.get('user_name')?.value || 'Administrador';
+const sucursalNombre = usuario?.sucursal_nombre;
 const currentPath = Astro.url.pathname;
 
-// Obtener reservas pendientes para el badge
+// Obtener reservas pendientes para el badge (filtrado por sucursal si no es super admin)
 let pendientesCount = 0;
 try {
-    const [pendRows] = await pool.query(`SELECT COUNT(*) as total FROM reservas WHERE estado = 'pendiente'`) as any[];
+    let pendQuery = `SELECT COUNT(*) as total FROM reservas WHERE estado = 'pendiente'`;
+    const pendParams: any[] = [];
+    if (!esSuperAdmin && userSucursalId) {
+        pendQuery += ` AND sucursal_id = ?`;
+        pendParams.push(userSucursalId);
+    }
+    const [pendRows] = await pool.query(pendQuery, pendParams) as any[];
     pendientesCount = pendRows[0]?.total || 0;
 } catch (e) {}
 
@@ -42,6 +53,9 @@ if (userRole === 'admin') {
     links.push({ href: '/admin/dashboard', icon: '📊', label: 'Dashboard' });
     if (modulosActivos['modulo_reservas']) {
         links.push({ href: '/admin/reservas', icon: '📅', label: 'Reservas', badge: pendientesCount > 0 ? pendientesCount : null });
+    }
+    if (esSuperAdmin) {
+        links.push({ href: '/admin/usuarios', icon: '👥', label: 'Administradores' });
     }
     links.push({ href: '/admin/whatsapp', icon: '💬', label: 'OpenWA WhatsApp' });
     if (modulosActivos['modulo_clientes']) {
@@ -55,7 +69,9 @@ if (userRole === 'admin') {
     }
     links.push({ href: '/admin/precios', icon: '💰', label: 'Precios & Festivos' });
     links.push({ href: '/admin/sucursales', icon: '🏢', label: 'Sucursales' });
-    links.push({ href: '/admin/configuracion', icon: '⚙️', label: 'Configuración' });
+    if (esSuperAdmin) {
+        links.push({ href: '/admin/configuracion', icon: '⚙️', label: 'Configuración' });
+    }
 }
 
 if (userRole === 'mesero') {
@@ -99,7 +115,9 @@ if (userRole === 'cocinero' && modulosActivos['modulo_cocina']) {
         <span class="user-avatar">{userName.charAt(0).toUpperCase()}</span>
         <div class="user-info">
             <span class="user-name">{userName}</span>
-            <span class="user-role">{userRole === 'admin' ? '👑 Admin' : userRole === 'mesero' ? '🍽️ Mesero' : '👨‍🍳 Cocinero'}</span>
+            <span class="user-role">
+                {esSuperAdmin ? '👑 Super Admin' : sucursalNombre ? `🏢 Admin ${sucursalNombre}` : userRole === 'admin' ? '🏢 Admin Sucursal' : userRole === 'mesero' ? '🍽️ Mesero' : '👨‍🍳 Cocinero'}
+            </span>
         </div>
     </div>
 

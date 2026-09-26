@@ -12,6 +12,20 @@ export interface Props {
 
 const { title, description } = Astro.props;
 
+const usuario = Astro.locals.usuario;
+const esSuperAdmin = usuario?.es_super_admin === true || usuario?.es_super_admin === 1 || Astro.cookies.get('es_super_admin')?.value === 'true';
+const userName = usuario?.nombre || Astro.cookies.get('user_name')?.value || 'Administrador';
+const userRole = usuario?.rol || Astro.cookies.get('user_role')?.value || 'admin';
+const sucursalNombre = usuario?.sucursal_nombre;
+
+const roleBadgeText = esSuperAdmin 
+    ? '👑 Super Admin' 
+    : sucursalNombre 
+        ? `🏢 Admin ${sucursalNombre}` 
+        : userRole === 'admin' ? '🏢 Admin Sucursal' : userRole === 'mesero' ? '🍽️ Mesero' : '👨‍🍳 Cocinero';
+
+const userInitial = userName ? userName.charAt(0).toUpperCase() : 'A';
+
 const pathname = Astro.url.pathname;
 const currentPage = Astro.props.currentPage || (
     pathname.includes('/admin/reservas') ? 'reservas' :
@@ -19,6 +33,7 @@ const currentPage = Astro.props.currentPage || (
     pathname.includes('/admin/clientes') ? 'clientes' :
     pathname.includes('/admin/menu') ? 'menu' :
     pathname.includes('/admin/configuracion') ? 'configuracion' :
+    pathname.includes('/admin/usuarios') ? 'usuarios' :
     pathname.includes('/admin/whatsapp') ? 'whatsapp' : 'dashboard'
 );
 ---
@@ -453,10 +468,10 @@ const currentPage = Astro.props.currentPage || (
                     </div>
                     <div class="admin-header-right">
                         <div class="admin-user">
-                            <div class="admin-avatar">A</div>
+                            <div class="admin-avatar">{userInitial}</div>
                             <div>
-                                <div class="admin-name">Administrador</div>
-                                <div class="admin-role">Admin</div>
+                                <div class="admin-name">{userName}</div>
+                                <div class="admin-role">{roleBadgeText}</div>
                             </div>
                         </div>
                     </div>

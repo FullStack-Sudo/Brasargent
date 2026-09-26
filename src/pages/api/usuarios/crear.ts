@@ -1,118 +1,162 @@
 import type { APIRoute } from 'astro';
-import pool from '../../../lib/db';
+import { query } from '../../../lib/db';
 import { hashPassword } from '../../../lib/auth';
 
-export const POST: APIRoute = async ({ request, cookies }) => {
+export const POST: APIRoute = async ({ request, locals }) => {
     try {
-        console.log('1. Iniciando creación de usuario...');
-        
-        // Verificar sesión admin
-        const session = cookies.get('session');
-        if (!session || session.value !== 'authenticated') {
-            console.log('2. Sesión no autorizada');
+        // 🔴 VERIFICAR QUE SEA SUPER ADMIN
+        const usuario = locals.usuario;
+        if (!usuario || !usuario.es_super_admin) {
             return new Response(JSON.stringify({
                 success: false,
-                error: 'No autorizado'
-            }), { status: 401 });
+                error: 'Solo el Super Administrador puede crear usuarios'
+            }), { status: 403 });
         }
-        
-        console.log('2. Sesión validada');
-        
-        // Obtener datos
+
         const data = await request.json();
-        console.log('3. Datos recibidos:', data);
-        
         const { 
             nombre, 
             apellido, 
             email, 
             telefono, 
             password, 
-            rol, 
-            sucursal_id 
+            sucursal_id,
+            permisos
         } = data;
-        
+
         // Validar campos obligatorios
-        if (!nombre || !email || !password || !rol) {
-            console.log('4. Campos faltantes');
+        if (!nombre || !email || !password || !sucursal_id) {
             return new Response(JSON.stringify({
                 success: false,
                 error: 'Todos los campos obligatorios deben ser completados'
             }), { status: 400 });
         }
-        
-        console.log('4. Validación aprobada');
-        
-        // Validar email único
-        const [existenteData] = await pool.query(
+
+        // Verificar que el email no exista
+        const [existente] = await query(
             'SELECT id FROM usuarios WHERE email = ?',
             [email]
         ) as any[];
-        
-        if (existenteData.length > 0) {
-            console.log('5. Email ya existe:', email);
+
+        if (existente && existente.length > 0) {
             return new Response(JSON.stringify({
                 success: false,
                 error: 'El email ya está registrado'
             }), { status: 409 });
         }
-        
-        console.log('5. Email disponible');
-        
+
+        // Verificar que la sucursal exista
+        const [sucursalRows] = await query(
+            'SELECT id, nombre FROM sucursales WHERE id = ? AND activo = 1',
+            [sucursal_id]
+        ) as any[];
+
+        const sucursal = sucursalRows && sucursalRows[0];
+
+        if (!sucursal) {
+            return new Response(JSON.stringify({
+                success: false,
+                error: 'La sucursal no existe o está inactiva'
+            }), { status: 404 });
+        }
+
         // Hash de la contraseña
-        let hashedPassword: string;
+        const hashedPassword = await hashPassword(password);
+
+        // Permisos default o personalizados
+        const permisosObj = permisos || {
+            puede_ver_reservas: true,
+            puede_aprobar_reservas: true,
+            puede_rechazar_reservas: true,
+            puede_ver_menu: true,
+            puede_editar_menu: false,
+            puede_ver_clientes: true,
+            puede_ver_reportes: true
+        };
+
+        // Insertar usuario (admin de sucursal)
+        const [result] = await query(
+            `INSERT INTO usuarios 
+             (nombre, apellido, email, telefono, password, rol, sucursal_id, es_super_admin, permisos, activo) 
+             VALUES (?, ?, ?, ?, ?, 'admin', ?, FALSE, ?, TRUE)`,
+            [
+                nombre, 
+                apellido || null, 
+                email, 
+                telefono || null, 
+                hashedPassword, 
+                sucursal_id,
+                JSON.stringify(permisosObj)
+            ]
+        ) as any[];
+
+        const nuevoUsuarioId = result.insertId;
+
+        // Insertar o actualizar permisos por sucursal
+        await query(
+            `INSERT INTO permisos_sucursal 
+             (usuario_id, sucursal_id, puede_ver_reservas, puede_aprobar_reservas, 
+              puede_rechazar_reservas, puede_ver_menu, puede_editar_menu, 
+              puede_ver_clientes, puede_ver_reportes) 
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+             ON DUPLICATE KEY UPDATE 
+              puede_ver_reservas = VALUES(puede_ver_reservas),
+              puede_aprobar_reservas = VALUES(puede_aprobar_reservas),
+              puede_rechazar_reservas = VALUES(puede_rechazar_reservas),
+              puede_ver_menu = VALUES(puede_ver_menu),
+              puede_editar_menu = VALUES(puede_editar_menu),
+              puede_ver_clientes = VALUES(puede_ver_clientes),
+              puede_ver_reportes = VALUES(puede_ver_reportes)`,
+            [
+                nuevoUsuarioId, 
+                sucursal_id,
+                Boolean(permisosObj.puede_ver_reservas ?? true),
+                Boolean(permisosObj.puede_aprobar_reservas ?? true),
+                Boolean(permisosObj.puede_rechazar_reservas ?? true),
+                Boolean(permisosObj.puede_ver_menu ?? true),
+                Boolean(permisosObj.puede_editar_menu ?? false),
+                Boolean(permisosObj.puede_ver_clientes ?? true),
+                Boolean(permisosObj.puede_ver_reportes ?? true)
+            ]
+        );
+
+        // Registrar en logs
         try {
-            hashedPassword = await hashPassword(password);
-            console.log('6. Contraseña hasheada correctamente');
-        } catch (hashError) {
-            console.error('Error al hashear contraseña:', hashError);
-            return new Response(JSON.stringify({
-                success: false,
-                error: 'Error al procesar la contraseña'
-            }), { status: 500 });
-        }
-        
-        // Insertar usuario
-        try {
-            console.log('7. Insertando usuario...');
-            // Parsear sucursal_id de string a número o dejarlo null
-            const sucursalIdParsed = sucursal_id ? parseInt(sucursal_id, 10) : null;
-            
-            const [result] = await pool.query(
-                `INSERT INTO usuarios 
-                 (nombre, apellido, email, telefono, password, rol, sucursal_id) 
-                 VALUES (?, ?, ?, ?, ?, ?, ?)`,
+            await query(
+                `INSERT INTO logs_actividad 
+                 (usuario_id, accion, tabla_afectada, registro_id, detalles) 
+                 VALUES (?, 'USUARIO_CREADO', 'usuarios', ?, ?)`,
                 [
-                    nombre, 
-                    apellido || null, 
-                    email, 
-                    telefono || null, 
-                    hashedPassword, 
-                    rol, 
-                    sucursalIdParsed
+                    usuario.id,
+                    nuevoUsuarioId,
+                    JSON.stringify({
+                        nombre: `${nombre} ${apellido || ''}`.trim(),
+                        email,
+                        sucursal: sucursal.nombre,
+                        creado_por: usuario.nombre
+                    })
                 ]
-            ) as any[];
-            console.log('8. Usuario creado con ID:', result.insertId);
-            
-            return new Response(JSON.stringify({
-                success: true,
-                mensaje: 'Usuario creado exitosamente',
-                id: result.insertId
-            }), { status: 201 });
-            
-        } catch (dbError: any) {
-            console.error('Error en la base de datos:', dbError);
-            return new Response(JSON.stringify({
-                success: false,
-                error: `Error en la base de datos: ${dbError.message || 'Error desconocido'}`
-            }), { status: 500 });
+            );
+        } catch (logErr) {
+            console.error('Error guardando log de actividad:', logErr);
         }
-        
+
+        return new Response(JSON.stringify({
+            success: true,
+            mensaje: `Administrador creado para ${sucursal.nombre}`,
+            usuario: {
+                id: nuevoUsuarioId,
+                nombre: `${nombre} ${apellido || ''}`.trim(),
+                email,
+                sucursal: sucursal.nombre
+            }
+        }), { status: 201 });
+
     } catch (error: any) {
-        console.error('Error general:', error);
+        console.error('Error al crear usuario:', error);
         return new Response(JSON.stringify({
             success: false,
-            error: `Error interno: ${error.message || 'Error desconocido'}`
+            error: error.message || 'Error al crear usuario'
         }), { status: 500 });
     }
 };

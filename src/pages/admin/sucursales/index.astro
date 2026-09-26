@@ -1,11 +1,14 @@
 ---
 // src/pages/admin/sucursales/index.astro
-// Lista de sucursales con opciones de edición
-
+// Lista de sucursales con opciones de edición, capacidad y reservas confirmadas en tiempo real
 import AdminLayout from '../../../layouts/AdminLayout.astro';
 import pool from '../../../lib/db';
+import { getEstadisticasCubiertos } from '../../../lib/cubiertos';
 
-// Obtener todas las sucursales
+// Sincronizar y recalcular cubiertos en tiempo real
+await getEstadisticasCubiertos();
+
+// Obtener todas las sucursales con detalle real sin producto cartesiano
 const [sucursalesRows] = await pool.query(`
     SELECT 
         s.id,
@@ -14,50 +17,61 @@ const [sucursalesRows] = await pool.query(`
         s.direccion,
         s.telefono,
         s.capacidad_total,
-        COALESCE(
-            (SELECT SUM(cubiertos_reservados) 
-             FROM reservas 
-             WHERE sucursal_id = s.id AND estado = 'confirmada' AND fecha = CURRENT_DATE()), 
-            0
-        ) AS cubiertos_ocupados,
+        s.cubiertos_ocupados,
+        s.cubiertos_disponibles,
         s.rating,
         s.resenas,
         s.permite_reservas,
         s.permite_cubiertos,
         s.activo,
-        COUNT(DISTINCT ms.plato_id) AS total_platos
+        (SELECT COUNT(*) FROM menu_sucursal WHERE sucursal_id = s.id) AS total_platos,
+        (SELECT COUNT(*) FROM reservas WHERE sucursal_id = s.id AND estado = 'confirmada') AS total_confirmadas,
+        (SELECT COUNT(*) FROM reservas WHERE sucursal_id = s.id AND estado = 'en_curso') AS total_en_curso,
+        (SELECT COUNT(*) FROM reservas WHERE sucursal_id = s.id AND estado = 'pendiente') AS total_pendientes,
+        COALESCE((SELECT SUM(COALESCE(personas_asistentes, cubiertos_reservados)) FROM reservas WHERE sucursal_id = s.id AND estado = 'en_curso'), 0) AS personas_en_mesa,
+        COALESCE((SELECT SUM(cubiertos_reservados) FROM reservas WHERE sucursal_id = s.id AND estado IN ('confirmada', 'en_curso')), 0) AS cubiertos_ocupados_reales
     FROM sucursales s
-    LEFT JOIN menu_sucursal ms ON s.id = ms.sucursal_id
-    GROUP BY s.id
     ORDER BY s.nombre
 `) as any[];
 
-const sucursales = sucursalesRows.map((s: any) => ({
-    ...s,
-    cubiertos_ocupados: Number(s.cubiertos_ocupados) || 0,
-    cubiertos_disponibles: (s.capacidad_total || 120) - (Number(s.cubiertos_ocupados) || 0)
-}));
+const sucursales = sucursalesRows.map((s: any) => {
+    const capTotal = Number(s.capacidad_total) || 120;
+    const ocupados = Number(s.cubiertos_ocupados_reales) || Number(s.cubiertos_ocupados) || 0;
+    const disponibles = Math.max(0, capTotal - ocupados);
+    return {
+        ...s,
+        capacidad_total: capTotal,
+        cubiertos_ocupados: ocupados,
+        cubiertos_disponibles: disponibles,
+        total_confirmadas: Number(s.total_confirmadas) || 0,
+        total_en_curso: Number(s.total_en_curso) || 0,
+        total_pendientes: Number(s.total_pendientes) || 0,
+        personas_en_mesa: Number(s.personas_en_mesa) || 0
+    };
+});
 
-// Estadísticas
+// Estadísticas globales
+const totalSucursales = sucursales.length;
 const totalActivas = sucursales.filter((s: any) => s.activo === 1).length;
-const totalCubiertos = sucursales.reduce((acc: number, s: any) => acc + (s.capacidad_total || 120), 0);
-const totalOcupados = sucursales.reduce((acc: number, s: any) => acc + (s.cubiertos_ocupados || 0), 0);
-const totalDisponibles = totalCubiertos - totalOcupados;
+const totalCapacidad = sucursales.reduce((acc: number, s: any) => acc + s.capacidad_total, 0);
+const totalOcupados = sucursales.reduce((acc: number, s: any) => acc + s.cubiertos_ocupados, 0);
+const totalDisponibles = sucursales.reduce((acc: number, s: any) => acc + s.cubiertos_disponibles, 0);
+const totalReservasConfirmadas = sucursales.reduce((acc: number, s: any) => acc + (s.total_confirmadas + s.total_en_curso), 0);
 
 // Función para formatear porcentaje
 const getPorcentaje = (ocupados: number, total: number) => {
     if (total === 0) return 0;
-    return Math.round((ocupados / total) * 100);
+    return Math.min(100, Math.round((ocupados / total) * 100));
 };
 ---
 
-<AdminLayout title="Sucursales" description="Gestión de sucursales y cubiertos">
+<AdminLayout title="Sucursales" description="Gestión de sucursales, capacidad de cubiertos y reservas confirmadas">
     <div class="sucursales-admin">
         <!-- Header -->
         <div class="admin-header">
             <div>
-                <h1>🏢 Sucursales</h1>
-                <p>Gestión de todas las sucursales del restaurante</p>
+                <h1>🏢 Sucursales y Capacidad</h1>
+                <p>Monitoreo de capacidad total, cubiertos ocupados y reservas confirmadas por sucursal</p>
             </div>
             <a href="/admin/sucursales/nueva" class="btn-nueva">
                 ➕ Nueva Sucursal
@@ -69,36 +83,36 @@ const getPorcentaje = (ocupados: number, total: number) => {
             <div class="stat-card">
                 <span class="stat-icon">🏢</span>
                 <div>
-                    <span class="stat-number">{sucursales.length}</span>
-                    <span class="stat-label">Total Sucursales</span>
-                </div>
-            </div>
-            <div class="stat-card">
-                <span class="stat-icon">✅</span>
-                <div>
-                    <span class="stat-number">{totalActivas}</span>
-                    <span class="stat-label">Activas</span>
+                    <span class="stat-number">{totalSucursales}</span>
+                    <span class="stat-label">Total ({totalActivas} Activas)</span>
                 </div>
             </div>
             <div class="stat-card">
                 <span class="stat-icon">🪑</span>
                 <div>
-                    <span class="stat-number">{totalCubiertos}</span>
-                    <span class="stat-label">Cubiertos Totales</span>
+                    <span class="stat-number">{totalCapacidad}</span>
+                    <span class="stat-label">Capacidad Total</span>
                 </div>
             </div>
             <div class="stat-card">
                 <span class="stat-icon">🔴</span>
                 <div>
                     <span class="stat-number">{totalOcupados}</span>
-                    <span class="stat-label">Ocupados</span>
+                    <span class="stat-label">Cubiertos Ocupados</span>
                 </div>
             </div>
             <div class="stat-card">
                 <span class="stat-icon">🟢</span>
                 <div>
                     <span class="stat-number">{totalDisponibles}</span>
-                    <span class="stat-label">Disponibles</span>
+                    <span class="stat-label">Cubiertos Disponibles</span>
+                </div>
+            </div>
+            <div class="stat-card">
+                <span class="stat-icon">✅</span>
+                <div>
+                    <span class="stat-number">{totalReservasConfirmadas}</span>
+                    <span class="stat-label">Reservas Confirmadas</span>
                 </div>
             </div>
         </div>
@@ -110,11 +124,10 @@ const getPorcentaje = (ocupados: number, total: number) => {
                     <tr>
                         <th>#</th>
                         <th>Sucursal</th>
-                        <th>Dirección</th>
-                        <th>Teléfono</th>
-                        <th>Cubiertos</th>
-                        <th>Ocupación</th>
-                        <th>Reservas</th>
+                        <th>Contacto</th>
+                        <th>Capacidad y Cubiertos</th>
+                        <th>Reservas Confirmadas</th>
+                        <th>Ocupación %</th>
                         <th>Estado</th>
                         <th>Acciones</th>
                     </tr>
@@ -131,26 +144,53 @@ const getPorcentaje = (ocupados: number, total: number) => {
                                     <strong>{sucursal.nombre}</strong>
                                     <span class="concepto-badge">{sucursal.concepto || 'Restaurante'}</span>
                                 </td>
-                                <td>{sucursal.direccion}</td>
-                                <td>{sucursal.telefono}</td>
                                 <td>
-                                    <div class="cubiertos-info">
-                                        <span class="cubiertos-total">{sucursal.capacidad_total || 120}</span>
-                                        <span class="cubiertos-disponibles">({sucursal.cubiertos_disponibles || 0} disp.)</span>
+                                    <span style="display: block; font-weight: 500;">📍 {sucursal.direccion}</span>
+                                    <span style="font-size: 0.78rem; color: #6b7280;">📞 {sucursal.telefono}</span>
+                                </td>
+                                <td>
+                                    <div class="cubiertos-box">
+                                        <div class="capacidad-line">
+                                            <strong>{sucursal.capacidad_total}</strong> <span class="cap-text">capacidad total</span>
+                                        </div>
+                                        <div class="cubiertos-details-grid">
+                                            <span class="cubiertos-disp-pill">🟢 {sucursal.cubiertos_disponibles} disp.</span>
+                                            <span class="cubiertos-ocup-pill">🔴 {sucursal.cubiertos_ocupados} ocup.</span>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>
+                                    <div class="reservas-info-cell">
+                                        {sucursal.total_confirmadas > 0 ? (
+                                            <a href={`/admin/reservas?sucursal=${sucursal.id}&estado=confirmada`} class="reserva-tag tag-confirmadas" title="Ver reservas confirmadas por llegar">
+                                                ✅ <strong>{sucursal.total_confirmadas}</strong> por llegar
+                                            </a>
+                                        ) : (
+                                            <span class="reserva-tag tag-vacio">0 por llegar</span>
+                                        )}
+
+                                        {sucursal.total_en_curso > 0 ? (
+                                            <a href={`/admin/reservas?sucursal=${sucursal.id}&estado=en_curso`} class="reserva-tag tag-en-curso" title="Ver reservas en mesa">
+                                                🟢 <strong>{sucursal.total_en_curso} res. en mesa</strong> ({sucursal.personas_en_mesa} pers.)
+                                            </a>
+                                        ) : (
+                                            <span class="reserva-tag tag-vacio">0 en mesa</span>
+                                        )}
+
+                                        {sucursal.total_pendientes > 0 && (
+                                            <a href={`/admin/reservas?sucursal=${sucursal.id}&estado=pendiente`} class="reserva-tag tag-pendientes" title="Ver pendientes por aprobar">
+                                                ⏳ <strong>{sucursal.total_pendientes}</strong> pendientes
+                                            </a>
+                                        )}
                                     </div>
                                 </td>
                                 <td>
                                     <div class="ocupacion-container">
-                                        <div class="barra-ocupacion" style="width: 100px; height: 6px; background: #eee; border-radius: 3px; overflow: hidden;">
+                                        <div class="barra-ocupacion" style="width: 90px; height: 8px; background: #eee; border-radius: 4px; overflow: hidden;">
                                             <div class="barra-fill" style={`width: ${porcentaje}%; background: ${colorBarra}; height: 100%; transition: width 0.5s ease;`}></div>
                                         </div>
-                                        <span class="porcentaje" style={`color: ${colorBarra}; font-weight: 500;`}>{porcentaje}%</span>
+                                        <span class="porcentaje" style={`color: ${colorBarra}; font-weight: 700;`}>{porcentaje}%</span>
                                     </div>
-                                </td>
-                                <td>
-                                    <span class={`badge ${sucursal.permite_reservas ? 'badge-si' : 'badge-no'}`}>
-                                        {sucursal.permite_reservas ? '✅ Sí' : '❌ No'}
-                                    </span>
                                 </td>
                                 <td>
                                     <span class={`badge ${sucursal.activo ? 'badge-activo' : 'badge-inactivo'}`}>
@@ -159,13 +199,16 @@ const getPorcentaje = (ocupados: number, total: number) => {
                                 </td>
                                 <td>
                                     <div class="acciones">
-                                        <a href={`/admin/sucursales/editar/${sucursal.id}`} class="btn-editar" title="Editar">
+                                        <a href={`/admin/sucursales/cubiertos/${sucursal.id}`} class="btn-action btn-cubiertos" title="Ajustar Capacidad de Cubiertos">
+                                            🪑
+                                        </a>
+                                        <a href={`/admin/sucursales/editar/${sucursal.id}`} class="btn-action btn-editar" title="Editar Sucursal">
                                             ✏️
                                         </a>
-                                        <button class="btn-toggle" onclick={`toggleSucursal(${sucursal.id}, ${sucursal.activo})`} title="Activar/Desactivar">
+                                        <button class="btn-action btn-toggle" onclick={`toggleSucursal(${sucursal.id}, ${sucursal.activo})`} title="Activar/Desactivar">
                                             🔄
                                         </button>
-                                        <a href={`/sucursales?id=${sucursal.id}`} class="btn-ver" title="Ver en página principal">
+                                        <a href={`/sucursales?id=${sucursal.id}`} class="btn-action btn-ver" target="_blank" title="Ver en Web">
                                             👁️
                                         </a>
                                     </div>
@@ -303,24 +346,91 @@ const getPorcentaje = (ocupados: number, total: number) => {
 
 .concepto-badge {
     display: block;
-    font-size: 0.6rem;
-    color: rgba(26, 26, 26, 0.3);
-    font-weight: 400;
+    font-size: 0.65rem;
+    color: rgba(26, 26, 26, 0.4);
+    font-weight: 500;
 }
 
-.cubiertos-info {
+.cubiertos-box {
     display: flex;
-    align-items: center;
+    flex-direction: column;
     gap: 4px;
 }
 
-.cubiertos-total {
+.capacidad-line {
+    font-size: 0.9rem;
+    color: #1a1a1a;
+}
+
+.cap-text {
+    font-size: 0.75rem;
+    color: #6b7280;
+}
+
+.cubiertos-details-grid {
+    display: flex;
+    gap: 8px;
+    font-size: 0.75rem;
+    flex-wrap: wrap;
+}
+
+.cubiertos-disp-pill {
+    color: #047857;
     font-weight: 600;
 }
 
-.cubiertos-disponibles {
-    font-size: 0.75rem;
-    color: #10b981;
+.cubiertos-ocup-pill {
+    color: #dc2626;
+    font-weight: 600;
+}
+
+.reservas-info-cell {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.reserva-tag {
+    font-size: 0.72rem;
+    font-weight: 600;
+    padding: 3px 8px;
+    border-radius: 6px;
+    text-decoration: none;
+    display: inline-block;
+    width: fit-content;
+    transition: all 0.2s ease;
+}
+
+.tag-confirmadas {
+    background: rgba(16, 185, 129, 0.12);
+    color: #047857;
+}
+
+.tag-confirmadas:hover {
+    background: rgba(16, 185, 129, 0.25);
+}
+
+.tag-en-curso {
+    background: rgba(59, 130, 246, 0.12);
+    color: #1d4ed8;
+}
+
+.tag-en-curso:hover {
+    background: rgba(59, 130, 246, 0.25);
+}
+
+.tag-pendientes {
+    background: rgba(245, 158, 11, 0.12);
+    color: #b45309;
+}
+
+.tag-pendientes:hover {
+    background: rgba(245, 158, 11, 0.25);
+}
+
+.tag-vacio {
+    background: #f3f4f6;
+    color: #9ca3af;
 }
 
 .ocupacion-container {
@@ -330,7 +440,7 @@ const getPorcentaje = (ocupados: number, total: number) => {
 }
 
 .porcentaje {
-    font-size: 0.75rem;
+    font-size: 0.78rem;
     min-width: 36px;
 }
 
@@ -339,16 +449,6 @@ const getPorcentaje = (ocupados: number, total: number) => {
     border-radius: 20px;
     font-size: 0.7rem;
     font-weight: 500;
-}
-
-.badge-si {
-    background: rgba(16, 185, 129, 0.1);
-    color: #10b981;
-}
-
-.badge-no {
-    background: rgba(239, 68, 68, 0.1);
-    color: #ef4444;
 }
 
 .badge-activo {
@@ -363,12 +463,10 @@ const getPorcentaje = (ocupados: number, total: number) => {
 
 .acciones {
     display: flex;
-    gap: 8px;
+    gap: 6px;
 }
 
-.btn-editar,
-.btn-toggle,
-.btn-ver {
+.btn-action {
     width: 32px;
     height: 32px;
     border: none;
@@ -382,6 +480,11 @@ const getPorcentaje = (ocupados: number, total: number) => {
     text-decoration: none;
     background: rgba(26, 26, 26, 0.04);
     color: #1a1a1a;
+}
+
+.btn-cubiertos:hover {
+    background: rgba(16, 185, 129, 0.15);
+    color: #047857;
 }
 
 .btn-editar:hover {

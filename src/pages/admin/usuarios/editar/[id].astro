@@ -1,0 +1,356 @@
+---
+// src/pages/admin/usuarios/editar/[id].astro
+// Edición de administrador por sucursal
+import AdminLayout from '../../../../layouts/AdminLayout.astro';
+import { query } from '../../../../lib/db';
+
+// Verificar Super Admin
+const usuario = Astro.locals.usuario;
+if (!usuario || !usuario.es_super_admin) {
+    return Astro.redirect('/admin/dashboard');
+}
+
+const { id } = Astro.params;
+
+// Obtener usuario
+const [usuarios] = await query(
+    `SELECT u.*, ps.puede_ver_reservas, ps.puede_aprobar_reservas, ps.puede_rechazar_reservas,
+            ps.puede_ver_menu, ps.puede_editar_menu, ps.puede_ver_clientes, ps.puede_ver_reportes
+     FROM usuarios u
+     LEFT JOIN permisos_sucursal ps ON u.id = ps.usuario_id AND u.sucursal_id = ps.sucursal_id
+     WHERE u.id = ? AND u.es_super_admin = FALSE`,
+    [id]
+) as any[];
+
+const targetUser = usuarios && usuarios[0];
+
+if (!targetUser) {
+    return Astro.redirect('/admin/usuarios');
+}
+
+// Parsear permisos si existen
+let permisos = {
+    puede_ver_reservas: targetUser.puede_ver_reservas ?? true,
+    puede_aprobar_reservas: targetUser.puede_aprobar_reservas ?? true,
+    puede_rechazar_reservas: targetUser.puede_rechazar_reservas ?? true,
+    puede_ver_menu: targetUser.puede_ver_menu ?? true,
+    puede_editar_menu: targetUser.puede_editar_menu ?? false,
+    puede_ver_clientes: targetUser.puede_ver_clientes ?? true
+};
+
+if (targetUser.permisos) {
+    try {
+        const parsed = typeof targetUser.permisos === 'string' ? JSON.parse(targetUser.permisos) : targetUser.permisos;
+        permisos = { ...permisos, ...parsed };
+    } catch (e) {}
+}
+
+// Helper para iconos de sucursal
+const getIconoSucursal = (nombre?: string) => {
+    if (!nombre) return '🏢';
+    if (nombre.includes('Churrasquería') || nombre.includes('Churrasqueria')) return '🔥';
+    if (nombre.includes('Fast')) return '⚡';
+    if (nombre.includes('Rodizio')) return '🥩';
+    return '🏢';
+};
+
+// Obtener sucursales activas
+const [sucursales] = await query(
+    'SELECT id, nombre FROM sucursales WHERE activo = 1 ORDER BY nombre'
+) as any[];
+---
+
+<AdminLayout title={`Editar ${targetUser.nombre}`} description="Modifica datos y permisos del administrador" currentPage="usuarios">
+    <div class="usuarios-admin">
+        <div class="page-header">
+            <div>
+                <h1>✏️ Editar Administrador</h1>
+                <p>Modifica los datos y permisos de {targetUser.nombre} {targetUser.apellido || ''}</p>
+            </div>
+            <a href="/admin/usuarios" class="btn-volver">
+                ← Volver a Administradores
+            </a>
+        </div>
+
+        <div class="section-card">
+            <form id="formEditarUsuario" class="form-body" onsubmit="return false;">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Nombre *</label>
+                        <input type="text" id="nombre" class="input-luxury" value={targetUser.nombre} required />
+                    </div>
+                    <div class="form-group">
+                        <label>Apellido</label>
+                        <input type="text" id="apellido" class="input-luxury" value={targetUser.apellido || ''} />
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Email *</label>
+                        <input type="email" id="email" class="input-luxury" value={targetUser.email} required />
+                    </div>
+                    <div class="form-group">
+                        <label>Teléfono</label>
+                        <input type="tel" id="telefono" class="input-luxury" value={targetUser.telefono || ''} />
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Nueva Contraseña (Opcional)</label>
+                        <input type="password" id="password" class="input-luxury" placeholder="Dejar en blanco para no cambiar" minlength="6" />
+                    </div>
+                    <div class="form-group">
+                        <label>Sucursal Asignada *</label>
+                        <select id="sucursal_id" class="input-luxury" required>
+                            <option value="">Seleccionar sucursal</option>
+                            {sucursales.map((s: any) => (
+                                <option value={s.id} selected={targetUser.sucursal_id === s.id}>
+                                    {getIconoSucursal(s.nombre)} {s.nombre}
+                                </option>
+                            ))}
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-group mt-4">
+                    <label style="font-weight: 700;">Permisos Granulares por Sucursal</label>
+                    <div class="permisos-grid mt-2">
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="permiso_ver_reservas" checked={Boolean(permisos.puede_ver_reservas)} />
+                            <span>Ver Reservas</span>
+                        </label>
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="permiso_aprobar" checked={Boolean(permisos.puede_aprobar_reservas)} />
+                            <span>Aprobar Reservas</span>
+                        </label>
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="permiso_rechazar" checked={Boolean(permisos.puede_rechazar_reservas)} />
+                            <span>Rechazar Reservas</span>
+                        </label>
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="permiso_ver_menu" checked={Boolean(permisos.puede_ver_menu)} />
+                            <span>Ver Menú</span>
+                        </label>
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="permiso_editar_menu" checked={Boolean(permisos.puede_editar_menu)} />
+                            <span>Editar Menú</span>
+                        </label>
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="permiso_ver_clientes" checked={Boolean(permisos.puede_ver_clientes)} />
+                            <span>Ver Clientes</span>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="form-actions mt-6">
+                    <a href="/admin/usuarios" class="btn-cancel">Cancelar</a>
+                    <button type="button" id="btnGuardarCambios" class="btn-save">💾 Guardar Cambios</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</AdminLayout>
+
+<script data-id={id}>
+document.addEventListener('DOMContentLoaded', () => {
+    const btnGuardar = document.getElementById('btnGuardarCambios') as HTMLButtonElement;
+    const userId = document.querySelector('script[data-id]')?.getAttribute('data-id');
+
+    if (btnGuardar && userId) {
+        btnGuardar.addEventListener('click', async () => {
+            const nombre = (document.getElementById('nombre') as HTMLInputElement).value.trim();
+            const apellido = (document.getElementById('apellido') as HTMLInputElement).value.trim();
+            const email = (document.getElementById('email') as HTMLInputElement).value.trim();
+            const telefono = (document.getElementById('telefono') as HTMLInputElement).value.trim();
+            const password = (document.getElementById('password') as HTMLInputElement).value;
+            const sucursal_id = (document.getElementById('sucursal_id') as HTMLSelectElement).value;
+
+            if (!nombre || !email || !sucursal_id) {
+                alert('⚠️ Completa todos los campos obligatorios (*)');
+                return;
+            }
+
+            btnGuardar.textContent = '⏳ Guardando...';
+            btnGuardar.disabled = true;
+
+            try {
+                const response = await fetch(`/api/usuarios/${userId}/editar`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        nombre,
+                        apellido,
+                        email,
+                        telefono,
+                        password,
+                        sucursal_id: parseInt(sucursal_id, 10),
+                        permisos: {
+                            puede_ver_reservas: (document.getElementById('permiso_ver_reservas') as HTMLInputElement).checked,
+                            puede_aprobar_reservas: (document.getElementById('permiso_aprobar') as HTMLInputElement).checked,
+                            puede_rechazar_reservas: (document.getElementById('permiso_rechazar') as HTMLInputElement).checked,
+                            puede_ver_menu: (document.getElementById('permiso_ver_menu') as HTMLInputElement).checked,
+                            puede_editar_menu: (document.getElementById('permiso_editar_menu') as HTMLInputElement).checked,
+                            puede_ver_clientes: (document.getElementById('permiso_ver_clientes') as HTMLInputElement).checked
+                        }
+                    })
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    alert('✅ ' + result.mensaje);
+                    window.location.href = '/admin/usuarios';
+                } else {
+                    alert('❌ Error: ' + result.error);
+                    btnGuardar.textContent = '💾 Guardar Cambios';
+                    btnGuardar.disabled = false;
+                }
+            } catch (err) {
+                alert('❌ Error de conexión con el servidor');
+                btnGuardar.textContent = '💾 Guardar Cambios';
+                btnGuardar.disabled = false;
+            }
+        });
+    }
+});
+</script>
+
+<style>
+.usuarios-admin {
+    max-width: 800px;
+    margin: 0 auto;
+}
+
+.page-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 24px;
+}
+
+.page-header h1 {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.5rem;
+    color: #1A1A1A;
+    margin: 0;
+}
+
+.page-header p {
+    color: #6B6B6B;
+    font-size: 0.85rem;
+    margin: 2px 0 0;
+}
+
+.btn-volver {
+    padding: 8px 18px;
+    background: transparent;
+    border: 1.5px solid rgba(0, 0, 0, 0.1);
+    border-radius: 8px;
+    color: #1A1A1A;
+    text-decoration: none;
+    font-size: 0.85rem;
+    font-weight: 500;
+}
+
+.section-card {
+    background: white;
+    border-radius: 14px;
+    padding: 28px;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.04);
+}
+
+.form-body {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+}
+
+.form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.form-group label {
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: #1A1A1A;
+}
+
+.input-luxury {
+    padding: 10px 14px;
+    border: 1.5px solid rgba(0, 0, 0, 0.08);
+    border-radius: 8px;
+    font-family: 'Inter', sans-serif;
+    font-size: 0.9rem;
+}
+
+.input-luxury:focus {
+    outline: none;
+    border-color: #8B1A1A;
+}
+
+.permisos-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 10px;
+}
+
+.checkbox-label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.85rem;
+    color: #374151;
+    cursor: pointer;
+}
+
+.checkbox-label input {
+    width: 16px;
+    height: 16px;
+    accent-color: #8B1A1A;
+}
+
+.form-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+}
+
+.btn-cancel {
+    padding: 10px 22px;
+    border: 1.5px solid rgba(0, 0, 0, 0.1);
+    border-radius: 8px;
+    color: #374151;
+    text-decoration: none;
+    font-weight: 500;
+}
+
+.btn-save {
+    padding: 10px 28px;
+    background: #8B1A1A;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.btn-save:hover {
+    background: #6B1414;
+}
+
+@media (max-width: 640px) {
+    .form-row {
+        grid-template-columns: 1fr;
+    }
+}
+</style>

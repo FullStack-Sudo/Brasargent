@@ -1,75 +1,113 @@
 import type { APIRoute } from 'astro';
-import pool from '../../../../lib/db';
+import { query } from '../../../../lib/db';
 import { hashPassword } from '../../../../lib/auth';
 
-export const POST: APIRoute = async ({ request, cookies, params }) => {
+export const POST: APIRoute = async ({ request, locals, params }) => {
     try {
-        const { id } = params;
-        
-        // Verificar sesión admin
-        const session = cookies.get('session');
-        if (!session || session.value !== 'authenticated') {
+        const usuario = locals.usuario;
+        if (!usuario || !usuario.es_super_admin) {
             return new Response(JSON.stringify({
                 success: false,
-                error: 'No autorizado'
-            }), { status: 401 });
+                error: 'Solo el Super Administrador puede editar usuarios'
+            }), { status: 403 });
         }
-        
-        const data = await request.json();
-        const { nombre, apellido, email, telefono, rol, sucursal_id, password } = data;
-        
-        // Validar campos obligatorios
-        if (!nombre || !email || !rol) {
+
+        const { id } = params;
+        if (!id) {
             return new Response(JSON.stringify({
                 success: false,
-                error: 'Faltan campos obligatorios'
+                error: 'ID de usuario requerido'
             }), { status: 400 });
         }
-        
-        // Verificar email único
-        const [existenteData] = await pool.query(
+
+        const data = await request.json();
+        const { nombre, apellido, email, telefono, sucursal_id, password, permisos } = data;
+
+        if (!nombre || !email || !sucursal_id) {
+            return new Response(JSON.stringify({
+                success: false,
+                error: 'Todos los campos obligatorios deben ser completados'
+            }), { status: 400 });
+        }
+
+        // Verificar que no exista otro usuario con ese email
+        const [existenteData] = await query(
             'SELECT id FROM usuarios WHERE email = ? AND id != ?',
             [email, id]
         ) as any[];
-        
-        if (existenteData.length > 0) {
+
+        if (existenteData && existenteData.length > 0) {
             return new Response(JSON.stringify({
                 success: false,
-                error: 'El email ya está en uso por otro usuario'
+                error: 'El email ya está registrado en otra cuenta'
             }), { status: 409 });
         }
 
-        const sucursalIdParsed = sucursal_id ? parseInt(sucursal_id, 10) : null;
-        
-        if (password) {
-            // Actualizar con contraseña
+        const sucursalIdParsed = parseInt(sucursal_id, 10);
+        const permisosObj = permisos || {};
+
+        if (password && password.trim().length > 0) {
+            if (password.length < 6) {
+                return new Response(JSON.stringify({
+                    success: false,
+                    error: 'La contraseña debe tener al menos 6 caracteres'
+                }), { status: 400 });
+            }
             const hashedPassword = await hashPassword(password);
-            await pool.query(
+            await query(
                 `UPDATE usuarios 
-                 SET nombre = ?, apellido = ?, email = ?, telefono = ?, rol = ?, sucursal_id = ?, password = ?
-                 WHERE id = ?`,
-                [nombre, apellido || null, email, telefono || null, rol, sucursalIdParsed, hashedPassword, id]
+                 SET nombre = ?, apellido = ?, email = ?, telefono = ?, sucursal_id = ?, permisos = ?, password = ?
+                 WHERE id = ? AND es_super_admin = FALSE`,
+                [nombre, apellido || null, email, telefono || null, sucursalIdParsed, JSON.stringify(permisosObj), hashedPassword, id]
             );
         } else {
-            // Actualizar sin cambiar contraseña
-            await pool.query(
+            await query(
                 `UPDATE usuarios 
-                 SET nombre = ?, apellido = ?, email = ?, telefono = ?, rol = ?, sucursal_id = ?
-                 WHERE id = ?`,
-                [nombre, apellido || null, email, telefono || null, rol, sucursalIdParsed, id]
+                 SET nombre = ?, apellido = ?, email = ?, telefono = ?, sucursal_id = ?, permisos = ?
+                 WHERE id = ? AND es_super_admin = FALSE`,
+                [nombre, apellido || null, email, telefono || null, sucursalIdParsed, JSON.stringify(permisosObj), id]
             );
         }
-        
+
+        // Actualizar permisos por sucursal
+        await query(
+            `INSERT INTO permisos_sucursal 
+             (usuario_id, sucursal_id, puede_ver_reservas, puede_aprobar_reservas, 
+              puede_rechazar_reservas, puede_ver_menu, puede_editar_menu, 
+              puede_ver_clientes, puede_ver_reportes) 
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+             ON DUPLICATE KEY UPDATE 
+              sucursal_id = VALUES(sucursal_id),
+              puede_ver_reservas = VALUES(puede_ver_reservas),
+              puede_aprobar_reservas = VALUES(puede_aprobar_reservas),
+              puede_rechazar_reservas = VALUES(puede_rechazar_reservas),
+              puede_ver_menu = VALUES(puede_ver_menu),
+              puede_editar_menu = VALUES(puede_editar_menu),
+              puede_ver_clientes = VALUES(puede_ver_clientes),
+              puede_ver_reportes = VALUES(puede_ver_reportes)`,
+            [
+                id, 
+                sucursalIdParsed,
+                Boolean(permisosObj.puede_ver_reservas ?? true),
+                Boolean(permisosObj.puede_aprobar_reservas ?? true),
+                Boolean(permisosObj.puede_rechazar_reservas ?? true),
+                Boolean(permisosObj.puede_ver_menu ?? true),
+                Boolean(permisosObj.puede_editar_menu ?? false),
+                Boolean(permisosObj.puede_ver_clientes ?? true),
+                Boolean(permisosObj.puede_ver_reportes ?? true)
+            ]
+        );
+
         return new Response(JSON.stringify({
             success: true,
-            mensaje: 'Usuario actualizado exitosamente'
+            mensaje: 'Administrador actualizado exitosamente'
         }), { status: 200 });
-        
+
     } catch (error: any) {
-        console.error('Error al actualizar usuario:', error);
+        console.error('Error al editar usuario:', error);
         return new Response(JSON.stringify({
             success: false,
-            error: error.message || 'Error interno del servidor'
+            error: error.message || 'Error al editar usuario'
         }), { status: 500 });
     }
 };

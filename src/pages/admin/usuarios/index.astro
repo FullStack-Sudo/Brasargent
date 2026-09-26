@@ -1,0 +1,838 @@
+---
+// src/pages/admin/usuarios/index.astro
+// Gestión de administradores por sucursal
+import AdminLayout from '../../../layouts/AdminLayout.astro';
+import { query } from '../../../lib/db';
+
+// Verificar que sea Super Admin
+const usuario = Astro.locals.usuario;
+if (!usuario || !usuario.es_super_admin) {
+    return Astro.redirect('/admin/dashboard');
+}
+
+// Helper para iconos de sucursal
+const getIconoSucursal = (nombre?: string) => {
+    if (!nombre) return '🏢';
+    if (nombre.includes('Churrasquería') || nombre.includes('Churrasqueria')) return '🔥';
+    if (nombre.includes('Fast')) return '⚡';
+    if (nombre.includes('Rodizio')) return '🥩';
+    return '🏢';
+};
+
+// Obtener usuarios
+const [usuarios] = await query(
+    `SELECT 
+        u.id,
+        u.nombre,
+        u.apellido,
+        u.email,
+        u.telefono,
+        u.rol,
+        u.sucursal_id,
+        u.activo,
+        u.created_at,
+        s.nombre AS sucursal_nombre
+     FROM usuarios u
+     LEFT JOIN sucursales s ON u.sucursal_id = s.id
+     WHERE u.es_super_admin = FALSE
+     ORDER BY s.nombre, u.nombre`
+) as any[];
+
+// Obtener sucursales para el select
+const [sucursales] = await query(
+    'SELECT id, nombre FROM sucursales WHERE activo = 1 ORDER BY nombre'
+) as any[];
+---
+
+<AdminLayout title="Administradores" description="Gestión de administradores por sucursal" currentPage="usuarios">
+    <div class="usuarios-admin">
+        <!-- Header -->
+        <div class="page-header">
+            <div>
+                <h1>👥 Administradores por Sucursal</h1>
+                <p>Gestiona los administradores de cada sucursal</p>
+            </div>
+            <button class="btn-nuevo" id="btnNuevoAdmin">
+                ➕ Nuevo Administrador
+            </button>
+        </div>
+
+        <!-- Estadísticas -->
+        <div class="stats-grid">
+            <div class="stat-card">
+                <span class="stat-icon">👥</span>
+                <div>
+                    <span class="stat-number">{usuarios.length}</span>
+                    <span class="stat-label">Total Administradores</span>
+                </div>
+            </div>
+            <div class="stat-card">
+                <span class="stat-icon">🏢</span>
+                <div>
+                    <span class="stat-number">{sucursales.length}</span>
+                    <span class="stat-label">Sucursales Activas</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Lista de Usuarios -->
+        <div class="section-card">
+            <div class="section-header">
+                <h3>📋 Lista de Administradores</h3>
+            </div>
+
+            {usuarios.length === 0 ? (
+                <div class="empty-state">
+                    <span class="empty-icon">👤</span>
+                    <p>No hay administradores registrados</p>
+                    <button class="btn-agregar-primero" id="btnAgregarPrimero">
+                        Crear el primer administrador
+                    </button>
+                </div>
+            ) : (
+                <div class="usuarios-grid">
+                    {usuarios.map((u: any) => (
+                        <div class="usuario-card">
+                            <div class="usuario-header">
+                                <div class="usuario-avatar">
+                                    {u.nombre ? u.nombre.charAt(0).toUpperCase() : 'U'}
+                                </div>
+                                <div class="usuario-info">
+                                    <span class="usuario-nombre">{u.nombre} {u.apellido || ''}</span>
+                                    <span class="usuario-email">{u.email}</span>
+                                </div>
+                                <span class={`usuario-estado ${u.activo ? 'activo' : 'inactivo'}`}>
+                                    {u.activo ? '✅ Activo' : '❌ Inactivo'}
+                                </span>
+                            </div>
+                            
+                            <div class="usuario-detalles">
+                                <div class="detalle-item">
+                                    <span class="detalle-icono">{getIconoSucursal(u.sucursal_nombre)}</span>
+                                    <span>{u.sucursal_nombre || 'Sin asignar'}</span>
+                                </div>
+                                {u.telefono && (
+                                    <div class="detalle-item">
+                                        <span class="detalle-icono">📞</span>
+                                        <span>{u.telefono}</span>
+                                    </div>
+                                )}
+                                <div class="detalle-item">
+                                    <span class="detalle-icono">📅</span>
+                                    <span>Creado: {new Date(u.created_at).toLocaleDateString('es-ES')}</span>
+                                </div>
+                            </div>
+                            
+                            <div class="usuario-acciones">
+                                <button class="btn-editar" data-id={u.id}>
+                                    ✏️ Editar
+                                </button>
+                                <button class="btn-toggle" data-id={u.id} data-activo={u.activo ? "1" : "0"}>
+                                    🔄 {u.activo ? 'Desactivar' : 'Activar'}
+                                </button>
+                                <button class="btn-eliminar" data-id={u.id}>
+                                    🗑️ Eliminar
+                                </button>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            )}
+        </div>
+    </div>
+
+    <!-- Modal de Nuevo Usuario -->
+    <div id="modalNuevoUsuario" class="modal-overlay" style="display: none;">
+        <div class="modal-container">
+            <div class="modal-header">
+                <h2>➕ Nuevo Administrador</h2>
+                <button class="modal-close" id="btnCerrarModal">✕</button>
+            </div>
+            
+            <form id="formNuevoUsuario" class="modal-body" onsubmit="return false;">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Nombre *</label>
+                        <input type="text" id="nombre" class="input-luxury" placeholder="Carlos" required />
+                    </div>
+                    <div class="form-group">
+                        <label>Apellido</label>
+                        <input type="text" id="apellido" class="input-luxury" placeholder="Gómez" />
+                    </div>
+                </div>
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Email *</label>
+                        <input type="email" id="email" class="input-luxury" placeholder="admin@brasargent.com" required />
+                    </div>
+                    <div class="form-group">
+                        <label>Teléfono</label>
+                        <input type="tel" id="telefono" class="input-luxury" placeholder="70000111" />
+                    </div>
+                </div>
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Contraseña *</label>
+                        <input type="password" id="password" class="input-luxury" placeholder="••••••••" required minlength="6" />
+                    </div>
+                    <div class="form-group">
+                        <label>Sucursal Asignada *</label>
+                        <select id="sucursal_id" class="input-luxury" required>
+                            <option value="">Seleccionar sucursal</option>
+                            {sucursales.map((s: any) => (
+                                <option value={s.id}>{getIconoSucursal(s.nombre)} {s.nombre}</option>
+                            ))}
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label>Permisos Granulares</label>
+                    <div class="permisos-grid">
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="permiso_ver_reservas" checked />
+                            <span>Ver Reservas</span>
+                        </label>
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="permiso_aprobar" checked />
+                            <span>Aprobar Reservas</span>
+                        </label>
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="permiso_rechazar" checked />
+                            <span>Rechazar Reservas</span>
+                        </label>
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="permiso_ver_menu" checked />
+                            <span>Ver Menú</span>
+                        </label>
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="permiso_editar_menu" />
+                            <span>Editar Menú</span>
+                        </label>
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="permiso_ver_clientes" checked />
+                            <span>Ver Clientes</span>
+                        </label>
+                    </div>
+                </div>
+            </form>
+            
+            <div class="modal-footer">
+                <button class="btn-cancel" id="btnCancelarModal">Cancelar</button>
+                <button class="btn-save" id="btnGuardarUsuario">✅ Crear Administrador</button>
+            </div>
+        </div>
+    </div>
+</AdminLayout>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    const modal = document.getElementById('modalNuevoUsuario') as HTMLElement;
+    const btnNuevo = document.getElementById('btnNuevoAdmin');
+    const btnAgregarPrimero = document.getElementById('btnAgregarPrimero');
+    const btnCerrar = document.getElementById('btnCerrarModal');
+    const btnCancelar = document.getElementById('btnCancelarModal');
+    const btnSave = document.getElementById('btnGuardarUsuario') as HTMLButtonElement;
+
+    function abrirModal() {
+        if (modal) {
+            modal.style.display = 'flex';
+            document.body.style.overflow = 'hidden';
+        }
+    }
+
+    function cerrarModal() {
+        if (modal) {
+            modal.style.display = 'none';
+            document.body.style.overflow = '';
+        }
+    }
+
+    if (btnNuevo) btnNuevo.addEventListener('click', abrirModal);
+    if (btnAgregarPrimero) btnAgregarPrimero.addEventListener('click', abrirModal);
+    if (btnCerrar) btnCerrar.addEventListener('click', cerrarModal);
+    if (btnCancelar) btnCancelar.addEventListener('click', cerrarModal);
+
+    // Guardar usuario
+    if (btnSave) {
+        btnSave.addEventListener('click', async () => {
+            const nombreEl = document.getElementById('nombre') as HTMLInputElement;
+            const apellidoEl = document.getElementById('apellido') as HTMLInputElement;
+            const emailEl = document.getElementById('email') as HTMLInputElement;
+            const telefonoEl = document.getElementById('telefono') as HTMLInputElement;
+            const passwordEl = document.getElementById('password') as HTMLInputElement;
+            const sucursalEl = document.getElementById('sucursal_id') as HTMLSelectElement;
+
+            const nombre = nombreEl?.value.trim();
+            const apellido = apellidoEl?.value.trim();
+            const email = emailEl?.value.trim();
+            const telefono = telefonoEl?.value.trim();
+            const password = passwordEl?.value;
+            const sucursal_id = sucursalEl?.value;
+
+            if (!nombre || !email || !password || !sucursal_id) {
+                alert('⚠️ Completa todos los campos obligatorios (*)');
+                return;
+            }
+
+            if (password.length < 6) {
+                alert('⚠️ La contraseña debe tener al menos 6 caracteres');
+                return;
+            }
+
+            btnSave.textContent = '⏳ Creando...';
+            btnSave.disabled = true;
+
+            try {
+                const res = await fetch('/api/usuarios/crear', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        nombre,
+                        apellido,
+                        email,
+                        telefono,
+                        password,
+                        sucursal_id: parseInt(sucursal_id, 10),
+                        permisos: {
+                            puede_ver_reservas: (document.getElementById('permiso_ver_reservas') as HTMLInputElement)?.checked,
+                            puede_aprobar_reservas: (document.getElementById('permiso_aprobar') as HTMLInputElement)?.checked,
+                            puede_rechazar_reservas: (document.getElementById('permiso_rechazar') as HTMLInputElement)?.checked,
+                            puede_ver_menu: (document.getElementById('permiso_ver_menu') as HTMLInputElement)?.checked,
+                            puede_editar_menu: (document.getElementById('permiso_editar_menu') as HTMLInputElement)?.checked,
+                            puede_ver_clientes: (document.getElementById('permiso_ver_clientes') as HTMLInputElement)?.checked
+                        }
+                    })
+                });
+
+                const result = await res.json();
+
+                if (result.success) {
+                    alert(`✅ ${result.mensaje}`);
+                    window.location.reload();
+                } else {
+                    alert('❌ Error: ' + result.error);
+                    btnSave.textContent = '✅ Crear Administrador';
+                    btnSave.disabled = false;
+                }
+            } catch (err) {
+                alert('❌ Error de conexión con el servidor');
+                btnSave.textContent = '✅ Crear Administrador';
+                btnSave.disabled = false;
+            }
+        });
+    }
+
+    // Acciones de tarjetas de usuario
+    document.querySelectorAll('.btn-toggle').forEach(button => {
+        button.addEventListener('click', async (e) => {
+            const btn = e.currentTarget as HTMLButtonElement;
+            const id = btn.getAttribute('data-id');
+            const activo = btn.getAttribute('data-activo') === '1';
+            const accion = activo ? 'desactivar' : 'activar';
+
+            if (!confirm(`¿Deseas ${accion} a este administrador?`)) return;
+
+            try {
+                const response = await fetch(`/api/usuarios/${id}/toggle`, {
+                    method: 'POST'
+                });
+                const result = await response.json();
+                if (result.success) {
+                    window.location.reload();
+                } else {
+                    alert('❌ Error: ' + result.error);
+                }
+            } catch (err) {
+                alert('❌ Error de conexión');
+            }
+        });
+    });
+
+    document.querySelectorAll('.btn-eliminar').forEach(button => {
+        button.addEventListener('click', async (e) => {
+            const btn = e.currentTarget as HTMLButtonElement;
+            const id = btn.getAttribute('data-id');
+
+            if (!confirm('¿Eliminar este administrador permanentemente?')) return;
+            if (!confirm('⚠️ Esta acción eliminará su acceso al sistema y no se puede deshacer.')) return;
+
+            try {
+                const response = await fetch(`/api/usuarios/${id}`, {
+                    method: 'DELETE'
+                });
+                const result = await response.json();
+                if (result.success) {
+                    window.location.reload();
+                } else {
+                    alert('❌ Error: ' + result.error);
+                }
+            } catch (err) {
+                alert('❌ Error de conexión');
+            }
+        });
+    });
+
+    document.querySelectorAll('.btn-editar').forEach(button => {
+        button.addEventListener('click', (e) => {
+            const btn = e.currentTarget as HTMLButtonElement;
+            const id = btn.getAttribute('data-id');
+            if (id) window.location.href = `/admin/usuarios/editar/${id}`;
+        });
+    });
+});
+</script>
+
+<style>
+/* ============================================
+   GESTIÓN DE USUARIOS - ESTILOS
+   ============================================ */
+.usuarios-admin {
+    max-width: 1000px;
+    margin: 0 auto;
+}
+
+.page-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 24px;
+}
+
+.page-header h1 {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.6rem;
+    color: #1A1A1A;
+    margin: 0;
+}
+
+.page-header p {
+    color: #6B6B6B;
+    font-size: 0.85rem;
+    margin: 2px 0 0;
+}
+
+.btn-nuevo {
+    padding: 10px 24px;
+    background: #8B1A1A;
+    color: white;
+    border: none;
+    border-radius: 10px;
+    font-weight: 500;
+    font-size: 0.85rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.btn-nuevo:hover {
+    background: #6B1414;
+    transform: translateY(-2px);
+}
+
+/* Estadísticas */
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 16px;
+    margin-bottom: 24px;
+}
+
+.stat-card {
+    background: white;
+    border-radius: 12px;
+    padding: 16px 20px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+    border-left: 3px solid #C9A87C;
+}
+
+.stat-icon {
+    font-size: 1.6rem;
+}
+
+.stat-number {
+    display: block;
+    font-size: 1.4rem;
+    font-weight: 700;
+    color: #1A1A1A;
+}
+
+.stat-label {
+    font-size: 0.75rem;
+    color: #6B6B6B;
+}
+
+.section-card {
+    background: white;
+    border-radius: 14px;
+    padding: 24px;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.04);
+}
+
+.section-header {
+    margin-bottom: 18px;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+    padding-bottom: 12px;
+}
+
+.section-header h3 {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.2rem;
+    color: #1A1A1A;
+    margin: 0;
+}
+
+.empty-state {
+    text-align: center;
+    padding: 40px 20px;
+    color: #6B6B6B;
+}
+
+.empty-icon {
+    font-size: 2.5rem;
+    display: block;
+    margin-bottom: 10px;
+}
+
+.btn-agregar-primero {
+    margin-top: 14px;
+    padding: 10px 20px;
+    background: #8B1A1A;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: 500;
+}
+
+/* Usuarios Grid */
+.usuarios-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.usuario-card {
+    background: white;
+    border-radius: 12px;
+    padding: 16px 20px;
+    border: 1px solid rgba(0, 0, 0, 0.06);
+    transition: all 0.3s ease;
+}
+
+.usuario-card:hover {
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06);
+}
+
+.usuario-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 10px;
+}
+
+.usuario-avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #8B1A1A, #C9A87C);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 0.9rem;
+}
+
+.usuario-info {
+    flex: 1;
+}
+
+.usuario-nombre {
+    display: block;
+    font-weight: 600;
+    font-size: 0.95rem;
+    color: #1A1A1A;
+}
+
+.usuario-email {
+    font-size: 0.8rem;
+    color: #6B6B6B;
+}
+
+.usuario-estado {
+    font-size: 0.7rem;
+    font-weight: 500;
+    padding: 2px 10px;
+    border-radius: 50px;
+}
+
+.usuario-estado.activo {
+    background: rgba(16, 185, 129, 0.1);
+    color: #10B981;
+}
+
+.usuario-estado.inactivo {
+    background: rgba(239, 68, 68, 0.1);
+    color: #EF4444;
+}
+
+.usuario-detalles {
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+    margin-bottom: 12px;
+    padding: 8px 0;
+    border-top: 1px solid rgba(0, 0, 0, 0.04);
+    border-bottom: 1px solid rgba(0, 0, 0, 0.04);
+}
+
+.detalle-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.8rem;
+    color: #6B6B6B;
+}
+
+.detalle-icono {
+    font-size: 0.9rem;
+}
+
+.usuario-acciones {
+    display: flex;
+    gap: 8px;
+}
+
+.usuario-acciones button {
+    padding: 6px 14px;
+    border: none;
+    border-radius: 6px;
+    font-size: 0.75rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-family: 'Inter', sans-serif;
+}
+
+.btn-editar {
+    background: rgba(59, 130, 246, 0.08);
+    color: #3B82F6;
+}
+
+.btn-editar:hover {
+    background: rgba(59, 130, 246, 0.15);
+}
+
+.btn-toggle {
+    background: rgba(245, 158, 11, 0.08);
+    color: #F59E0B;
+}
+
+.btn-toggle:hover {
+    background: rgba(245, 158, 11, 0.15);
+}
+
+.btn-eliminar {
+    background: rgba(239, 68, 68, 0.08);
+    color: #EF4444;
+}
+
+.btn-eliminar:hover {
+    background: rgba(239, 68, 68, 0.15);
+}
+
+/* Modal */
+.modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(8px);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+}
+
+.modal-container {
+    background: white;
+    border-radius: 16px;
+    max-width: 560px;
+    width: 100%;
+    padding: 28px 32px;
+    max-height: 90vh;
+    overflow-y: auto;
+    animation: modalIn 0.3s ease;
+}
+
+@keyframes modalIn {
+    from { opacity: 0; transform: scale(0.95) translateY(20px); }
+    to { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+.modal-header h2 {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.3rem;
+    margin: 0;
+}
+
+.modal-close {
+    background: transparent;
+    border: none;
+    font-size: 1.2rem;
+    cursor: pointer;
+    color: #6B6B6B;
+    transition: transform 0.3s;
+}
+
+.modal-close:hover {
+    transform: rotate(90deg);
+}
+
+.modal-body {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+}
+
+.form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.form-group label {
+    font-size: 0.8rem;
+    font-weight: 500;
+    color: #1A1A1A;
+}
+
+.input-luxury {
+    padding: 10px 14px;
+    border: 1.5px solid rgba(0, 0, 0, 0.08);
+    border-radius: 8px;
+    font-family: 'Inter', sans-serif;
+    font-size: 0.9rem;
+    transition: border-color 0.3s;
+}
+
+.input-luxury:focus {
+    outline: none;
+    border-color: #8B1A1A;
+}
+
+.permisos-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin-top: 4px;
+}
+
+.checkbox-label {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.8rem;
+    color: #6B6B6B;
+    cursor: pointer;
+}
+
+.checkbox-label input {
+    width: 16px;
+    height: 16px;
+    accent-color: #8B1A1A;
+}
+
+.modal-footer {
+    display: flex;
+    gap: 12px;
+    margin-top: 20px;
+    justify-content: flex-end;
+}
+
+.btn-cancel {
+    padding: 10px 24px;
+    border: 1.5px solid rgba(0, 0, 0, 0.08);
+    border-radius: 8px;
+    background: transparent;
+    cursor: pointer;
+    font-weight: 500;
+}
+
+.btn-save {
+    padding: 10px 28px;
+    background: #8B1A1A;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: 500;
+    transition: all 0.3s;
+}
+
+.btn-save:hover {
+    background: #6B1414;
+    transform: translateY(-2px);
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .page-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 12px;
+    }
+    
+    .btn-nuevo {
+        width: 100%;
+        text-align: center;
+    }
+    
+    .form-row {
+        grid-template-columns: 1fr;
+    }
+    
+    .permisos-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .stats-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .modal-container {
+        margin: 12px;
+        padding: 20px;
+    }
+    
+    .usuario-header {
+        flex-wrap: wrap;
+    }
+    
+    .usuario-acciones {
+        flex-direction: column;
+    }
+    
+    .usuario-acciones button {
+        width: 100%;
+        text-align: center;
+    }
+}
+</style>

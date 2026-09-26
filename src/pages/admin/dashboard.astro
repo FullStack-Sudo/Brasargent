@@ -7,22 +7,40 @@ import { getEstadisticasCubiertos } from '../../lib/cubiertos';
 import { getReservasAceptables } from '../../lib/reservas';
 import { verificarReservasParaLiberar } from '../../lib/liberacion-cubiertos';
 
+// Obtener usuario actual desde locals (seteado en middleware)
+const usuario = Astro.locals.usuario;
+const esSuperAdmin = usuario?.es_super_admin === true || usuario?.es_super_admin === 1;
+const userSucursalId = usuario?.sucursal_id;
+
 // Ejecutar liberación y obtener reservas dentro de 24h
 await verificarReservasParaLiberar();
-const reservasAceptables = await getReservasAceptables();
+const reservasAceptablesAll = await getReservasAceptables();
+const reservasAceptables = (!esSuperAdmin && userSucursalId)
+    ? reservasAceptablesAll.filter((r: any) => r.sucursal_id === userSucursalId)
+    : reservasAceptablesAll;
 
 // Obtener estadísticas de cubiertos
-const cubiertos = await getEstadisticasCubiertos();
+const cubiertosAll = await getEstadisticasCubiertos();
+const cubiertos = (!esSuperAdmin && userSucursalId)
+    ? cubiertosAll.filter((s: any) => s.id === userSucursalId)
+    : cubiertosAll;
 
-// Obtener totales globales
+// Obtener totales globales/por sucursal
+let statsWhere = '';
+const statsParams: any[] = [];
+if (!esSuperAdmin && userSucursalId) {
+    statsWhere = ' AND sucursal_id = ?';
+    statsParams.push(userSucursalId, userSucursalId, userSucursalId, userSucursalId);
+}
+
 const [statsRows] = await pool.query(`
     SELECT 
-        (SELECT COUNT(*) FROM reservas) AS total_reservas,
-        (SELECT COUNT(*) FROM reservas WHERE estado = 'pendiente') AS pendientes,
-        (SELECT COUNT(*) FROM reservas WHERE estado = 'confirmada') AS confirmadas,
-        (SELECT COUNT(*) FROM reservas WHERE estado = 'rechazada') AS rechazadas,
+        (SELECT COUNT(*) FROM reservas WHERE 1=1 ${!esSuperAdmin && userSucursalId ? 'AND sucursal_id = ?' : ''}) AS total_reservas,
+        (SELECT COUNT(*) FROM reservas WHERE estado = 'pendiente' ${!esSuperAdmin && userSucursalId ? 'AND sucursal_id = ?' : ''}) AS pendientes,
+        (SELECT COUNT(*) FROM reservas WHERE estado = 'confirmada' ${!esSuperAdmin && userSucursalId ? 'AND sucursal_id = ?' : ''}) AS confirmadas,
+        (SELECT COUNT(*) FROM reservas WHERE estado = 'rechazada' ${!esSuperAdmin && userSucursalId ? 'AND sucursal_id = ?' : ''}) AS rechazadas,
         (SELECT COUNT(*) FROM clientes) AS total_clientes
-`) as any[];
+`, statsParams) as any[];
 
 const stats = Array.isArray(statsRows) && statsRows.length > 0 ? statsRows[0] : {
     total_reservas: 0,
@@ -33,6 +51,13 @@ const stats = Array.isArray(statsRows) && statsRows.length > 0 ? statsRows[0] : 
 };
 
 // Obtener reservas recientes
+let recWhere = '';
+const recParams: any[] = [];
+if (!esSuperAdmin && userSucursalId) {
+    recWhere = ' WHERE r.sucursal_id = ?';
+    recParams.push(userSucursalId);
+}
+
 const [reservasRecientesRows] = await pool.query(`
     SELECT 
         r.id,
@@ -46,11 +71,50 @@ const [reservasRecientesRows] = await pool.query(`
         s.nombre AS sucursal_nombre
     FROM reservas r
     JOIN sucursales s ON r.sucursal_id = s.id
+    ${recWhere}
     ORDER BY r.created_at DESC
     LIMIT 6
-`) as any[];
+`, recParams) as any[];
 
 const reservasRecientes = Array.isArray(reservasRecientesRows) ? reservasRecientesRows : [];
+
+// Obtener reservas confirmadas y en_curso para el modulo de Asistencia en Vivo
+let asisWhere = ` WHERE r.estado IN ('confirmada', 'en_curso')`;
+const asisParams: any[] = [];
+if (!esSuperAdmin && userSucursalId) {
+    asisWhere += ` AND r.sucursal_id = ?`;
+    asisParams.push(userSucursalId);
+}
+
+const [asistenciaRows] = await pool.query(`
+    SELECT 
+        r.id,
+        r.numero_reserva,
+        r.nombre_cliente,
+        r.telefono,
+        r.telefono_completo,
+        r.codigo_pais,
+        r.fecha,
+        r.hora,
+        r.numero_personas,
+        r.cantidad_ninos,
+        r.cubiertos_reservados,
+        r.personas_asistentes,
+        r.hora_llegada,
+        r.estado,
+        s.nombre AS sucursal_nombre
+    FROM reservas r
+    JOIN sucursales s ON r.sucursal_id = s.id
+    ${asisWhere}
+    ORDER BY 
+        FIELD(r.estado, 'confirmada', 'en_curso'),
+        r.fecha ASC,
+        r.hora ASC
+`, asisParams) as any[];
+
+const reservasAsistencia = Array.isArray(asistenciaRows) ? asistenciaRows : [];
+const totalEnCurso = reservasAsistencia.filter((r: any) => r.estado === 'en_curso').length;
+const totalConfirmadasAsistencia = reservasAsistencia.filter((r: any) => r.estado === 'confirmada').length;
 ---
 
 <AdminLayout title="Dashboard" description="Resumen de actividad y gestión de tu restaurante" currentPage="dashboard">
@@ -122,6 +186,113 @@ const reservasRecientes = Array.isArray(reservasRecientesRows) ? reservasRecient
                     <span class="stat-label">Confirmadas</span>
                 </div>
             </div>
+            <div class="stat-card stat-asistencia-card">
+                <span class="stat-icon">🙋‍♂️</span>
+                <div>
+                    <span class="stat-number">{totalEnCurso} / {reservasAsistencia.length}</span>
+                    <span class="stat-label">En Mesa / Total</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- ============================================
+        SECCIÓN: CONTROL DE ASISTENCIA Y RECEPCIÓN EN VIVO
+        ============================================ -->
+        <div class="section-card asistencia-section">
+            <div class="section-header">
+                <div>
+                    <h3>🙋‍♂️ Control de Asistencia y Recepción en Vivo</h3>
+                    <p class="section-subtitle">Marca la llegada de tus clientes en tiempo real y ajusta los cubiertos ocupados</p>
+                </div>
+                <div class="asistencia-header-actions">
+                    <span class="badge-asistencia-summary">
+                        🟢 <strong>{totalEnCurso}</strong> en mesa | ⏳ <strong>{totalConfirmadasAsistencia}</strong> por llegar
+                    </span>
+                </div>
+            </div>
+
+            <!-- Buscador rápido en vivo -->
+            <div class="asistencia-search-bar">
+                <input 
+                    type="text" 
+                    id="searchAsistenciaInput" 
+                    placeholder="🔍 Buscar cliente por nombre, teléfono o #reserva..." 
+                    oninput="window.filtrarAsistenciaCards()"
+                />
+            </div>
+
+            {reservasAsistencia.length === 0 ? (
+                <div class="empty-state">
+                    <span class="empty-icon">🥂</span>
+                    <p>No hay reservas confirmadas o en curso para mostrar</p>
+                    <span class="empty-sub">Las reservas confirmadas aparecerán aquí para marcar su llegada cuando arriben a la sucursal</span>
+                </div>
+            ) : (
+                <div class="asistencia-grid" id="asistenciaGrid">
+                    {reservasAsistencia.map((r: any) => {
+                        const esEnCurso = r.estado === 'en_curso';
+                        const totalPersonas = (parseInt(r.numero_personas) || 0) + (parseInt(r.cantidad_ninos) || 0);
+                        const cubiertos = r.cubiertos_reservados || totalPersonas;
+                        const horaLlegada = r.hora_llegada ? new Date(r.hora_llegada).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' }) : null;
+                        
+                        return (
+                            <div class={`asistencia-card ${esEnCurso ? 'card-en-curso' : 'card-confirmada'}`}
+                                 data-search={`${r.nombre_cliente} ${r.telefono} ${r.numero_reserva} ${r.sucursal_nombre}`.toLowerCase()}>
+                                <div class="asistencia-card-header">
+                                    <div>
+                                        <div class="client-title-row">
+                                            <strong class="client-name">{r.nombre_cliente}</strong>
+                                            <span class="reserva-code">{r.numero_reserva || 'BR-2026'}</span>
+                                        </div>
+                                        <span class="sucursal-badge">📍 {r.sucursal_nombre}</span>
+                                    </div>
+                                    <span class={`status-pill ${esEnCurso ? 'pill-en-curso' : 'pill-confirmada'}`}>
+                                        {esEnCurso ? `🟢 En Mesa` : '⏳ Por Llegar'}
+                                    </span>
+                                </div>
+
+                                <div class="asistencia-card-body">
+                                    <div class="info-chips-grid">
+                                        <span class="chip-item">📅 {r.fecha ? new Date(r.fecha).toLocaleDateString('es-ES') : 'Hoy'}</span>
+                                        <span class="chip-item">🕐 Hora: <strong>{r.hora}</strong></span>
+                                        <span class="chip-item">👥 Reservado: <strong>{totalPersonas} pers</strong></span>
+                                        {r.cantidad_ninos > 0 && <span class="chip-item">🧒 {r.cantidad_ninos} niños</span>}
+                                    </div>
+                                    {esEnCurso && horaLlegada && (
+                                        <div class="hora-llegada-info">
+                                            ✅ Llegó a las <strong>{horaLlegada}</strong> con <strong>{r.personas_asistentes || cubiertos} personas presentes</strong>
+                                        </div>
+                                    )}
+                                </div>
+
+                                <div class="asistencia-card-footer">
+                                    <button 
+                                        type="button"
+                                        class={`btn-llegada-action ${esEnCurso ? 'btn-modificar' : 'btn-registrar'}`}
+                                        onclick={`window.abrirModalAsistencia(${r.id}, '${String(r.nombre_cliente).replace(/'/g, "\\'")}', ${cubiertos})`}>
+                                        {esEnCurso ? '✏️ Modificar Asistencia' : '🙋‍♂️ Registrar Llegada del Cliente'}
+                                    </button>
+                                    
+                                    <button 
+                                        type="button"
+                                        class="btn-liberar-action"
+                                        onclick={`window.liberarCubiertosMesa(${r.id}, '${String(r.nombre_cliente).replace(/'/g, "\\'")}', ${cubiertos})`}
+                                        title="Liberar cubiertos de la mesa al finalizar el servicio">
+                                        🔓 Liberar Mesa
+                                    </button>
+                                    
+                                    <a href={`https://wa.me/${r.telefono_completo || '591' + r.telefono}`} 
+                                       target="_blank" 
+                                       class="btn-wa-action" 
+                                       title="Enviar mensaje por WhatsApp">
+                                        💬
+                                    </a>
+                                </div>
+                            </div>
+                        );
+                    })}
+                </div>
+            )}
         </div>
 
         <!-- ============================================
@@ -263,11 +434,341 @@ const reservasRecientes = Array.isArray(reservasRecientesRows) ? reservasRecient
                 <button type="button" class="btn-generar" onclick="window.generarReporte()">📥 Descargar Reporte</button>
             </div>
         </div>
+    <!-- Modal Didáctico para Registrar Asistencia -->
+    <div id="modalAsistenciaDashboard" class="modal-reportes" style="display:none;">
+        <div class="modal-reportes-content modal-asistencia-content">
+            <div class="modal-header">
+                <div>
+                    <h2>🙋‍♂️ Registrar Asistencia del Cliente</h2>
+                    <p class="modal-subtext" id="asistenciaModalClientInfo">Confirmar cuántas personas asistieron en total</p>
+                </div>
+                <button type="button" class="modal-close" onclick="window.cerrarModalAsistencia()">✕</button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="asistenciaReservaId" />
+                <input type="hidden" id="asistenciaCubiertosReservados" />
+                
+                <div class="counter-box">
+                    <label style="font-size: 0.85rem; font-weight: 700; color: #1A1A1A;">👥 Personas Presentes / Asistentes:</label>
+                    <div class="counter-control">
+                        <button type="button" class="btn-count-step" onclick="window.cambiarContadorAsistencia(-1)">-</button>
+                        <input type="number" id="inputPersonasAsistentes" value="1" min="1" max="100" oninput="window.actualizarPreviewCubiertos()" />
+                        <button type="button" class="btn-count-step" onclick="window.cambiarContadorAsistencia(1)">+</button>
+                    </div>
+                </div>
+
+                <div class="preview-cubiertos-box" id="previewCubiertosBox">
+                    <span class="preview-icon">🪑</span>
+                    <div class="preview-text" id="previewCubiertosText">
+                        Confirmando asistencia...
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn-cancel" onclick="window.cerrarModalAsistencia()">Cancelar</button>
+                <button type="button" id="btnConfirmarAsistenciaModal" class="btn-generar btn-confirmar-asistencia" onclick="window.guardarAsistenciaDashboard()">
+                    ✅ Confirmar Llegada
+                </button>
+            </div>
+        </div>
     </div>
 </AdminLayout>
 
 <style>
 .btn-excel { background: #C9A87C; color: #1A1A1A; }
+
+/* ============================================
+   CONTROL DE ASISTENCIA Y RECEPCIÓN EN VIVO
+   ============================================ */
+.asistencia-section {
+    border-top: 4px solid #10B981;
+}
+
+.section-subtitle {
+    font-size: 0.8rem;
+    color: #6B7280;
+    margin: 2px 0 0;
+}
+
+.badge-asistencia-summary {
+    font-size: 0.78rem;
+    background: rgba(16, 185, 129, 0.1);
+    color: #047857;
+    padding: 6px 14px;
+    border-radius: 50px;
+    border: 1px solid rgba(16, 185, 129, 0.2);
+    font-weight: 600;
+}
+
+.asistencia-search-bar {
+    margin-bottom: 18px;
+}
+
+.asistencia-search-bar input {
+    width: 100%;
+    padding: 12px 18px;
+    border: 1.5px solid rgba(0, 0, 0, 0.1);
+    border-radius: 12px;
+    font-size: 0.92rem;
+    background: #F9FAFB;
+    font-family: 'Inter', sans-serif;
+    transition: all 0.2s ease;
+    box-sizing: border-box;
+}
+
+.asistencia-search-bar input:focus {
+    outline: none;
+    border-color: #10B981;
+    background: white;
+    box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.12);
+}
+
+.asistencia-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 16px;
+}
+
+.asistencia-card {
+    background: white;
+    border-radius: 16px;
+    padding: 18px 20px;
+    border: 1.5px solid rgba(0, 0, 0, 0.08);
+    box-shadow: 0 3px 12px rgba(0, 0, 0, 0.04);
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    transition: all 0.25s ease;
+}
+
+.asistencia-card.card-confirmada {
+    border-left: 5px solid #F59E0B;
+}
+
+.asistencia-card.card-en-curso {
+    border-left: 5px solid #10B981;
+    background: rgba(240, 253, 244, 0.4);
+}
+
+.asistencia-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 10px;
+}
+
+.client-title-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.client-name {
+    font-size: 1.05rem;
+    color: #1A1A1A;
+    font-weight: 700;
+}
+
+.reserva-code {
+    font-size: 0.72rem;
+    font-family: monospace;
+    font-weight: 700;
+    background: rgba(158, 42, 43, 0.1);
+    color: #9E2A2B;
+    padding: 2px 6px;
+    border-radius: 4px;
+}
+
+.sucursal-badge {
+    font-size: 0.75rem;
+    color: #4B5563;
+    display: block;
+    margin-top: 3px;
+    font-weight: 600;
+}
+
+.status-pill {
+    font-size: 0.72rem;
+    font-weight: 700;
+    padding: 4px 10px;
+    border-radius: 50px;
+    white-space: nowrap;
+}
+
+.pill-confirmada {
+    background: rgba(245, 158, 11, 0.15);
+    color: #D97706;
+}
+
+.pill-en-curso {
+    background: rgba(16, 185, 129, 0.18);
+    color: #047857;
+}
+
+.info-chips-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    font-size: 0.8rem;
+    color: #374151;
+}
+
+.chip-item {
+    background: #F3F4F6;
+    padding: 4px 10px;
+    border-radius: 8px;
+    font-weight: 500;
+}
+
+.hora-llegada-info {
+    margin-top: 6px;
+    padding: 6px 12px;
+    background: rgba(16, 185, 129, 0.1);
+    border-radius: 8px;
+    font-size: 0.8rem;
+    color: #047857;
+}
+
+.asistencia-card-footer {
+    display: flex;
+    gap: 8px;
+    margin-top: 4px;
+}
+
+.btn-liberar-action {
+    padding: 10px 14px;
+    border: none;
+    border-radius: 10px;
+    font-size: 0.82rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-family: 'Inter', sans-serif;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    background: rgba(239, 68, 68, 0.12);
+    color: #DC2626;
+    white-space: nowrap;
+}
+
+.btn-liberar-action:hover {
+    background: rgba(239, 68, 68, 0.22);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(239, 68, 68, 0.15);
+}
+
+.btn-registrar {
+    background: #10B981;
+    color: white;
+}
+
+.btn-registrar:hover {
+    background: #059669;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.25);
+}
+
+.btn-modificar {
+    background: rgba(59, 130, 246, 0.12);
+    color: #2563EB;
+}
+
+.btn-modificar:hover {
+    background: rgba(59, 130, 246, 0.22);
+}
+
+.btn-wa-action {
+    width: 40px;
+    height: 40px;
+    border-radius: 10px;
+    background: rgba(37, 211, 102, 0.12);
+    color: #25D366;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.1rem;
+    text-decoration: none;
+    transition: all 0.2s ease;
+}
+
+.btn-wa-action:hover {
+    background: rgba(37, 211, 102, 0.25);
+    transform: scale(1.05);
+}
+
+/* Modal Didáctico Asistencia */
+.modal-asistencia-content {
+    max-width: 440px;
+}
+
+.counter-box {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    background: #F9FAFB;
+    padding: 20px;
+    border-radius: 16px;
+    border: 1.5px solid rgba(0, 0, 0, 0.06);
+}
+
+.counter-control {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+}
+
+.btn-count-step {
+    width: 44px;
+    height: 44px;
+    border-radius: 12px;
+    border: 1.5px solid rgba(0, 0, 0, 0.1);
+    background: white;
+    font-size: 1.4rem;
+    font-weight: 700;
+    cursor: pointer;
+    color: #1A1A1A;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.btn-count-step:hover {
+    background: #10B981;
+    color: white;
+    border-color: #10B981;
+}
+
+.counter-control input {
+    width: 70px;
+    height: 44px;
+    text-align: center;
+    font-size: 1.4rem;
+    font-weight: 800;
+    border: 1.5px solid rgba(0, 0, 0, 0.1);
+    border-radius: 12px;
+    background: white;
+    color: #1A1A1A;
+}
+
+.preview-cubiertos-box {
+    margin-top: 16px;
+    padding: 14px;
+    border-radius: 12px;
+    background: rgba(16, 185, 129, 0.08);
+    border: 1px solid rgba(16, 185, 129, 0.2);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 0.85rem;
+    color: #047857;
+}
+
+.preview-icon { font-size: 1.3rem; }
 
 /* MODAL DE REPORTES */
 .modal-reportes {
@@ -912,6 +1413,149 @@ window.reiniciarReservas = async function() {
         }
     } catch (e) {
         alert('❌ Error de conexión al reiniciar reservas.');
+    }
+};
+
+// ============================================
+// FUNCIONES DE CONTROL DE ASISTENCIA Y RECEPCIÓN
+// ============================================
+
+window.filtrarAsistenciaCards = function() {
+    const q = (document.getElementById('searchAsistenciaInput')?.value || '').toLowerCase().trim();
+    const cards = document.querySelectorAll('#asistenciaGrid .asistencia-card');
+    cards.forEach(card => {
+        const searchData = card.getAttribute('data-search') || '';
+        if (!q || searchData.includes(q)) {
+            card.style.display = 'flex';
+        } else {
+            card.style.display = 'none';
+        }
+    });
+};
+
+window.abrirModalAsistencia = function(id, nombreCliente, reservados) {
+    const modal = document.getElementById('modalAsistenciaDashboard');
+    const inputId = document.getElementById('asistenciaReservaId');
+    const inputReservados = document.getElementById('asistenciaCubiertosReservados');
+    const inputPersonas = document.getElementById('inputPersonasAsistentes');
+    const labelInfo = document.getElementById('asistenciaModalClientInfo');
+
+    if (!modal || !inputId || !inputPersonas) return;
+
+    inputId.value = String(id);
+    if (inputReservados) inputReservados.value = String(reservados || 1);
+    inputPersonas.value = String(reservados || 1);
+    if (labelInfo) labelInfo.textContent = `Cliente: ${nombreCliente} (${reservados} cubiertos reservados)`;
+
+    window.actualizarPreviewCubiertos();
+
+    modal.style.display = 'flex';
+    document.body.style.overflow = 'hidden';
+};
+
+window.cerrarModalAsistencia = function() {
+    const modal = document.getElementById('modalAsistenciaDashboard');
+    if (modal) {
+        modal.style.display = 'none';
+        document.body.style.overflow = '';
+    }
+};
+
+window.cambiarContadorAsistencia = function(delta) {
+    const input = document.getElementById('inputPersonasAsistentes');
+    if (!input) return;
+    let val = parseInt(input.value || '1', 10) + delta;
+    if (val < 1) val = 1;
+    input.value = String(val);
+    window.actualizarPreviewCubiertos();
+};
+
+window.actualizarPreviewCubiertos = function() {
+    const inputReservados = document.getElementById('asistenciaCubiertosReservados');
+    const inputPersonas = document.getElementById('inputPersonasAsistentes');
+    const boxText = document.getElementById('previewCubiertosText');
+
+    if (!inputReservados || !inputPersonas || !boxText) return;
+
+    const reservados = parseInt(inputReservados.value || '0', 10);
+    const asistentes = parseInt(inputPersonas.value || '0', 10);
+
+    if (asistentes < reservados) {
+        const liberados = reservados - asistentes;
+        boxText.innerHTML = `Llegaron <strong>${asistentes}</strong> personas. ¡Se liberarán <strong>${liberados} cubierto(s)</strong> automáticamente en tiempo real!`;
+    } else if (asistentes > reservados) {
+        boxText.innerHTML = `Llegaron <strong>${asistentes}</strong> personas (más de las ${reservados} reservadas).`;
+    } else {
+        boxText.innerHTML = `Llegaron las <strong>${asistentes}</strong> personas esperadas.`;
+    }
+};
+
+window.guardarAsistenciaDashboard = async function() {
+    const inputId = document.getElementById('asistenciaReservaId');
+    const inputPersonas = document.getElementById('inputPersonasAsistentes');
+    const btnBtn = document.getElementById('btnConfirmarAsistenciaModal');
+
+    if (!inputId || !inputPersonas) return;
+
+    const id = parseInt(inputId.value || '0', 10);
+    const personas = parseInt(inputPersonas.value || '1', 10);
+
+    if (!id || personas < 1) {
+        alert('⚠️ Ingresa una cantidad válida de personas.');
+        return;
+    }
+
+    const originalText = btnBtn ? btnBtn.textContent : 'Confirmar Llegada';
+    try {
+        if (btnBtn) {
+            btnBtn.disabled = true;
+            btnBtn.textContent = '⏳ Guardando...';
+        }
+
+        const res = await fetch(`/api/reservas/${id}/asistencia`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ personas_asistentes: personas })
+        });
+
+        const data = await res.json();
+        if (data.success) {
+            alert(`✅ ${data.mensaje}`);
+            window.cerrarModalAsistencia();
+            window.location.reload();
+        } else {
+            alert(`❌ Error: ${data.error || 'No se pudo guardar la asistencia'}`);
+        }
+    } catch (e) {
+        alert('❌ Error de conexión al registrar la asistencia.');
+    } finally {
+        if (btnBtn) {
+            btnBtn.disabled = false;
+            btnBtn.textContent = originalText;
+        }
+    }
+};
+
+window.liberarCubiertosMesa = async function(id, nombreCliente, cubiertos) {
+    if (!confirm(`🔓 ¿Deseas liberar la mesa de ${nombreCliente}?\n\nEsta acción marcará el servicio como finalizado y devolverá los ${cubiertos} cubiertos al inventario disponible de tu sucursal.`)) {
+        return;
+    }
+
+    try {
+        const response = await fetch(`/api/reservas/${id}/liberar`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' }
+        });
+
+        const data = await response.json();
+        if (data.success) {
+            alert(`✅ ${data.mensaje || 'Mesa y cubiertos liberados exitosamente'}`);
+            window.location.reload();
+        } else {
+            alert(`❌ Error: ${data.error || 'No se pudieron liberar los cubiertos'}`);
+        }
+    } catch (e) {
+        alert('❌ Error de conexión al intentar liberar los cubiertos.');
     }
 };
 </script>
