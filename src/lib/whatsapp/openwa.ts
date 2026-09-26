@@ -95,7 +95,11 @@ class OpenWAClient {
             if (!session) return false;
             
             const status = String(session.status || '').toLowerCase();
-            return status === 'ready' || status === 'connected' || status === 'working' || Boolean(session.phone);
+            // Si la sesión requiere escanear QR, está desconectada o detenida, NO está lista
+            if (['qr_ready', 'scan_qr', 'disconnected', 'stopped', 'unpaired', 'error', 'starting'].includes(status)) {
+                return false;
+            }
+            return status === 'ready' || status === 'connected' || status === 'working' || status === 'authenticated' || status === 'inchat';
         } catch (error) {
             console.error('❌ Error verificando conexión:', error);
             return false;
@@ -107,14 +111,13 @@ class OpenWAClient {
             const session = await this.getSession(sessionName);
             if (!session) return { connected: false, session: sessionName || this.defaultSession };
 
-            const status = String(session.status || '').toLowerCase();
-            const isConnected = status === 'ready' || status === 'connected' || status === 'working' || Boolean(session.phone);
+            const isConnected = await this.checkConnection(sessionName);
 
             return {
                 connected: isConnected,
                 session: session.name || this.defaultSession,
-                phone: session.phone || null,
-                pushName: session.pushName || null
+                phone: isConnected ? (session.phone || null) : null,
+                pushName: isConnected ? (session.pushName || null) : null
             };
         } catch (error) {
             console.error('❌ Error obteniendo info de sesión:', error);
@@ -136,7 +139,7 @@ class OpenWAClient {
             // Validar que OpenWA esté conectado
             const isConnected = await this.checkConnection(data.session);
             if (!isConnected) {
-                const errorMsg = 'OpenWA no está conectado. Escanea el código QR primero.';
+                const errorMsg = 'La sesión de WhatsApp no está conectada. Escanea el código QR en el panel (/admin/whatsapp).';
                 await this.logError(data.to, data.text, errorMsg);
                 return {
                     success: false,
@@ -146,7 +149,7 @@ class OpenWAClient {
 
             const session = await this.getSession(data.session);
             if (!session) {
-                const errorMsg = 'No se encontró la sesión de WhatsApp.';
+                const errorMsg = 'No se encontró la sesión de WhatsApp en OpenWA.';
                 await this.logError(data.to, data.text, errorMsg);
                 return { success: false, error: errorMsg };
             }
@@ -166,7 +169,11 @@ class OpenWAClient {
 
             if (!response.ok) {
                 const errorText = await response.text();
-                throw new Error(`OpenWA API Error (${response.status}): ${errorText}`);
+                let errorMsg = `OpenWA API Error (${response.status}): ${errorText}`;
+                if (response.status === 409 || errorText.includes('Session is not connected')) {
+                    errorMsg = 'La sesión de WhatsApp se desconectó. Por favor, vuelve a vincular el código QR en /admin/whatsapp.';
+                }
+                throw new Error(errorMsg);
             }
 
             const result = await response.json();
