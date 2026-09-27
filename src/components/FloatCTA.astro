@@ -4,11 +4,14 @@ const whatsappNumber = "59178555886";
 const whatsappMessage = encodeURIComponent(
   "Hola! Me gustaría hacer una reserva en Brasargent Rodizio",
 );
+const whatsappUrl = `https://wa.me/${whatsappNumber}?text=${whatsappMessage}`;
 ---
 
 <!-- Botón flotante de WhatsApp -->
 <a
-  href="/#contacto"
+  href={whatsappUrl}
+  target="_blank"
+  rel="noopener noreferrer"
   class="fixed bottom-6 right-6 z-50 group"
   aria-label="Contactar por WhatsApp"
 >

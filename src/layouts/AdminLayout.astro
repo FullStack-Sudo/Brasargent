@@ -3,6 +3,7 @@
 // Layout unificado para todas las páginas del admin
 
 import Sidebar from "../components/admin/Sidebar.astro";
+import '../styles/admin.css';
 
 export interface Props {
     title: string;
@@ -53,401 +54,6 @@ const currentPage = Astro.props.currentPage || (
             href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;0,800;1,400&family=Inter:wght@300;400;500;600;700&family=Montserrat:wght@300;400;500;600;700&display=swap"
             rel="stylesheet"
         />
-
-        <!-- Estilos globales del admin -->
-        <style is:global>
-            /* ============================================
-           RESET Y BASE
-           ============================================ */
-            * {
-                margin: 0;
-                padding: 0;
-                box-sizing: border-box;
-            }
-
-            :root {
-                --carbon: #1a1a1a;
-                --terracota: #9e2a2b;
-                --terracota-light: #b83a3b;
-                --terracota-dark: #7a2021;
-                --madera: #d4a574;
-                --crema: #fffaf0;
-                --crema-dark: #f5ede0;
-                --dorado: #d4af37;
-                --dorado-light: #e8c84a;
-                --success: #10b981;
-                --warning: #f59e0b;
-                --danger: #ef4444;
-                --info: #3b82f6;
-                --sidebar-width: 200px;
-                --header-height: 64px;
-            }
-
-            html, body {
-                width: 100%;
-                max-width: 100vw;
-                overflow-x: hidden !important;
-            }
-
-            body {
-                font-family: "Inter", sans-serif;
-                background: #f8f5f0;
-                color: #1a1a1a;
-                min-height: 100vh;
-                display: flex;
-                overflow-x: hidden !important;
-            }
-
-            .font-serif {
-                font-family: "Playfair Display", serif;
-            }
-
-            /* ============================================
-           LAYOUT PRINCIPAL
-           ============================================ */
-            .admin-layout {
-                display: flex;
-                min-height: 100vh;
-                width: 100%;
-                max-width: 100%;
-                overflow-x: hidden !important;
-            }
-
-            .admin-main {
-                flex: 1;
-                margin-left: var(--sidebar-width);
-                width: calc(100% - var(--sidebar-width));
-                max-width: calc(100% - var(--sidebar-width));
-                min-height: 100vh;
-                background: #f8f5f0;
-                box-sizing: border-box;
-                overflow-x: hidden !important;
-            }
-
-            .admin-content {
-                padding: 24px 32px 40px;
-                max-width: 1400px;
-                margin: 0 auto;
-                width: 100%;
-                box-sizing: border-box;
-                overflow-x: hidden !important;
-            }
-
-            /* ============================================
-           HEADER DEL ADMIN
-           ============================================ */
-            .admin-header {
-                background: white;
-                padding: 16px 32px;
-                border-bottom: 1px solid rgba(26, 26, 26, 0.06);
-                display: flex;
-                justify-content: space-between;
-                align-items: center;
-                position: sticky;
-                top: 0;
-                z-index: 50;
-                box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
-            }
-
-            .admin-header-left {
-                display: flex;
-                align-items: center;
-                gap: 16px;
-            }
-
-            .admin-header-left h1 {
-                font-size: 1.3rem;
-                font-weight: 700;
-                color: #1a1a1a;
-                font-family: "Playfair Display", serif;
-                letter-spacing: -0.01em;
-            }
-
-            .admin-header-left .subtitle {
-                font-size: 0.85rem;
-                color: rgba(26, 26, 26, 0.4);
-                font-weight: 400;
-            }
-
-            .admin-header-right {
-                display: flex;
-                align-items: center;
-                gap: 16px;
-            }
-
-            .admin-header-right .admin-user {
-                display: flex;
-                align-items: center;
-                gap: 10px;
-                padding: 6px 14px 6px 10px;
-                background: #f8f5f0;
-                border-radius: 30px;
-            }
-
-            .admin-header-right .admin-avatar {
-                width: 32px;
-                height: 32px;
-                border-radius: 50%;
-                background: linear-gradient(135deg, #9e2a2b, #d4a574);
-                color: white;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                font-weight: 700;
-                font-size: 0.8rem;
-            }
-
-            .admin-header-right .admin-name {
-                font-weight: 500;
-                font-size: 0.85rem;
-                color: #1a1a1a;
-            }
-
-            .admin-header-right .admin-role {
-                font-size: 0.7rem;
-                color: rgba(26, 26, 26, 0.3);
-            }
-
-            /* ============================================
-               BOTTOM NAVIGATION (MÓVIL ≤768px)
-               ============================================ */
-            .bottom-nav {
-                display: none;
-                position: fixed;
-                bottom: 0;
-                left: 0;
-                right: 0;
-                background: rgba(255, 255, 255, 0.96);
-                backdrop-filter: blur(16px);
-                -webkit-backdrop-filter: blur(16px);
-                border-top: 1px solid rgba(0, 0, 0, 0.08);
-                padding: 8px 12px 12px;
-                z-index: 9999;
-                justify-content: space-around;
-                align-items: center;
-                box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.06);
-            }
-
-            .bottom-nav .nav-item {
-                display: flex;
-                flex-direction: column;
-                align-items: center;
-                gap: 3px;
-                text-decoration: none;
-                color: #6B6B6B;
-                font-size: 0.65rem;
-                font-weight: 600;
-                transition: all 0.3s ease;
-                padding: 4px 10px;
-                border-radius: 12px;
-                border: none;
-                background: transparent;
-                cursor: pointer;
-                font-family: 'Inter', sans-serif;
-                min-width: 56px;
-            }
-
-            .bottom-nav .nav-item .icon {
-                font-size: 1.3rem;
-                line-height: 1;
-                transition: transform 0.2s ease;
-            }
-
-            .bottom-nav .nav-item.active {
-                color: #9e2a2b;
-            }
-
-            .bottom-nav .nav-item.active .icon {
-                transform: scale(1.15);
-            }
-
-            .bottom-nav .nav-item:hover {
-                color: #9e2a2b;
-            }
-
-            /* Menú flotante de accesos directos ("Más") */
-            .quick-menu {
-                display: none;
-                position: fixed;
-                bottom: 74px;
-                right: 16px;
-                background: #FFFFFF;
-                border-radius: 18px;
-                box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
-                padding: 8px 0;
-                min-width: 200px;
-                border: 1px solid rgba(0, 0, 0, 0.08);
-                z-index: 10000;
-                animation: quickMenuPopup 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
-            }
-
-            .quick-menu.open {
-                display: block;
-            }
-
-            @keyframes quickMenuPopup {
-                from { opacity: 0; transform: translateY(12px) scale(0.95); }
-                to { opacity: 1; transform: translateY(0) scale(1); }
-            }
-
-            .quick-menu a {
-                display: flex;
-                align-items: center;
-                gap: 12px;
-                padding: 10px 18px;
-                color: #1A1A1A;
-                text-decoration: none;
-                font-size: 0.85rem;
-                font-weight: 600;
-                transition: background 0.2s ease, color 0.2s ease;
-                font-family: 'Inter', sans-serif;
-            }
-
-            .quick-menu a:hover {
-                background: rgba(158, 42, 43, 0.06);
-                color: #9e2a2b;
-            }
-
-            .quick-menu .divider {
-                height: 1px;
-                background: rgba(0, 0, 0, 0.06);
-                margin: 6px 12px;
-            }
-
-            .quick-menu .menu-icon {
-                font-size: 1.1rem;
-                width: 22px;
-                text-align: center;
-            }
-
-            /* ============================================
-               RESPONSIVE (MÓVIL ≤768px)
-               ============================================ */
-            @media (max-width: 768px) {
-                body {
-                    display: block !important;
-                }
-
-                .admin-layout {
-                    display: block !important;
-                    width: 100% !important;
-                    max-width: 100% !important;
-                    overflow-x: hidden !important;
-                }
-
-                .admin-main {
-                    margin-left: 0 !important;
-                    width: 100% !important;
-                    max-width: 100% !important;
-                    padding-bottom: 90px !important;
-                    overflow-x: hidden !important;
-                }
-
-                .admin-content {
-                    padding: 16px 12px 80px !important;
-                    width: 100% !important;
-                    max-width: 100% !important;
-                    box-sizing: border-box !important;
-                    overflow-x: hidden !important;
-                }
-
-                .admin-header {
-                    padding: 12px 16px !important;
-                    width: 100% !important;
-                    max-width: 100% !important;
-                    box-sizing: border-box !important;
-                }
-
-                .admin-header-left .subtitle {
-                    display: none;
-                }
-
-                .admin-header-right .admin-name {
-                    display: none;
-                }
-
-                .admin-header-right .admin-role {
-                    display: none;
-                }
-
-                .bottom-nav {
-                    display: flex !important;
-                }
-            }
-
-            @media (max-width: 480px) {
-                .admin-content {
-                    padding: 12px 8px 90px !important;
-                }
-
-                .admin-header {
-                    padding: 10px 12px !important;
-                    flex-wrap: wrap;
-                    gap: 8px;
-                }
-
-                .admin-header-left h1 {
-                    font-size: 1.1rem;
-                }
-
-                .bottom-nav {
-                    padding: 6px 8px 10px;
-                }
-
-                .bottom-nav .nav-item {
-                    font-size: 0.55rem;
-                    padding: 4px 6px;
-                    min-width: 48px;
-                }
-
-                .bottom-nav .nav-item .icon {
-                    font-size: 1.2rem;
-                }
-            }
-
-            /* ============================================
-           ANIMACIONES
-           ============================================ */
-            @keyframes fadeInUp {
-                from {
-                    opacity: 0;
-                    transform: translateY(12px);
-                }
-                to {
-                    opacity: 1;
-                    transform: translateY(0);
-                }
-            }
-
-            .fade-in-up {
-                animation: fadeInUp 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-            }
-
-            /* ============================================
-           UTILIDADES
-           ============================================ */
-            .text-terracota {
-                color: var(--terracota);
-            }
-            .text-success {
-                color: var(--success);
-            }
-            .text-warning {
-                color: var(--warning);
-            }
-            .text-danger {
-                color: var(--danger);
-            }
-            .text-info {
-                color: var(--info);
-            }
-            .bg-crema {
-                background: var(--crema);
-            }
-            .bg-carbon {
-                background: var(--carbon);
-            }
-        </style>
     </head>
     <body>
         <div class="admin-layout">
@@ -512,6 +118,12 @@ const currentPage = Astro.props.currentPage || (
             
             <!-- 🔴 MENÚ DE ACCESOS DIRECTOS -->
             <div class="quick-menu" id="quickMenu" role="menu">
+                {esSuperAdmin && (
+                    <a href="/admin/usuarios" role="menuitem">
+                        <span class="menu-icon">👑</span>
+                        <span>Administradores</span>
+                    </a>
+                )}
                 <a href="/admin/clientes" role="menuitem">
                     <span class="menu-icon">👥</span>
                     <span>Clientes</span>
@@ -520,14 +132,20 @@ const currentPage = Astro.props.currentPage || (
                     <span class="menu-icon">🍽️</span>
                     <span>Menú</span>
                 </a>
-                <a href="/admin/configuracion" role="menuitem">
-                    <span class="menu-icon">⚙️</span>
-                    <span>Configuración</span>
+                <a href="/admin/precios" role="menuitem">
+                    <span class="menu-icon">💰</span>
+                    <span>Precios & Festivos</span>
                 </a>
                 <a href="/admin/whatsapp" role="menuitem">
                     <span class="menu-icon">💬</span>
                     <span>WhatsApp</span>
                 </a>
+                {esSuperAdmin && (
+                    <a href="/admin/configuracion" role="menuitem">
+                        <span class="menu-icon">⚙️</span>
+                        <span>Configuración</span>
+                    </a>
+                )}
                 <div class="divider"></div>
                 <a href="/admin/logout" role="menuitem" style="color: #EF4444;">
                     <span class="menu-icon">🚪</span>

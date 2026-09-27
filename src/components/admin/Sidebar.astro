@@ -93,18 +93,20 @@ if (userRole === 'cocinero' && modulosActivos['modulo_cocina']) {
 
 <aside class="sidebar-compact">
     <!-- Logo de la Empresa (Animación Parpadeo Lento entre blanca.png y negro.png) -->
-    <div class="sidebar-logo">
+    <div class="sidebar-logo" style="max-height: 60px; overflow: hidden;">
         <a href="/admin/dashboard" class="sidebar-logo-link" aria-label="Brasargent Dashboard">
-            <div class="logo-blinking-wrapper">
+            <div class="logo-blinking-wrapper" style="max-height: 48px; max-width: 160px; overflow: hidden; position: relative;">
                 <img 
                     src="/img/logo/blanca.png" 
                     alt="Brasargent Rodizio Logo" 
                     class="logo-img logo-img-white"
+                    style="max-height: 44px; max-width: 160px; width: auto; object-fit: contain;"
                 />
                 <img 
                     src="/img/logo/negro.png" 
                     alt="Brasargent Rodizio Logo" 
                     class="logo-img logo-img-black"
+                    style="max-height: 44px; max-width: 160px; width: auto; object-fit: contain;"
                 />
             </div>
         </a>

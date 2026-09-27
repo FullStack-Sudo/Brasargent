@@ -62,57 +62,58 @@ const formatearFecha = (fecha: string) => {
 ---
 
 <AdminLayout title="Clientes" description="Gestión de todos los clientes registrados">
-    <!-- Estadísticas -->
-    <div class="stats-grid">
-        <div class="stat-card">
-            <div class="stat-icon" style="background: rgba(59, 130, 246, 0.1); color: #3b82f6;">👥</div>
-            <div class="stat-info">
-                <span class="stat-number">{estadisticas.total}</span>
-                <span class="stat-label">Total Clientes</span>
+    <div class="clientes-page">
+        <!-- Estadísticas -->
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-icon" style="background: rgba(59, 130, 246, 0.12); color: #3b82f6;">👥</div>
+                <div class="stat-info">
+                    <span class="stat-number">{estadisticas.total}</span>
+                    <span class="stat-label">Total Clientes</span>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon" style="background: rgba(16, 185, 129, 0.12); color: #10b981;">✅</div>
+                <div class="stat-info">
+                    <span class="stat-number">{estadisticas.activos}</span>
+                    <span class="stat-label">Activos</span>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon" style="background: rgba(158, 42, 43, 0.12); color: #9e2a2b;">📋</div>
+                <div class="stat-info">
+                    <span class="stat-number">{estadisticas.con_reservas}</span>
+                    <span class="stat-label">Con Reservas</span>
+                </div>
             </div>
         </div>
-        <div class="stat-card">
-            <div class="stat-icon" style="background: rgba(16, 185, 129, 0.1); color: #10b981;">✅</div>
-            <div class="stat-info">
-                <span class="stat-number">{estadisticas.activos}</span>
-                <span class="stat-label">Activos</span>
-            </div>
-        </div>
-        <div class="stat-card">
-            <div class="stat-icon" style="background: rgba(158, 42, 43, 0.1); color: #9e2a2b;">📋</div>
-            <div class="stat-info">
-                <span class="stat-number">{estadisticas.con_reservas}</span>
-                <span class="stat-label">Con Reservas</span>
-            </div>
-        </div>
-    </div>
-        
+            
         <!-- Buscador -->
         <div class="buscador-container">
-        <form method="GET" class="buscador-form">
-            <div class="buscador-input">
-                <span class="buscador-icon">🔍</span>
-                <input 
-                    type="text" 
-                    name="busqueda" 
-                    placeholder="Buscar por nombre o teléfono..." 
-                    value={busqueda}
-                />
-            </div>
-            <button type="submit" class="btn-buscar">Buscar</button>
-            {busqueda && (
-                <a href="/admin/clientes" class="btn-limpiar">✕ Limpiar</a>
-            )}
-        </form>
-    </div>
-    
-    <!-- Tabla -->
-    <div class="section-card">
+            <form method="GET" class="buscador-form">
+                <div class="buscador-input">
+                    <span class="buscador-icon">🔍</span>
+                    <input 
+                        type="text" 
+                        name="busqueda" 
+                        placeholder="Buscar por nombre o teléfono..." 
+                        value={busqueda}
+                    />
+                </div>
+                <button type="submit" class="btn-buscar">🔍 Buscar</button>
+                {busqueda && (
+                    <a href="/admin/clientes" class="btn-limpiar">✕ Limpiar</a>
+                )}
+            </form>
+        </div>
+        
+        <!-- Tabla Desktop -->
+        <div class="section-card desktop-table-view">
             {clientes.length === 0 ? (
                 <div class="empty-state">
                     <span class="empty-icon">📭</span>
                     <p>No hay clientes registrados</p>
-                    <span class="empty-sub">Los clientes aparecerán aquí cuando hagan reservas</span>
+                    <span class="empty-sub">Los clientes aparecerán aquí cuando realicen reservas</span>
                 </div>
             ) : (
                 <div class="table-wrapper">
@@ -134,7 +135,7 @@ const formatearFecha = (fecha: string) => {
                                 <tr>
                                     <td>{index + 1}</td>
                                     <td>
-                                        <strong>{cliente.nombre}</strong>
+                                        <strong class="cliente-nombre">{cliente.nombre}</strong>
                                     </td>
                                     <td>
                                         <a href={`https://wa.me/${cliente.telefono_completo || '591' + cliente.telefono}`} 
@@ -144,7 +145,7 @@ const formatearFecha = (fecha: string) => {
                                         </a>
                                     </td>
                                     <td>
-                                        <span class="badge-reservas">{cliente.total_reservas || 0}</span>
+                                        <span class="badge-reservas">{cliente.total_reservas || 0} res.</span>
                                     </td>
                                     <td>
                                         {cliente.ultima_reserva ? formatearFecha(cliente.ultima_reserva) : '-'}
@@ -158,11 +159,11 @@ const formatearFecha = (fecha: string) => {
                                     <td>
                                         <div class="acciones-btns">
                                             <button class="btn-whatsapp" 
-                                                    onclick={`enviarWhatsAppCliente('${cliente.telefono_completo || '591' + cliente.telefono}', '${cliente.nombre}')`}>
+                                                    onclick={`enviarWhatsAppCliente('${cliente.telefono_completo || '591' + cliente.telefono}', '${cliente.nombre}')`} title="Contactar por WhatsApp">
                                                 💬
                                             </button>
                                             <button class="btn-detalle" 
-                                                    onclick={`verReservasCliente(${cliente.id})`} title="Ver detalles">
+                                                    onclick={`verReservasCliente(${cliente.id})`} title="Ver historial de reservas">
                                                 📋
                                             </button>
                                             <button class="btn-eliminar" 
@@ -178,6 +179,66 @@ const formatearFecha = (fecha: string) => {
                 </div>
             )}
         </div>
+
+        <!-- Tarjetas Móviles (optimizadas para móviles ≤768px) -->
+        <div class="mobile-clientes-cards">
+            {clientes.length === 0 ? (
+                <div class="empty-state">
+                    <span class="empty-icon">📭</span>
+                    <p>No hay clientes registrados</p>
+                </div>
+            ) : (
+                clientes.map((cliente: any, index: number) => (
+                    <div class="cliente-mobile-card">
+                        <div class="cm-card-header">
+                            <div>
+                                <h3 class="cm-nombre">{cliente.nombre}</h3>
+                                <span class="cm-id">Cliente #{index + 1}</span>
+                            </div>
+                            <span class={`badge ${cliente.activo ? 'badge-activo' : 'badge-inactivo'}`}>
+                                {cliente.activo ? '✅ Activo' : '❌ Inactivo'}
+                            </span>
+                        </div>
+
+                        <div class="cm-card-contact">
+                            <a href={`https://wa.me/${cliente.telefono_completo || '591' + cliente.telefono}`} 
+                               target="_blank" 
+                               class="whatsapp-link-mobile">
+                                💬 WhatsApp: +{cliente.codigo_pais || '591'} {cliente.telefono}
+                            </a>
+                        </div>
+
+                        <div class="cm-card-grid">
+                            <div class="cm-grid-item">
+                                <span class="cm-label">Reservas</span>
+                                <span class="cm-val highlight-blue">📋 {cliente.total_reservas || 0}</span>
+                            </div>
+                            <div class="cm-grid-item">
+                                <span class="cm-label">Última Reserva</span>
+                                <span class="cm-val">{cliente.ultima_reserva ? formatearFecha(cliente.ultima_reserva) : '-'}</span>
+                            </div>
+                            <div class="cm-grid-item">
+                                <span class="cm-label">Registro</span>
+                                <span class="cm-val">{formatearFecha(cliente.fecha_registro)}</span>
+                            </div>
+                        </div>
+
+                        <div class="cm-card-actions">
+                            <button class="cm-btn cm-btn-wa" onclick={`enviarWhatsAppCliente('${cliente.telefono_completo || '591' + cliente.telefono}', '${cliente.nombre}')`}>
+                                💬 WhatsApp
+                            </button>
+                            <button class="cm-btn cm-btn-det" onclick={`verReservasCliente(${cliente.id})`}>
+                                📋 Reservas
+                            </button>
+                            <button class="cm-btn cm-btn-del" onclick={`borrarCliente(${cliente.id}, '${cliente.nombre}')`}>
+                                🗑️ Eliminar
+                            </button>
+                        </div>
+                    </div>
+                ))
+            )}
+        </div>
+    </div>
 </AdminLayout>
 
 <script>
@@ -370,19 +431,73 @@ document.addEventListener('DOMContentLoaded', function() {
 /* ============================================
    ESTILOS DE CLIENTES
    ============================================ */
-.clientes-page { padding: 24px; max-width: 1400px; margin: 0 auto; }
+.clientes-page {
+    padding: 0;
+    max-width: 1400px;
+    margin: 0 auto;
+}
 
+/* Stats Grid */
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+    margin-bottom: 24px;
+}
+
+.stat-card {
+    background: #ffffff;
+    border-radius: 14px;
+    padding: 18px 22px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.04);
+    border: 1px solid rgba(26, 26, 26, 0.05);
+}
+
+.stat-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.4rem;
+    flex-shrink: 0;
+}
+
+.stat-info {
+    display: flex;
+    flex-direction: column;
+}
+
+.stat-number {
+    font-size: 1.6rem;
+    font-weight: 700;
+    color: #1a1a1a;
+    line-height: 1.2;
+}
+
+.stat-label {
+    font-size: 0.85rem;
+    color: rgba(26, 26, 26, 0.5);
+    font-weight: 500;
+}
+
+/* Buscador */
 .buscador-container {
     background: white;
     padding: 16px 20px;
-    border-radius: 12px;
+    border-radius: 14px;
     margin-bottom: 24px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.04);
+    border: 1px solid rgba(26, 26, 26, 0.05);
 }
 
 .buscador-form {
     display: flex;
-    gap: 16px;
+    gap: 12px;
     align-items: center;
 }
 
@@ -396,18 +511,20 @@ document.addEventListener('DOMContentLoaded', function() {
 .buscador-icon {
     position: absolute;
     left: 14px;
+    font-size: 1rem;
     color: rgba(26, 26, 26, 0.4);
 }
 
 .buscador-input input {
     width: 100%;
-    padding: 10px 14px 10px 40px;
+    padding: 12px 14px 12px 42px;
     border: 1.5px solid rgba(26, 26, 26, 0.08);
-    border-radius: 8px;
+    border-radius: 10px;
     font-size: 0.95rem;
     background: white;
     transition: all 0.3s ease;
     font-family: 'Inter', sans-serif;
+    color: #1a1a1a;
 }
 
 .buscador-input input:focus {
@@ -417,42 +534,53 @@ document.addEventListener('DOMContentLoaded', function() {
 }
 
 .btn-buscar {
-    padding: 10px 24px;
+    padding: 12px 24px;
     background: #9e2a2b;
     color: #fffaf0;
     border: none;
-    border-radius: 8px;
+    border-radius: 10px;
     font-size: 0.9rem;
-    font-weight: 500;
+    font-weight: 600;
     cursor: pointer;
     transition: all 0.3s ease;
     font-family: 'Inter', sans-serif;
+    white-space: nowrap;
 }
 
-.btn-buscar:hover { background: #7a2021; }
+.btn-buscar:hover {
+    background: #7a2021;
+    transform: translateY(-1px);
+}
 
 .btn-limpiar {
-    padding: 10px 16px;
+    padding: 12px 18px;
     background: transparent;
     color: #1a1a1a;
-    border: 1.5px solid rgba(26, 26, 26, 0.08);
-    border-radius: 8px;
+    border: 1.5px solid rgba(26, 26, 26, 0.1);
+    border-radius: 10px;
     font-size: 0.9rem;
+    font-weight: 500;
     text-decoration: none;
     transition: all 0.3s ease;
+    white-space: nowrap;
 }
 
-.btn-limpiar:hover { background: rgba(26, 26, 26, 0.04); }
+.btn-limpiar:hover {
+    background: rgba(26, 26, 26, 0.04);
+}
 
+/* Tabla Desktop */
 .section-card {
     background: white;
-    border-radius: 12px;
+    border-radius: 14px;
     overflow: hidden;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.04);
+    border: 1px solid rgba(26, 26, 26, 0.05);
 }
 
 .table-wrapper {
     overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
 }
 
 .tabla-clientes {
@@ -465,10 +593,10 @@ document.addEventListener('DOMContentLoaded', function() {
 }
 
 .tabla-clientes th {
-    padding: 12px 16px;
+    padding: 14px 18px;
     text-align: left;
-    font-size: 0.8rem;
-    font-weight: 600;
+    font-size: 0.75rem;
+    font-weight: 700;
     color: rgba(26, 26, 26, 0.5);
     text-transform: uppercase;
     letter-spacing: 0.5px;
@@ -476,7 +604,7 @@ document.addEventListener('DOMContentLoaded', function() {
 }
 
 .tabla-clientes td {
-    padding: 12px 16px;
+    padding: 14px 18px;
     font-size: 0.9rem;
     color: #1a1a1a;
     border-bottom: 1px solid rgba(26, 26, 26, 0.04);
@@ -484,87 +612,92 @@ document.addEventListener('DOMContentLoaded', function() {
 }
 
 .tabla-clientes tr:hover td {
-    background: rgba(255, 250, 240, 0.3);
+    background: rgba(255, 250, 240, 0.4);
+}
+
+.cliente-nombre {
+    font-weight: 600;
+    color: #1a1a1a;
 }
 
 .badge-reservas {
     display: inline-block;
-    padding: 2px 12px;
+    padding: 4px 12px;
     border-radius: 20px;
     background: rgba(59, 130, 246, 0.1);
-    color: #3b82f6;
+    color: #1d4ed8;
     font-weight: 600;
+    font-size: 0.8rem;
+}
+
+.badge {
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 0.78rem;
+    font-weight: 600;
+    display: inline-block;
 }
 
 .badge-activo {
     background: rgba(16, 185, 129, 0.1);
-    color: #10b981;
+    color: #047857;
 }
 
 .badge-inactivo {
     background: rgba(239, 68, 68, 0.1);
-    color: #ef4444;
+    color: #dc2626;
 }
 
 .whatsapp-link {
-    color: #25d366;
+    color: #16a34a;
     text-decoration: none;
-    font-weight: 500;
-    transition: all 0.3s ease;
+    font-weight: 600;
+    transition: all 0.2s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
 }
 
 .whatsapp-link:hover {
-    color: #1da851;
+    color: #15803d;
     text-decoration: underline;
 }
 
 .acciones-btns {
     display: flex;
-    gap: 6px;
+    gap: 8px;
 }
 
 .acciones-btns button {
-    width: 32px;
-    height: 32px;
+    width: 36px;
+    height: 36px;
     border: none;
-    border-radius: 6px;
+    border-radius: 8px;
     cursor: pointer;
-    font-size: 0.9rem;
-    transition: all 0.3s ease;
+    font-size: 0.95rem;
+    transition: all 0.2s ease;
     display: flex;
     align-items: center;
     justify-content: center;
 }
 
 .btn-whatsapp {
-    background: rgba(37, 211, 102, 0.1);
-    color: #25d366;
+    background: rgba(37, 211, 102, 0.12);
+    color: #16a34a;
 }
-
-.btn-whatsapp:hover {
-    background: rgba(37, 211, 102, 0.2);
-    transform: scale(1.1);
-}
+.btn-whatsapp:hover { background: rgba(37, 211, 102, 0.25); transform: scale(1.08); }
 
 .btn-detalle {
-    background: rgba(59, 130, 246, 0.1);
-    color: #3b82f6;
+    background: rgba(59, 130, 246, 0.12);
+    color: #1d4ed8;
 }
-
-.btn-detalle:hover {
-    background: rgba(59, 130, 246, 0.2);
-    transform: scale(1.1);
-}
+.btn-detalle:hover { background: rgba(59, 130, 246, 0.25); transform: scale(1.08); }
 
 .btn-eliminar {
-    background: rgba(239, 68, 68, 0.1);
-    color: #ef4444;
+    background: rgba(239, 68, 68, 0.12);
+    color: #dc2626;
 }
-
-.btn-eliminar:hover {
-    background: rgba(239, 68, 68, 0.2);
-    transform: scale(1.1);
-}
+.btn-eliminar:hover { background: rgba(239, 68, 68, 0.25); transform: scale(1.08); }
 
 .empty-state {
     text-align: center;
@@ -589,36 +722,156 @@ document.addEventListener('DOMContentLoaded', function() {
     font-size: 0.9rem;
 }
 
-/* Responsive */
-@media (max-width: 768px) {
-    .estadisticas-grid {
-        grid-template-columns: 1fr;
+/* Tarjetas Móviles */
+.mobile-clientes-cards {
+    display: none;
+    flex-direction: column;
+    gap: 14px;
+}
+
+.cliente-mobile-card {
+    background: #ffffff;
+    border-radius: 16px;
+    padding: 16px;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.05);
+    border: 1px solid rgba(26, 26, 26, 0.06);
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.cm-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+}
+
+.cm-nombre {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: #1a1a1a;
+    margin: 0;
+    font-family: 'Playfair Display', serif;
+}
+
+.cm-id {
+    font-size: 0.72rem;
+    color: rgba(26, 26, 26, 0.4);
+    font-weight: 500;
+}
+
+.cm-card-contact {
+    background: #f8f5f0;
+    padding: 10px 12px;
+    border-radius: 10px;
+}
+
+.whatsapp-link-mobile {
+    color: #15803d;
+    text-decoration: none;
+    font-weight: 600;
+    font-size: 0.88rem;
+}
+
+.cm-card-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+    background: #ffffff;
+    border: 1px solid #f0e9df;
+    padding: 10px;
+    border-radius: 10px;
+    text-align: center;
+}
+
+.cm-grid-item {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.cm-label {
+    font-size: 0.65rem;
+    color: #6b7280;
+    text-transform: uppercase;
+    font-weight: 600;
+}
+
+.cm-val {
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: #1a1a1a;
+}
+
+.highlight-blue {
+    color: #1d4ed8;
+}
+
+.cm-card-actions {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+    padding-top: 10px;
+    border-top: 1px solid #f3f4f6;
+}
+
+.cm-btn {
+    padding: 9px 8px;
+    border-radius: 8px;
+    font-size: 0.78rem;
+    font-weight: 600;
+    border: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    transition: all 0.2s ease;
+}
+
+.cm-btn-wa { background: rgba(37, 211, 102, 0.12); color: #16a34a; }
+.cm-btn-det { background: rgba(59, 130, 246, 0.12); color: #1d4ed8; }
+.cm-btn-del { background: rgba(239, 68, 68, 0.12); color: #dc2626; }
+
+/* Responsive Breakpoints */
+@media (max-width: 900px) {
+    .stats-grid {
+        grid-template-columns: repeat(3, 1fr);
     }
-    
+}
+
+@media (max-width: 768px) {
+    .stats-grid {
+        grid-template-columns: 1fr;
+        gap: 10px;
+    }
+
+    .stat-card {
+        padding: 14px 18px;
+    }
+
     .buscador-form {
         flex-direction: column;
+        gap: 10px;
     }
-    
+
     .buscador-input {
         width: 100%;
     }
-    
+
     .btn-buscar,
     .btn-limpiar {
         width: 100%;
         text-align: center;
+        justify-content: center;
     }
-    
-    .page-header {
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 12px;
+
+    .desktop-table-view {
+        display: none;
     }
-    
-    .tabla-clientes td,
-    .tabla-clientes th {
-        padding: 8px 12px;
-        font-size: 0.8rem;
+
+    .mobile-clientes-cards {
+        display: flex;
     }
 }
 </style>
