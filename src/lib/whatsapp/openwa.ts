@@ -36,11 +36,10 @@ class OpenWAClient {
         this.apiKey = getEnv('OPENWA_API_KEY') || 'owa_k1_a7424af6e46cc9dbb8b8dffa789ae56897d11c736bdb7f7bb80a3d140edbc58b';
         this.defaultSession = getEnv('OPENWA_DEFAULT_SESSION') || 'brasargent';
     }
-
     private getHeaders() {
         const apiKey = getEnv('OPENWA_API_KEY') || this.apiKey;
         return {
-            'Authorization': `Bearer ${apiKey}`,
+            'X-API-Key': apiKey,
             'Content-Type': 'application/json'
         };
     }
