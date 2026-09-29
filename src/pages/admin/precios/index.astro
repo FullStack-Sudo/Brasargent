@@ -225,10 +225,15 @@ const sucursales = sucursalesRows;
 
             let html = '';
             festivos.forEach(f => {
-                const fechaFmt = new Date(f.fecha + 'T12:00:00').toLocaleDateString('es-ES', { weekday: 'short', year: 'numeric', month: 'long', day: 'numeric' });
+                const strFecha = typeof f.fecha === 'string' ? f.fecha.split('T')[0] : (f.fecha ? new Date(f.fecha).toISOString().split('T')[0] : '');
+                const fechaObj = strFecha ? new Date(strFecha + 'T12:00:00') : null;
+                const fechaFmt = (fechaObj && !isNaN(fechaObj.getTime()))
+                    ? fechaObj.toLocaleDateString('es-ES', { weekday: 'short', year: 'numeric', month: 'long', day: 'numeric' })
+                    : (strFecha || f.fecha || 'Sin fecha');
+                const fechaCap = fechaFmt ? fechaFmt.charAt(0).toUpperCase() + fechaFmt.slice(1) : '';
                 html += `
                     <tr>
-                        <td><strong>${fechaFmt}</strong></td>
+                        <td><strong>${fechaCap}</strong></td>
                         <td>${f.descripcion}</td>
                         <td>
                             <span class="badge-festivo">${f.sin_reservas ? '🚫 Sin Reservas' : '✅ Permitidas'}</span>

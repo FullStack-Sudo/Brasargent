@@ -141,15 +141,20 @@ const sucursales = sucursalesRows || [];
 
             let html = '';
             fechas.forEach(f => {
-                const fechaObj = new Date(f.fecha + 'T12:00:00');
-                const fechaFmt = fechaObj.toLocaleDateString('es-ES', { year: 'numeric', month: 'long', day: 'numeric' });
-                const diaFmt = fechaObj.toLocaleDateString('es-ES', { weekday: 'long' });
-                const diaCap = diaFmt.charAt(0).toUpperCase() + diaFmt.slice(1);
+                const strFecha = typeof f.fecha === 'string' ? f.fecha.split('T')[0] : (f.fecha ? new Date(f.fecha).toISOString().split('T')[0] : '');
+                const fechaObj = strFecha ? new Date(strFecha + 'T12:00:00') : null;
+                const fechaFmt = (fechaObj && !isNaN(fechaObj.getTime()))
+                    ? fechaObj.toLocaleDateString('es-ES', { year: 'numeric', month: 'long', day: 'numeric' })
+                    : strFecha;
+                const diaFmt = (fechaObj && !isNaN(fechaObj.getTime()))
+                    ? fechaObj.toLocaleDateString('es-ES', { weekday: 'long' })
+                    : '';
+                const diaCap = diaFmt ? diaFmt.charAt(0).toUpperCase() + diaFmt.slice(1) : '-';
                 const sucursalNombre = f.sucursal_nombre || (f.sucursal_id ? `Sucursal #${f.sucursal_id}` : 'Todas');
 
                 html += `
                     <tr>
-                        <td><strong>${f.fecha}</strong></td>
+                        <td><strong>${strFecha}</strong> <span style="color: #6b7280; font-size: 0.8rem;">(${fechaFmt})</span></td>
                         <td>${diaCap}</td>
                         <td><span class="badge-sucursal">${sucursalNombre}</span></td>
                         <td>${f.descripcion}</td>

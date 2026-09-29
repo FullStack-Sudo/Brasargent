@@ -8,17 +8,32 @@ export const GET: APIRoute = async ({ url, cookies }) => {
             return new Response(JSON.stringify({ success: false, error: 'No autorizado' }), { status: 401 });
         }
 
-        const sucursalId = parseInt(url.searchParams.get('sucursal_id') || '0');
-        if (!sucursalId) {
-            return new Response(JSON.stringify({ success: false, error: 'sucursal_id requerido' }), { status: 400 });
+        const sucursalIdParam = url.searchParams.get('sucursal_id');
+        const sucursalId = sucursalIdParam ? parseInt(sucursalIdParam, 10) : 0;
+
+        let sql = `
+            SELECT 
+                df.id, 
+                df.sucursal_id, 
+                DATE_FORMAT(df.fecha, '%Y-%m-%d') AS fecha, 
+                df.descripcion, 
+                df.sin_reservas, 
+                s.nombre AS sucursal_nombre 
+            FROM dias_festivos df 
+            LEFT JOIN sucursales s ON df.sucursal_id = s.id
+        `;
+        const params: any[] = [];
+
+        if (sucursalId > 0) {
+            sql += ` WHERE df.sucursal_id = ?`;
+            params.push(sucursalId);
         }
 
-        const [festivos] = await query(
-            `SELECT * FROM dias_festivos WHERE sucursal_id = ? ORDER BY fecha ASC`,
-            [sucursalId]
-        ) as any[];
+        sql += ` ORDER BY df.fecha ASC`;
 
-        return new Response(JSON.stringify({ success: true, data: festivos }), { status: 200 });
+        const [festivos] = await query(sql, params) as any[];
+
+        return new Response(JSON.stringify({ success: true, data: festivos || [] }), { status: 200 });
     } catch (error: any) {
         return new Response(JSON.stringify({ success: false, error: error.message }), { status: 500 });
     }

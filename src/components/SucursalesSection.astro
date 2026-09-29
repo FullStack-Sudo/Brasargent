@@ -590,13 +590,13 @@ try {
                 <form id="formReservaCliente" class="modal-body">
                     <!-- Nombre -->
                     <div class="form-group">
-                        <label>👤 Nombres Completos <span class="required">*</span></label>
-                        <input type="text" id="nombreCliente" placeholder="Carlos Gómez Pérez" required />
+                        <label>Nombres Completos <span class="required">*</span></label>
+                        <input type="text" id="nombreCliente" placeholder="Juan Perez" required />
                     </div>
                     
                     <!-- Teléfono con código de país -->
                     <div class="form-group">
-                        <label>📱 Número Celular <span class="required">*</span></label>
+                        <label>Número Celular <span class="required">*</span></label>
                         <div class="telefono-wrapper">
                             <select id="codigoPais" class="codigo-pais">
                                 <option value="591">🇧🇴 +591 (Bolivia)</option>
@@ -613,7 +613,7 @@ try {
                     </div>                    
                     <!-- Fecha -->
                     <div class="form-group">
-                        <label>📅 Fecha de Reserva <span class="required">*</span></label>
+                        <label>Fecha de Reserva <span class="required">*</span></label>
                         <input type="date" id="fechaReserva" required />
                         <span class="field-hint">Selecciona el día de tu reserva</span>
                     </div>
@@ -656,22 +656,13 @@ try {
                     </div>
 
                     <div id="precioContainer" class="precio-container hidden">
-                        <div class="precio-info">
-                            <span class="precio-icon">🏷️</span>
-                            <div class="precio-detalles">
-                                <span class="precio-label">Precio por cubierto en la fecha seleccionada:</span>
-                                <div class="precio-valores">
-                                    <span class="precio-adulto" id="precioAdulto">-- Bs Adultos</span>
-                                    <span class="precio-nino" id="precioNino">-- Bs Niños (5-10 años)</span>
-                                </div>
-                            </div>
-                        </div>
+                        
                     </div>
                     
                     <!-- Personas (adultos) -->
                     <div class="form-group personas-section">
                         <div class="label-with-badge">
-                            <label>👥 Número de Adultos <span class="required">*</span></label>
+                            <label>Número de Adultos <span class="required">*</span></label>
                             <span class="badge-grupo">Sin límite de personas</span>
                         </div>
                         <div class="cantidad-wrapper">
@@ -688,7 +679,7 @@ try {
                         
                         <!-- Niños -->
                         <div class="form-group">
-                            <label>👧 Niños (2-12 años)</label>
+                            <label>Niños (2-12 años)</label>
                             <div class="cantidad-wrapper">
                                 <button type="button" class="btn-cantidad btn-menos" onclick="window._cambiarCantidad('cantidadNinos', -1, 0, 200)">−</button>
                                 <input type="number" id="cantidadNinos" value="0" min="0" max="200" oninput="this.value = Math.max(0, Math.min(200, parseInt(this.value) || 0))" />
@@ -698,21 +689,12 @@ try {
                         </div>
                     </div>
 
-                    <!-- 🎉 BANNER GRUPOS GRANDES & EVENTOS -->
-                    <div class="grupo-grande-banner">
-                        <div class="grupo-banner-header">
-                            <span class="banner-icon">🎉</span>
-                            <div>
-                                <strong>Reserva para Grupos Grandes / Eventos (+20 personas)</strong>
-                                <p>Puedes ingresar la cantidad exacta de adultos y niños arriba para reservar para tu grupo o evento.</p>
-                            </div>
-                        </div>
-                    </div>
+                    
                     
                     <!-- Comentarios -->
                     <div class="form-group comentarios-section">
-                        <label>📝 Comentarios <span class="optional">(Opcional)</span></label>
-                        <textarea id="observacionesReserva" rows="2" placeholder="Ej: Prefiero mesa cerca de la ventana o requerimiento especial para evento"></textarea>
+                        <label>Comentarios <span class="optional">(Opcional)</span></label>
+                        <textarea id="observacionesReserva" rows="2" placeholder="Comentarios adicionales..."></textarea>
                     </div>
                 </form>
                 
