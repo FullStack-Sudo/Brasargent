@@ -6,14 +6,41 @@ import type { MiddlewareHandler } from 'astro';
 import { query } from './lib/db';
 import { checkFeatureToggle } from './middleware/featureToggles';
 
-// Rutas públicas y de auth
-const PUBLIC_ROUTES = [
-    '/admin/login',
-    '/admin/logout',
-    '/api/auth/login',
-    '/api/auth/logout',
-    '/api/webhooks'
+// Rutas públicas y de auth (método + ruta)
+const PUBLIC_ROUTES: Array<{ method?: string; path: string }> = [
+    // Auth
+    { path: '/admin/login' },
+    { path: '/admin/logout' },
+    { path: '/api/auth/login' },
+    { path: '/api/auth/logout' },
+    { path: '/api/webhooks' },
+
+    // ============ RESERVAS PÚBLICAS ============
+    { path: '/api/reservas/horas-disponibles' },
+    { path: '/api/reservas/validar-hora' },
+    { path: '/api/reservas/fechas-bloqueadas' },
+    { path: '/api/reservas/cliente' },
+    { path: '/api/reservas', method: 'POST' },  // solo POST es público
+
+    // ============ PRECIOS ============
+    { path: '/api/precios' },
+    { path: '/api/precios/validar-reserva' },
+
+    // ============ VISITAS ============
+    { path: '/api/visitas' },
+
+    // ============ FERIADOS ============
+    { path: '/api/feriados' },
+
+    // ============ MENÚ ============
+    { path: '/api/menu' },
+    { path: '/api/menu/sucursal' },
+
+    // ============ SUCURSALES (solo GET) ============
+    { path: '/api/sucursales', method: 'GET' },
+    { path: '/api/sucursales/cubiertos' }
 ];
+
 
 // Rutas que requieren SUPER ADMIN
 const SUPER_ADMIN_ROUTES = [
@@ -40,10 +67,16 @@ export const onRequest: MiddlewareHandler = async ({ request, cookies, redirect,
     const url = new URL(request.url);
     const path = url.pathname;
 
-    // Permitir rutas públicas
-    if (PUBLIC_ROUTES.some(route => path === route || path.startsWith(route + '/'))) {
-        return next();
-    }
+    // Permitir rutas públicas (ahora soporta método HTTP)
+const method = request.method.toUpperCase();
+if (PUBLIC_ROUTES.some(route => {
+    const pathMatch = path === route.path || path.startsWith(route.path + '/');
+    if (!pathMatch) return false;
+    if (route.method && route.method !== method) return false;
+    return true;
+})) {
+    return next();
+}
 
     // Solo aplicar control de acceso en rutas /admin o /api
     if (!path.startsWith('/admin') && !path.startsWith('/api')) {

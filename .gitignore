@@ -22,3 +22,23 @@ pnpm-debug.log*
 
 # jetbrains setting folder
 .idea/
+
+# backups locales
+*.backup
+*.original
+*.bak
+
+# backups de base de datos
+backups/
+*.sql
+
+# archivos temporales de certbot (se regeneran)
+nginx/certbot/www/.well-known/acme-challenge/
+
+# backups locales
+*.backup
+*.original
+*.bak
+backups/
+*.sql
+nginx/certbot/www/.well-known/acme-challenge/

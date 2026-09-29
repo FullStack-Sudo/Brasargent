@@ -1,17 +1,15 @@
-version: '3.8'
-
 services:
-  # ============================================
-  # APP BRASARGENT
-  # ============================================
   app:
     build: .
     container_name: brasargent-app
     restart: unless-stopped
-    ports:
-      - "4321:4321"
+    expose:
+      - "4321"
     environment:
       - NODE_ENV=production
+      - SITE_URL=https://brasargent.bo
+      - HOST=0.0.0.0
+      - PORT=4321
       - DB_HOST=db
       - DB_PORT=3306
       - DB_USER=${DB_USER}
@@ -22,20 +20,17 @@ services:
       - OPENWA_ADMIN_KEY=${OPENWA_ADMIN_KEY}
       - OPENWA_DEFAULT_SESSION=${OPENWA_DEFAULT_SESSION:-brasargent}
     depends_on:
-      - db
-      - openwa
+      db:
+        condition: service_healthy
+      openwa:
+        condition: service_started
     networks:
       - brasargent-network
 
-  # ============================================
-  # BASE DE DATOS MYSQL
-  # ============================================
   db:
     image: mysql:8.0
     container_name: brasargent-db
     restart: unless-stopped
-    ports:
-      - "3306:3306"
     environment:
       - MYSQL_ROOT_PASSWORD=${DB_ROOT_PASSWORD}
       - MYSQL_DATABASE=${DB_NAME}
@@ -43,28 +38,48 @@ services:
       - MYSQL_PASSWORD=${DB_PASSWORD}
     volumes:
       - mysql-data:/var/lib/mysql
-      - ./database/init.sql:/docker-entrypoint-initdb.d/init.sql
+      - ./database/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
     networks:
       - brasargent-network
     command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${DB_ROOT_PASSWORD}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
 
-  # ============================================
-  # OPENWA - WHATSAPP API
-  # ============================================
   openwa:
     image: rmyndharis/openwa:latest
     container_name: brasargent-openwa
     restart: unless-stopped
-    ports:
-      - "2785:2785"
+    expose:
+      - "2785"
     environment:
       - NODE_ENV=production
       - DATABASE_URL=sqlite:./data/openwa.db
+      - ENGINE_TYPE=baileys
+      - NODE_OPTIONS=--dns-result-order=ipv4first
       - API_KEY=${OPENWA_API_KEY}
       - ADMIN_KEY=${OPENWA_ADMIN_KEY}
       - WEBHOOK_URL=http://app:4321/api/webhooks/whatsapp
     volumes:
       - openwa-data:/app/data
+    networks:
+      - brasargent-network
+  nginx:
+    image: nginx:alpine
+    container_name: brasargent-nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/conf.d:/etc/nginx/conf.d:ro
+      - ./nginx/certbot/www:/var/www/certbot:ro
+      - /etc/letsencrypt:/etc/letsencrypt:ro
+    depends_on:
+      - app
     networks:
       - brasargent-network
 
