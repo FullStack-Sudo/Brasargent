@@ -539,7 +539,7 @@ import NavbarSimple from "../../components/NavbarSimple.astro";
                                 type="email"
                                 id="email"
                                 name="email"
-                                placeholder="admin@brasargent.com"
+                                placeholder="correo@ejemplo.com"
                                 value={emailValue}
                                 required
                                 autocomplete="email"
@@ -745,17 +745,6 @@ import NavbarSimple from "../../components/NavbarSimple.astro";
                         card.style.transform = "translateY(0) scale(1)";
                     }, 100);
                 }
-
-                // ========================================
-                // 4. AUTOCOMPLETAR EN DESARROLLO
-                // ========================================
-                // Autocompletado simulado para probar el login rápidamente
-                setTimeout(() => {
-                    if (!emailInput.value) {
-                        emailInput.value = "admin@brasargent.com";
-                        passwordInput.value = "brasargent2026";
-                    }
-                }, 500);
             });
         </script>
     </body>
