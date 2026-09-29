@@ -1,6 +1,6 @@
 ---
 // src/pages/admin/menu/sucursal/[id].astro
-// Gestión de menú rediseñado - Moderno y Minimalista con AdminLayout
+// Gestión de menú — Premium Dashboard
 import "../../../../styles/global.css";
 import AdminLayout from "../../../../layouts/AdminLayout.astro";
 import PlatoCard from "../../../../components/admin/PlatoCard.astro";
@@ -48,85 +48,129 @@ if (data?.platos) {
 const totalPlatos = data?.platos?.length || 0;
 const disponibles = data?.platos?.filter((p: any) => Boolean(p.disponible)).length || 0;
 const agotados = totalPlatos - disponibles;
+const destacados = data?.platos?.filter((p: any) => Boolean(p.destacado)).length || 0;
+
+// Sucursal color/icon mapping
+const sucursalStyles: Record<string, { color: string; icon: string }> = {
+    'Churrasquería': { color: '#9e2a2b', icon: '🔥' },
+    'Fast Grill': { color: '#d4af37', icon: '⚡' },
+    'Rodizio': { color: '#d4a574', icon: '🥩' },
+};
+const style = sucursalStyles[data?.sucursal?.nombre] || { color: '#9e2a2b', icon: '🍽️' };
 ---
 
 <AdminLayout title={`Menú: ${data?.sucursal?.nombre || 'Sucursal'}`} description="Gestión de platos y disponibilidad del menú" currentPage="menu">
-    <div class="menu-modern-container w-full max-w-6xl mx-auto">
+    <div class="sp-container">
         {error ? (
-            <div class="bg-red-50 text-red-600 p-4 rounded-xl border border-red-100 flex items-center gap-3">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+            <div class="sp-error">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <line x1="12" y1="8" x2="12" y2="12"></line>
+                    <line x1="12" y1="16" x2="12.01" y2="16"></line>
                 </svg>
-                {error}
+                <span>{error}</span>
             </div>
         ) : (
             <>
-                <!-- Volver a sucursales y Header de la Sucursal -->
-                <div class="mb-8">
-                    <a href="/admin/menu" class="text-gray-500 hover:text-[#9e2a2b] transition-colors flex items-center gap-1.5 text-sm font-medium mb-4 w-fit">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
-                        </svg>
-                        Volver a Menús por Sucursal
-                    </a>
+                <!-- Breadcrumb -->
+                <a href="/admin/menu" class="sp-back-link">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <line x1="19" y1="12" x2="5" y2="12"></line>
+                        <polyline points="12 19 5 12 12 5"></polyline>
+                    </svg>
+                    Volver a Menús por Sucursal
+                </a>
 
-                    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-6 rounded-2xl border border-gray-100 shadow-sm">
+                <!-- Hero Header -->
+                <div class="sp-hero" style={`--accent: ${style.color}`}>
+                    <div class="sp-hero-left">
+                        <div class="sp-hero-icon" style={`background: ${style.color}`}>
+                            <span>{style.icon}</span>
+                        </div>
                         <div>
-                            <h1 class="text-2xl sm:text-3xl font-serif text-gray-900 font-bold mb-1 flex items-center gap-2">
-                                <span>🍽️</span> {data.sucursal.nombre}
-                            </h1>
-                            <p class="text-gray-500 text-sm flex items-center gap-2">
-                                <span>📍</span> {data.sucursal.direccion}
+                            <h1 class="sp-hero-title">{data.sucursal.nombre}</h1>
+                            <p class="sp-hero-address">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
+                                {data.sucursal.direccion}
                             </p>
                         </div>
-                        
-                        <div class="flex items-center gap-3 flex-wrap">
-                            <button id="btnAñadirPlato" class="bg-[#9e2a2b] hover:bg-[#8a2426] text-white px-5 py-2.5 rounded-xl text-sm font-semibold transition-all shadow-sm hover:shadow flex items-center gap-2 border-0 cursor-pointer">
-                                <span>➕</span> Añadir Plato
-                            </button>
-                            
-                            <div class="bg-gray-50 px-4 py-2 rounded-xl border border-gray-200 flex items-center gap-3 text-xs">
-                                <div>
-                                    <span class="text-gray-400 font-medium block">Total</span>
-                                    <span class="font-bold text-gray-900">{totalPlatos}</span>
-                                </div>
-                                <div class="w-px h-6 bg-gray-200"></div>
-                                <div>
-                                    <span class="text-green-600 font-medium block">Disponibles</span>
-                                    <span class="font-bold text-green-700">{disponibles}</span>
-                                </div>
-                                <div class="w-px h-6 bg-gray-200"></div>
-                                <div>
-                                    <span class="text-red-500 font-medium block">Agotados</span>
-                                    <span class="font-bold text-red-600">{agotados}</span>
-                                </div>
-                            </div>
+                    </div>
+                    <div class="sp-hero-right">
+                        <button id="btnAñadirPlato" class="sp-btn-add" style={`background: ${style.color}`} type="button">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                <line x1="12" y1="5" x2="12" y2="19"></line>
+                                <line x1="5" y1="12" x2="19" y2="12"></line>
+                            </svg>
+                            Añadir Plato
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Stats Row -->
+                <div class="sp-stats-row">
+                    <div class="sp-stat-card">
+                        <div class="sp-stat-icon sp-stat-icon--total">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8h1a4 4 0 0 1 0 8h-1"></path><path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"></path><line x1="6" y1="1" x2="6" y2="4"></line><line x1="10" y1="1" x2="10" y2="4"></line><line x1="14" y1="1" x2="14" y2="4"></line></svg>
+                        </div>
+                        <div class="sp-stat-info">
+                            <span class="sp-stat-value">{totalPlatos}</span>
+                            <span class="sp-stat-label">Platos totales</span>
+                        </div>
+                    </div>
+                    <div class="sp-stat-card">
+                        <div class="sp-stat-icon sp-stat-icon--available">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
+                        </div>
+                        <div class="sp-stat-info">
+                            <span class="sp-stat-value" style="color:#059669;">{disponibles}</span>
+                            <span class="sp-stat-label">Disponibles</span>
+                        </div>
+                    </div>
+                    <div class="sp-stat-card">
+                        <div class="sp-stat-icon sp-stat-icon--sold">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="15" y1="9" x2="9" y2="15"></line><line x1="9" y1="9" x2="15" y2="15"></line></svg>
+                        </div>
+                        <div class="sp-stat-info">
+                            <span class="sp-stat-value" style="color:#dc2626;">{agotados}</span>
+                            <span class="sp-stat-label">Agotados</span>
+                        </div>
+                    </div>
+                    <div class="sp-stat-card">
+                        <div class="sp-stat-icon sp-stat-icon--featured">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
+                        </div>
+                        <div class="sp-stat-info">
+                            <span class="sp-stat-value" style="color:#d97706;">{destacados}</span>
+                            <span class="sp-stat-label">Destacados</span>
                         </div>
                     </div>
                 </div>
 
-                <!-- Menú Agrupado por Categoría -->
-                <div class="space-y-10">
+                <!-- Menu by Category -->
+                <div class="sp-categories">
                     {Object.keys(categorias).length === 0 ? (
-                        <div class="text-center py-16 bg-white rounded-2xl border border-gray-100 shadow-sm">
-                            <span class="text-4xl block mb-3">🍽️</span>
-                            <h3 class="text-lg font-medium text-gray-900">No hay platos registrados</h3>
-                            <p class="text-gray-500 mt-1">Esta sucursal aún no tiene elementos en su menú.</p>
+                        <div class="sp-empty">
+                            <div class="sp-empty-icon">🍽️</div>
+                            <h3 class="sp-empty-title">No hay platos registrados</h3>
+                            <p class="sp-empty-text">Esta sucursal aún no tiene elementos en su menú.</p>
+                            <button id="btnAñadirPlatoEmpty" class="sp-btn-add sp-btn-add--outline" style={`color: ${style.color}; border-color: ${style.color}`} type="button">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                    <line x1="12" y1="5" x2="12" y2="19"></line>
+                                    <line x1="5" y1="12" x2="19" y2="12"></line>
+                                </svg>
+                                Añadir primer plato
+                            </button>
                         </div>
                     ) : (
                         Object.entries(categorias).map(([categoria, platosArr]) => (
-                            <section class="category-section">
-                                <div class="flex items-center gap-3 mb-6 pb-2 border-b border-gray-200">
-                                    <span class="w-1.5 h-6 bg-[#9e2a2b] rounded-full inline-block"></span>
-                                    <h2 class="text-xl font-serif font-bold text-gray-800">
-                                        {categoria}
-                                    </h2>
-                                    <span class="bg-gray-100 text-gray-600 text-xs font-semibold px-2.5 py-0.5 rounded-full">
-                                        {platosArr.length}
-                                    </span>
+                            <section class="sp-category-section">
+                                <div class="sp-category-header">
+                                    <div class="sp-category-bar" style={`background: ${style.color}`}></div>
+                                    <h2 class="sp-category-name">{categoria}</h2>
+                                    <span class="sp-category-count">{platosArr.length} {platosArr.length === 1 ? 'plato' : 'platos'}</span>
                                 </div>
                                 
-                                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                                <div class="sp-platos-grid">
                                     {platosArr.map((plato: any) => (
                                         <PlatoCard plato={plato} sucursalId={sucursalId} />
                                     ))}
@@ -144,8 +188,8 @@ const agotados = totalPlatos - disponibles;
     <ModalEditarPlato />
     <ModalImagenPlato />
     
-    <!-- Contenedor Toast -->
-    <div id="toastContainer" class="fixed bottom-5 right-5 z-50 flex flex-col gap-2"></div>
+    <!-- Toast Container -->
+    <div id="toastContainer" class="sp-toast-container"></div>
 
     <!-- Scripts de Interacción -->
     <script>
@@ -154,23 +198,26 @@ const agotados = totalPlatos - disponibles;
             if (!container) return;
             
             const toast = document.createElement('div');
-            toast.className = `flex items-center gap-3 px-4 py-3 rounded-xl shadow-lg border toast-enter ${
-                type === 'success' 
-                ? 'bg-white border-green-200 text-green-800' 
-                : 'bg-white border-red-200 text-red-800'
-            }`;
+            toast.className = `sp-toast ${type === 'success' ? 'sp-toast--success' : 'sp-toast--error'}`;
             
             const icon = type === 'success' 
-                ? `<svg class="w-5 h-5 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>`
-                : `<svg class="w-5 h-5 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>`;
+                ? `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>`
+                : `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="15" y1="9" x2="9" y2="15"></line><line x1="9" y1="9" x2="15" y2="15"></line></svg>`;
                 
-            toast.innerHTML = `${icon} <span class="font-medium text-sm">${message}</span>`;
+            toast.innerHTML = `${icon} <span>${message}</span>`;
             container.appendChild(toast);
             
+            // Trigger animation
+            requestAnimationFrame(() => toast.classList.add('sp-toast--visible'));
+            
             setTimeout(() => {
-                toast.remove();
-            }, 3000);
+                toast.classList.remove('sp-toast--visible');
+                toast.addEventListener('transitionend', () => toast.remove());
+            }, 3500);
         }
+
+        // Make showToast available globally for ModalImagenPlato
+        (window as any).showToast = showToast;
 
         document.addEventListener('DOMContentLoaded', () => {
             // Toggle Disponibilidad
@@ -189,11 +236,11 @@ const agotados = totalPlatos - disponibles;
                     
                     if (badge) {
                         if (newStatus) {
-                            badge.textContent = '✅ Disponible';
-                            badge.className = 'status-badge inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold shadow-sm transition-colors border bg-[#10b981]/10 text-[#10b981] border-[#10b981]/20';
+                            badge.textContent = 'Disponible';
+                            badge.className = 'pc-badge status-badge pc-badge--available';
                         } else {
-                            badge.textContent = '❌ Agotado';
-                            badge.className = 'status-badge inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold shadow-sm transition-colors border bg-[#ef4444]/10 text-[#ef4444] border-[#ef4444]/20';
+                            badge.textContent = 'Agotado';
+                            badge.className = 'pc-badge status-badge pc-badge--sold';
                         }
                     }
 
@@ -258,12 +305,15 @@ const agotados = totalPlatos - disponibles;
             const modalCrear = document.getElementById('modalCrearPlato');
             const formCrear = document.getElementById('formCrearPlato') as HTMLFormElement;
             
-            document.getElementById('btnAñadirPlato')?.addEventListener('click', () => {
+            const openCrearModal = () => {
                 if (!modalCrear) return;
                 const inputSuc = document.getElementById('create_sucursal_id') as HTMLInputElement;
                 if (inputSuc) inputSuc.value = window.location.pathname.split('/').pop() || '1';
                 modalCrear.classList.add('modal-active');
-            });
+            };
+
+            document.getElementById('btnAñadirPlato')?.addEventListener('click', openCrearModal);
+            document.getElementById('btnAñadirPlatoEmpty')?.addEventListener('click', openCrearModal);
 
             const closeCrearModal = () => {
                 modalCrear?.classList.remove('modal-active');
@@ -277,30 +327,28 @@ const agotados = totalPlatos - disponibles;
             formCrear?.addEventListener('submit', async (e) => {
                 e.preventDefault();
                 const formData = new FormData(formCrear);
-                const rawSucId = formData.get('sucursal_id');
-                const sucursalId = Number(rawSucId) || Number(window.location.pathname.split('/').pop()) || 1;
-                const rawCatId = formData.get('categoria_id') || formData.get('categoria');
-                const categoriaId = Number(rawCatId) || 1;
 
-                const payload = {
-                    sucursal_id: sucursalId,
-                    nombre: String(formData.get('nombre') || '').trim(),
-                    descripcion: String(formData.get('descripcion') || '').trim(),
-                    precio: Number(formData.get('precio')),
-                    categoria_id: categoriaId,
-                    destacado: formData.get('destacado') === '1' ? 1 : 0
-                };
+                // Ensure sucursal_id is set
+                const rawSucId = formData.get('sucursal_id');
+                if (!rawSucId || rawSucId === '') {
+                    formData.set('sucursal_id', window.location.pathname.split('/').pop() || '1');
+                }
+
+                // Ensure destacado value
+                if (!formData.get('destacado')) {
+                    formData.set('destacado', '0');
+                }
 
                 try {
+                    // Send as FormData (multipart) so the image file is included
                     const res = await fetch('/api/menu/plato/create', {
                         method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(payload)
+                        body: formData
                     });
                     const result = await res.json();
                     if (!result.success) throw new Error(result.message || 'Error al crear plato');
 
-                    showToast('✅ Plato creado exitosamente');
+                    showToast('Plato creado exitosamente');
                     closeCrearModal();
                     setTimeout(() => window.location.reload(), 600);
                 } catch (err: any) {
@@ -322,20 +370,57 @@ const agotados = totalPlatos - disponibles;
                     const nombre = target.dataset.nombre || '';
                     const descripcion = target.dataset.descripcion || '';
                     const precio = target.dataset.precio || '';
-                    const categoria = target.dataset.categoria || '1';
+                    const categoria = target.dataset.categoria || '';
+                    const categoriaId = target.dataset.categoriaId || '';
+                    const imagen = target.dataset.imagen || '';
+                    const destacado = target.dataset.destacado === '1';
 
                     const inputId = document.getElementById('edit_plato_id') as HTMLInputElement;
                     const inputNombre = document.getElementById('edit_nombre') as HTMLInputElement;
                     const inputDesc = document.getElementById('edit_descripcion') as HTMLTextAreaElement;
                     const inputPrecio = document.getElementById('edit_precio') as HTMLInputElement;
-                    
+                    const inputDestacado = document.getElementById('edit_destacado') as HTMLInputElement;
+
                     if (inputId) inputId.value = id;
                     if (inputNombre) inputNombre.value = nombre;
-                    if (inputDesc) inputDesc.value = descripcion;
+                    if (inputDesc) {
+                        inputDesc.value = descripcion;
+                        const charCounter = document.getElementById('edit_charCounter');
+                        if (charCounter) charCounter.textContent = `${descripcion.length}/500`;
+                    }
                     if (inputPrecio) inputPrecio.value = precio;
-                    
+                    if (inputDestacado) inputDestacado.checked = destacado;
+
                     const catSelect = document.getElementById('edit_categoria') as HTMLSelectElement;
-                    if (catSelect) catSelect.value = categoria;
+                    if (catSelect) {
+                        const foundOpt = Array.from(catSelect.options).find(
+                            opt => opt.value === String(categoriaId) ||
+                                   opt.value === String(categoria) ||
+                                   opt.text.trim().toLowerCase() === String(categoria).trim().toLowerCase()
+                        );
+                        if (foundOpt) {
+                            catSelect.value = foundOpt.value;
+                        } else if (catSelect.options.length > 1) {
+                            catSelect.selectedIndex = 1;
+                        }
+                    }
+
+                    // Previsualizar la imagen actual del plato
+                    const previewContainer = document.getElementById('previewContainerEdit');
+                    const previewImage = document.getElementById('previewImageEdit') as HTMLImageElement;
+                    const uploadContent = document.getElementById('uploadContentEdit');
+                    const fileInput = document.getElementById('edit_imagenInput') as HTMLInputElement;
+                    if (fileInput) fileInput.value = '';
+
+                    if (imagen && previewImage && previewContainer && uploadContent) {
+                        previewImage.src = imagen;
+                        previewContainer.style.display = 'flex';
+                        uploadContent.style.display = 'none';
+                    } else if (previewContainer && uploadContent) {
+                        previewContainer.style.display = 'none';
+                        uploadContent.style.display = 'flex';
+                        if (previewImage) previewImage.removeAttribute('src');
+                    }
 
                     modalEditar.classList.add('modal-active');
                 });
@@ -353,24 +438,16 @@ const agotados = totalPlatos - disponibles;
             formEditar?.addEventListener('submit', async (e) => {
                 e.preventDefault();
                 const formData = new FormData(formEditar);
-                const payload = {
-                    plato_id: Number(formData.get('plato_id')),
-                    nombre: String(formData.get('nombre') || '').trim(),
-                    descripcion: String(formData.get('descripcion') || '').trim(),
-                    precio: Number(formData.get('precio')),
-                    categoria_id: Number(formData.get('categoria_id')) || 1
-                };
 
                 try {
                     const res = await fetch('/api/menu/plato/update', {
                         method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(payload)
+                        body: formData
                     });
                     const result = await res.json();
                     if (!result.success) throw new Error(result.message || 'Error al actualizar plato');
 
-                    showToast('✅ Plato actualizado correctamente');
+                    showToast('Plato actualizado correctamente');
                     closeEditarModal();
                     setTimeout(() => window.location.reload(), 600);
                 } catch (err: any) {
@@ -401,3 +478,240 @@ const agotados = totalPlatos - disponibles;
         });
     </script>
 </AdminLayout>
+
+<style is:global>
+    /* ===== CONTAINER ===== */
+    .sp-container {
+        width: 100%;
+        max-width: 1200px;
+        margin: 0 auto;
+    }
+
+    /* ===== ERROR ===== */
+    .sp-error {
+        display: flex; align-items: center; gap: .75rem;
+        padding: 1rem 1.25rem;
+        background: #fef2f2;
+        color: #dc2626;
+        border: 1px solid #fecaca;
+        border-radius: 1rem;
+        font-size: .875rem; font-weight: 500;
+    }
+
+    /* ===== BACK LINK ===== */
+    .sp-back-link {
+        display: inline-flex; align-items: center; gap: .4rem;
+        color: #8b8b94; font-size: .82rem; font-weight: 600;
+        text-decoration: none;
+        margin-bottom: 1.25rem;
+        transition: color .2s;
+    }
+    .sp-back-link:hover { color: #9e2a2b; }
+
+    /* ===== HERO HEADER ===== */
+    .sp-hero {
+        display: flex; align-items: center;
+        justify-content: space-between;
+        flex-wrap: wrap; gap: 1rem;
+        padding: 1.5rem 2rem;
+        background: #fff;
+        border-radius: 1.25rem;
+        border: 1px solid #f0f0f2;
+        box-shadow: 0 2px 12px rgba(0,0,0,.04);
+        margin-bottom: 1.25rem;
+    }
+    .sp-hero-left {
+        display: flex; align-items: center; gap: 1rem;
+    }
+    .sp-hero-icon {
+        width: 52px; height: 52px;
+        border-radius: 1rem;
+        display: flex; align-items: center; justify-content: center;
+        font-size: 1.6rem;
+        flex-shrink: 0;
+        box-shadow: 0 4px 14px rgba(0,0,0,.15);
+    }
+    .sp-hero-title {
+        font-family: 'Playfair Display', Georgia, serif !important;
+        font-size: 1.6rem !important; font-weight: 700 !important;
+        color: #1a1a1f !important;
+        margin: 0 !important; line-height: 1.2 !important;
+    }
+    .sp-hero-address {
+        display: flex; align-items: center; gap: .35rem;
+        color: #8b8b94 !important;
+        font-size: .82rem !important;
+        margin: .25rem 0 0 !important;
+    }
+    .sp-hero-right { display: flex; align-items: center; }
+
+    .sp-btn-add {
+        display: inline-flex; align-items: center; gap: .5rem;
+        padding: .65rem 1.4rem;
+        color: #fff;
+        border: none; border-radius: .75rem;
+        font-size: .82rem; font-weight: 600;
+        cursor: pointer;
+        box-shadow: 0 4px 14px rgba(0,0,0,.2);
+        transition: all .25s;
+        font-family: inherit;
+    }
+    .sp-btn-add:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 6px 20px rgba(0,0,0,.25);
+    }
+    .sp-btn-add:active { transform: translateY(0) scale(.98); }
+    .sp-btn-add--outline {
+        background: transparent !important;
+        border: 2px solid currentColor;
+        box-shadow: none;
+    }
+    .sp-btn-add--outline:hover {
+        box-shadow: 0 4px 14px rgba(0,0,0,.08);
+    }
+
+    /* ===== STATS ROW ===== */
+    .sp-stats-row {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: .75rem;
+        margin-bottom: 2rem;
+    }
+    @media (max-width: 768px) {
+        .sp-stats-row { grid-template-columns: repeat(2, 1fr); }
+    }
+    @media (max-width: 420px) {
+        .sp-stats-row { grid-template-columns: 1fr 1fr; }
+    }
+
+    .sp-stat-card {
+        display: flex; align-items: center; gap: .875rem;
+        padding: 1rem 1.2rem;
+        background: #fff;
+        border-radius: 1rem;
+        border: 1px solid #f0f0f2;
+        box-shadow: 0 1px 4px rgba(0,0,0,.03);
+        transition: box-shadow .2s, transform .2s;
+    }
+    .sp-stat-card:hover {
+        box-shadow: 0 4px 16px rgba(0,0,0,.06);
+        transform: translateY(-2px);
+    }
+
+    .sp-stat-icon {
+        width: 40px; height: 40px;
+        border-radius: .75rem;
+        display: flex; align-items: center; justify-content: center;
+        flex-shrink: 0;
+    }
+    .sp-stat-icon--total { background: rgba(99,102,241,.08); color: #6366f1; }
+    .sp-stat-icon--available { background: rgba(5,150,105,.08); color: #059669; }
+    .sp-stat-icon--sold { background: rgba(220,38,38,.08); color: #dc2626; }
+    .sp-stat-icon--featured { background: rgba(217,119,6,.08); color: #d97706; }
+
+    .sp-stat-info { display: flex; flex-direction: column; }
+    .sp-stat-value {
+        font-size: 1.4rem; font-weight: 800;
+        color: #1a1a1f;
+        line-height: 1;
+        font-variant-numeric: tabular-nums;
+    }
+    .sp-stat-label {
+        font-size: .7rem; font-weight: 600;
+        color: #8b8b94;
+        text-transform: uppercase;
+        letter-spacing: .04em;
+        margin-top: .2rem;
+    }
+
+    /* ===== CATEGORIES ===== */
+    .sp-categories { display: flex; flex-direction: column; gap: 2.5rem; }
+
+    .sp-category-section { }
+    .sp-category-header {
+        display: flex; align-items: center; gap: .75rem;
+        margin-bottom: 1.25rem;
+        padding-bottom: .75rem;
+        border-bottom: 1px solid #f0f0f2;
+    }
+    .sp-category-bar {
+        width: 4px; height: 22px;
+        border-radius: 4px;
+        flex-shrink: 0;
+    }
+    .sp-category-name {
+        font-family: 'Playfair Display', Georgia, serif !important;
+        font-size: 1.15rem !important; font-weight: 700 !important;
+        color: #1a1a1f !important;
+        margin: 0 !important;
+    }
+    .sp-category-count {
+        font-size: .7rem; font-weight: 600;
+        color: #8b8b94;
+        background: #f5f5f7;
+        padding: .2rem .6rem;
+        border-radius: .4rem;
+    }
+
+    /* ===== PLATOS GRID ===== */
+    .sp-platos-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+        gap: 1.25rem;
+    }
+    @media (max-width: 600px) {
+        .sp-platos-grid { grid-template-columns: 1fr; }
+    }
+
+    /* ===== EMPTY STATE ===== */
+    .sp-empty {
+        text-align: center;
+        padding: 4rem 2rem;
+        background: #fff;
+        border-radius: 1.25rem;
+        border: 1px solid #f0f0f2;
+    }
+    .sp-empty-icon { font-size: 3rem; margin-bottom: .75rem; }
+    .sp-empty-title {
+        font-family: 'Playfair Display', Georgia, serif !important;
+        font-size: 1.2rem !important; font-weight: 700 !important;
+        color: #1a1a1f !important;
+        margin: 0 0 .4rem !important;
+    }
+    .sp-empty-text {
+        font-size: .85rem !important; color: #8b8b94 !important;
+        margin: 0 0 1.5rem !important;
+    }
+
+    /* ===== TOAST ===== */
+    .sp-toast-container {
+        position: fixed;
+        bottom: 1.5rem; right: 1.5rem;
+        z-index: 200;
+        display: flex; flex-direction: column; gap: .5rem;
+    }
+    .sp-toast {
+        display: flex; align-items: center; gap: .6rem;
+        padding: .75rem 1.1rem;
+        border-radius: .75rem;
+        font-size: .82rem; font-weight: 600;
+        box-shadow: 0 8px 30px rgba(0,0,0,.12);
+        border: 1px solid;
+        transform: translateX(120%);
+        transition: transform .35s cubic-bezier(.4,0,.2,1);
+        max-width: 340px;
+    }
+    .sp-toast--visible { transform: translateX(0); }
+    .sp-toast--success {
+        background: #fff;
+        border-color: #bbf7d0;
+        color: #166534;
+    }
+    .sp-toast--success svg { color: #22c55e; }
+    .sp-toast--error {
+        background: #fff;
+        border-color: #fecaca;
+        color: #991b1b;
+    }
+    .sp-toast--error svg { color: #ef4444; }
+</style>

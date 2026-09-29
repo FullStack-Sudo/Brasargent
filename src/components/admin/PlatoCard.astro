@@ -15,105 +15,298 @@ interface Props {
 
 const { plato, sucursalId } = Astro.props;
 const isAvailable = Boolean(plato.disponible);
+const isHighlighted = Boolean(plato.destacado);
 
 // Fallback logo based on sucursal ID
 const fallbackLogos: Record<number, string> = {
-    1: "/img/logo/LOGO1SF.png", // Churrasquería
-    2: "/img/logo/LOGO2SF.png", // Fast Grill
-    3: "/img/logo/LOGO3SF.png", // Rodizio
+    1: "/img/logo/LOGO1SF.png",
+    2: "/img/logo/LOGO2SF.png",
+    3: "/img/logo/LOGO3SF.png",
 };
 const defaultImage = fallbackLogos[sucursalId] || "/img/logo/logo-SF.png";
 const hasImage = Boolean(plato.imagen_url && plato.imagen_url.trim() !== '');
 const imageUrl = hasImage ? plato.imagen_url : defaultImage;
 ---
 
-<div class="bg-white rounded-xl border border-gray-100 shadow-sm hover:shadow-md overflow-hidden flex flex-col h-full plato-card group transition-all" data-id={plato.id}>
-    <!-- Imagen del plato -->
-    <div class="relative h-44 bg-gray-50 overflow-hidden flex items-center justify-center p-2">
+<div class="pc-card plato-card" data-id={plato.id}>
+    <!-- Image Section -->
+    <div class="pc-image-wrap">
         <img 
             src={imageUrl} 
             alt={plato.nombre}
-            class={`w-full h-full transition-transform duration-700 group-hover:scale-110 ${hasImage ? 'object-cover' : 'object-contain opacity-50'}`}
-            onerror={`this.src='${defaultImage}'; this.className='w-full h-full object-contain opacity-50 transition-transform duration-700 group-hover:scale-110';`}
+            class={`pc-image ${hasImage ? '' : 'pc-image--fallback'}`}
+            onerror={`this.src='${defaultImage}'; this.classList.add('pc-image--fallback');`}
+            loading="lazy"
         />
         
-        <!-- Botón para subir imagen (Hover) -->
-        <button class="absolute inset-0 bg-black/50 flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity btn-upload-img backdrop-blur-[2px]" data-id={plato.id}>
-            <div class="bg-white/90 text-gray-900 rounded-full w-12 h-12 flex items-center justify-center mb-2 shadow-lg transform group-hover:scale-110 transition-transform duration-300">
-                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
-            </div>
-            <span class="text-white text-sm font-medium drop-shadow-md">Cambiar Imagen</span>
-        </button>
-    </div>
-
-    <!-- Info del plato -->
-    <div class="p-5 flex flex-col flex-1">
-        <div class="flex justify-between items-start mb-1">
-            <h4 class="font-serif font-bold text-gray-900 text-lg leading-tight line-clamp-2" title={plato.nombre}>
-                {plato.nombre}
-            </h4>
-        </div>
-        
-        <p class="text-sm text-gray-500 mb-4 line-clamp-2 flex-1 leading-relaxed" title={plato.descripcion}>
-            {plato.descripcion || "Sin descripción"}
-        </p>
-        
-        <div class="flex items-center gap-2 mb-4">
-            <span class={`status-badge inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold shadow-sm transition-colors border ${
-                isAvailable ? 'bg-[#10b981]/10 text-[#10b981] border-[#10b981]/20' : 'bg-[#ef4444]/10 text-[#ef4444] border-[#ef4444]/20'
-            }`}>
-                {isAvailable ? '✅ Disponible' : '❌ Agotado'}
+        <!-- Badges overlay -->
+        <div class="pc-badges">
+            {isHighlighted && (
+                <span class="pc-badge pc-badge--featured">🔥 Destacado</span>
+            )}
+            <span class={`pc-badge status-badge ${isAvailable ? 'pc-badge--available' : 'pc-badge--sold'}`}>
+                {isAvailable ? 'Disponible' : 'Agotado'}
             </span>
         </div>
 
-        <div class="flex justify-between items-center mt-auto pt-4 border-t border-gray-100">
-            <div class="flex flex-col">
-                <span class="text-[10px] text-gray-400 uppercase font-bold tracking-wider mb-0.5">Precio</span>
-                <span class="font-bold text-gray-900 text-lg">Bs. {Number(plato.precio).toFixed(2)}</span>
+        <!-- Camera overlay on hover -->
+        <button class="pc-camera-overlay btn-upload-img" data-id={plato.id} type="button" title="Cambiar imagen">
+            <div class="pc-camera-icon">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                    <circle cx="8.5" cy="8.5" r="1.5"></circle>
+                    <polyline points="21 15 16 10 5 21"></polyline>
+                </svg>
             </div>
-            
-            <div class="flex gap-2">
-                <!-- Toggle Disponibilidad -->
-                <button 
-                    class={`btn-toggle-status p-2.5 rounded-xl transition-all shadow-sm border ${
-                        isAvailable 
-                        ? 'bg-white border-gray-200 text-gray-400 hover:text-[#ef4444] hover:bg-[#ef4444]/5 hover:border-[#ef4444]/30' 
-                        : 'bg-white border-gray-200 text-gray-400 hover:text-[#10b981] hover:bg-[#10b981]/5 hover:border-[#10b981]/30'
-                    }`}
-                    data-id={plato.id}
-                    data-sucursal={sucursalId}
-                    data-status={isAvailable ? '1' : '0'}
-                    title={isAvailable ? "Marcar como Agotado" : "Marcar como Disponible"}
-                >
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"></path>
-                    </svg>
-                </button>
-                
-                <!-- Botón Editar -->
-                <button 
-                    class="btn-edit-plato p-2.5 bg-gray-50 border border-gray-200 text-gray-600 rounded-xl hover:bg-gray-900 hover:text-white hover:border-gray-900 transition-all shadow-sm group-hover:bg-gray-900 group-hover:text-white group-hover:border-gray-900"
-                    data-id={plato.id}
-                    data-nombre={plato.nombre}
-                    data-descripcion={plato.descripcion}
-                    data-precio={plato.precio}
-                    data-categoria={plato.categoria}
-                    title="Editar información"
-                >
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg>
-                </button>
+            <span class="pc-camera-text">Cambiar Imagen</span>
+        </button>
+    </div>
 
-                <!-- Botón Eliminar -->
-                <button 
-                    class="btn-delete-plato p-2.5 bg-red-50 border border-red-100 text-red-500 rounded-xl hover:bg-red-600 hover:text-white hover:border-red-600 transition-all shadow-sm"
-                    data-id={plato.id}
-                    data-nombre={plato.nombre}
-                    data-sucursal={sucursalId}
-                    title="Eliminar plato del menú"
-                >
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
-                </button>
-            </div>
+    <!-- Content Section -->
+    <div class="pc-content">
+        <!-- Name + Price -->
+        <div class="pc-top-row">
+            <h4 class="pc-name" title={plato.nombre}>{plato.nombre}</h4>
+            <span class="pc-price">Bs. {Number(plato.precio).toFixed(2)}</span>
+        </div>
+        
+        <!-- Description -->
+        <p class="pc-description" title={plato.descripcion}>
+            {plato.descripcion || "Sin descripción"}
+        </p>
+
+        <!-- Actions Row -->
+        <div class="pc-actions">
+            <!-- Toggle Status -->
+            <button 
+                class={`pc-action-btn btn-toggle-status ${isAvailable ? 'pc-action-btn--on' : 'pc-action-btn--off'}`}
+                data-id={plato.id}
+                data-sucursal={sucursalId}
+                data-status={isAvailable ? '1' : '0'}
+                title={isAvailable ? "Marcar como Agotado" : "Marcar como Disponible"}
+                type="button"
+            >
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"></path>
+                </svg>
+            </button>
+            
+            <!-- Edit -->
+            <button 
+                class="pc-action-btn pc-action-btn--edit btn-edit-plato"
+                data-id={plato.id}
+                data-nombre={plato.nombre}
+                data-descripcion={plato.descripcion}
+                data-precio={plato.precio}
+                data-categoria={plato.categoria}
+                data-categoria-id={(plato as any).categoria_id}
+                data-imagen={plato.imagen_url || ''}
+                data-destacado={plato.destacado ? '1' : '0'}
+                title="Editar información"
+                type="button"
+            >
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                </svg>
+            </button>
+
+            <!-- Delete -->
+            <button 
+                class="pc-action-btn pc-action-btn--delete btn-delete-plato"
+                data-id={plato.id}
+                data-nombre={plato.nombre}
+                data-sucursal={sucursalId}
+                title="Eliminar plato del menú"
+                type="button"
+            >
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="3 6 5 6 21 6"></polyline>
+                    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                    <line x1="10" y1="11" x2="10" y2="17"></line>
+                    <line x1="14" y1="11" x2="14" y2="17"></line>
+                </svg>
+            </button>
         </div>
     </div>
 </div>
+
+<style>
+    .pc-card {
+        background: #fff;
+        border-radius: 1.125rem;
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+        height: 100%;
+        border: 1px solid #f0f0f2;
+        box-shadow: 0 2px 12px rgba(0,0,0,.04);
+        transition: transform .3s cubic-bezier(.4,0,.2,1), box-shadow .3s;
+    }
+    .pc-card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 12px 36px rgba(0,0,0,.1);
+    }
+
+    /* ===== IMAGE ===== */
+    .pc-image-wrap {
+        position: relative;
+        height: 180px;
+        background: linear-gradient(135deg, #f8f8fa 0%, #f0f0f2 100%);
+        overflow: hidden;
+    }
+    .pc-image {
+        width: 100%; height: 100%;
+        object-fit: contain;
+        padding: .5rem;
+        transition: transform .5s cubic-bezier(.4,0,.2,1);
+    }
+    .pc-image--fallback { opacity: .4; padding: 2rem; }
+    .pc-card:hover .pc-image { transform: scale(1.05); }
+
+    /* Badges */
+    .pc-badges {
+        position: absolute; top: .625rem; left: .625rem;
+        display: flex; flex-direction: column; gap: .35rem;
+        z-index: 2;
+    }
+    .pc-badge {
+        display: inline-flex; align-items: center;
+        padding: .25rem .6rem;
+        border-radius: .5rem;
+        font-size: .65rem; font-weight: 700;
+        letter-spacing: .02em;
+        backdrop-filter: blur(6px);
+        -webkit-backdrop-filter: blur(6px);
+        line-height: 1.3;
+    }
+    .pc-badge--featured {
+        background: rgba(251,191,36,.9);
+        color: #78350f;
+    }
+    .pc-badge--available {
+        background: rgba(16,185,129,.12);
+        color: #059669;
+        border: 1px solid rgba(16,185,129,.2);
+    }
+    .pc-badge--sold {
+        background: rgba(239,68,68,.12);
+        color: #dc2626;
+        border: 1px solid rgba(239,68,68,.2);
+    }
+
+    /* Camera Overlay */
+    .pc-camera-overlay {
+        position: absolute; inset: 0;
+        background: rgba(15,15,20,.55);
+        backdrop-filter: blur(4px);
+        -webkit-backdrop-filter: blur(4px);
+        display: flex; flex-direction: column;
+        align-items: center; justify-content: center;
+        gap: .5rem;
+        opacity: 0;
+        transition: opacity .25s;
+        cursor: pointer;
+        border: none; z-index: 3;
+    }
+    .pc-card:hover .pc-camera-overlay { opacity: 1; }
+    .pc-camera-icon {
+        width: 46px; height: 46px;
+        border-radius: 50%;
+        background: rgba(255,255,255,.92);
+        color: #333;
+        display: flex; align-items: center; justify-content: center;
+        box-shadow: 0 4px 16px rgba(0,0,0,.2);
+        transition: transform .2s;
+    }
+    .pc-camera-overlay:hover .pc-camera-icon { transform: scale(1.08); }
+    .pc-camera-text {
+        color: #fff; font-size: .78rem; font-weight: 600;
+        text-shadow: 0 1px 4px rgba(0,0,0,.3);
+    }
+
+    /* ===== CONTENT ===== */
+    .pc-content {
+        padding: 1.1rem 1.25rem 1.15rem;
+        display: flex; flex-direction: column;
+        flex: 1;
+    }
+
+    .pc-top-row {
+        display: flex; align-items: flex-start;
+        justify-content: space-between;
+        gap: .75rem;
+        margin-bottom: .5rem;
+    }
+    .pc-name {
+        font-family: 'Playfair Display', Georgia, serif !important;
+        font-size: 1rem !important; font-weight: 700 !important;
+        color: #1a1a1f !important;
+        margin: 0 !important; line-height: 1.25 !important;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+        flex: 1;
+    }
+    .pc-price {
+        font-size: .88rem; font-weight: 700;
+        color: #9e2a2b;
+        white-space: nowrap;
+        padding: .2rem .6rem;
+        background: rgba(158,42,43,.06);
+        border-radius: .5rem;
+        flex-shrink: 0;
+    }
+
+    .pc-description {
+        font-size: .78rem !important; line-height: 1.5 !important;
+        color: #7a7a84 !important;
+        margin: 0 0 auto !important;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+        padding-bottom: .75rem;
+    }
+
+    /* ===== ACTIONS ===== */
+    .pc-actions {
+        display: flex; gap: .45rem;
+        justify-content: flex-end;
+        padding-top: .75rem;
+        border-top: 1px solid #f0f0f2;
+    }
+    .pc-action-btn {
+        width: 34px; height: 34px;
+        border-radius: .625rem;
+        display: flex; align-items: center; justify-content: center;
+        border: 1.5px solid #e5e5ea;
+        background: #fafafa;
+        color: #8b8b94;
+        cursor: pointer;
+        transition: all .2s;
+    }
+    .pc-action-btn:hover { transform: translateY(-1px); }
+
+    .pc-action-btn--on:hover {
+        background: rgba(239,68,68,.08);
+        border-color: rgba(239,68,68,.25);
+        color: #ef4444;
+    }
+    .pc-action-btn--off:hover {
+        background: rgba(16,185,129,.08);
+        border-color: rgba(16,185,129,.25);
+        color: #10b981;
+    }
+    .pc-action-btn--edit:hover {
+        background: rgba(37,99,235,.08);
+        border-color: rgba(37,99,235,.25);
+        color: #2563eb;
+    }
+    .pc-action-btn--delete:hover {
+        background: rgba(239,68,68,.08);
+        border-color: rgba(239,68,68,.25);
+        color: #ef4444;
+    }
+</style>

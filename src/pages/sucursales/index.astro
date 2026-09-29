@@ -19,8 +19,8 @@ import TerminosModal from "../../components/TerminosModal.astro";
   <!-- Navbar fija -->
   <NavbarSimple />
 
-  <!-- 🔴 Sección de Sucursales (inicia bloqueada hasta aceptar los términos) -->
-  <div id="sucursalesContent" class="sucursales-page-wrapper blocked">
+  <!-- 🔴 Sección de Sucursales -->
+  <div id="sucursalesContent" class="sucursales-page-wrapper">
     <SucursalesSection />
   </div>
 
@@ -33,6 +33,11 @@ import TerminosModal from "../../components/TerminosModal.astro";
 
 <style>
   .sucursales-page-wrapper {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
     transition: filter 0.4s ease, opacity 0.4s ease;
   }
 

@@ -166,13 +166,13 @@ const whatsappMessage = encodeURIComponent(
 .nav-link-luxury {
   font-family: 'Montserrat', sans-serif;
   font-size: 0.72rem;
-  font-weight: 500;
+  font-weight: 600;
   letter-spacing: 1px;
   text-transform: uppercase;
   /* Inicial: blanco */
-  color: rgba(255, 255, 255, 0.75);
+  color: rgba(255, 255, 255, 0.85);
   text-decoration: none;
-  transition: color 0.35s ease;
+  transition: all 0.35s ease;
   position: relative;
 }
 .nav-link-luxury::after {
@@ -181,7 +181,7 @@ const whatsappMessage = encodeURIComponent(
   bottom: -4px;
   left: 0;
   width: 0;
-  height: 1px;
+  height: 2px;
   background: #C9A87C;
   transition: width 0.3s ease;
 }
@@ -190,12 +190,13 @@ const whatsappMessage = encodeURIComponent(
 }
 .nav-link-luxury:hover::after { width: 100%; }
 
-/* Scrolled state para links */
+/* Scrolled state para links: Negrita resaltada al scroll */
 .navbar-luxury-fixed.scrolled .nav-link-luxury {
-  color: rgba(26, 26, 26, 0.6);
+  color: #111115;
+  font-weight: 700;
 }
 .navbar-luxury-fixed.scrolled .nav-link-luxury:hover {
-  color: #1A1A1A;
+  color: #8B1A1A;
 }
 .navbar-luxury-fixed.scrolled .nav-link-luxury::after {
   background: #8B1A1A;
@@ -207,7 +208,7 @@ const whatsappMessage = encodeURIComponent(
   top: -10px;
   right: -28px;
   font-size: 0.55rem;
-  font-weight: 700;
+  font-weight: 800;
   background: #8B1A1A;
   color: white;
   padding: 2px 6px;
@@ -217,11 +218,12 @@ const whatsappMessage = encodeURIComponent(
 }
 
 .nav-link-admin {
-  color: rgba(255, 255, 255, 0.85) !important;
-  font-weight: 600;
+  color: rgba(255, 255, 255, 0.9) !important;
+  font-weight: 700;
 }
 .navbar-luxury-fixed.scrolled .nav-link-admin {
-  color: rgba(26, 26, 26, 0.75) !important;
+  color: #8B1A1A !important;
+  font-weight: 700 !important;
 }
 .nav-link-admin:hover { color: #C9A87C !important; }
 

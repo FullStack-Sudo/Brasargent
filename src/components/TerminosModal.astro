@@ -1,50 +1,80 @@
 ---
 // src/components/TerminosModal.astro
-// Modal de Términos y Condiciones con visualización ampliada e invocación obligatoria en cada visita a /sucursales
+// Modal de Términos y Condiciones por Sucursal
 ---
 
-<!-- 🔴 SCRIPT INLINE PARA EVITAR PARPADEO AL CARGAR -->
-<script is:inline>
-  (function() {
-    try {
-      if (localStorage.getItem('brasargent_terminos_aceptados') === 'true') {
-        document.write('<style>#terminosModal { display: none !important; } #sucursalesContent { filter: none !important; pointer-events: auto !important; opacity: 1 !important; }</style>');
-      }
-    } catch(e) {}
-  })();
-</script>
-
-<!-- 🔴 MODAL DE TÉRMINOS Y CONDICIONES -->
-<div id="terminosModal" class="terminos-modal-overlay">
+<!-- 🔴 MODAL DE TÉRMINOS Y CONDICIONES POR SUCURSAL -->
+<div id="terminosModal" class="terminos-modal-overlay" style="display: none;">
     <div class="terminos-modal-container">
         <!-- Botón de cerrar -->
-        <button class="terminos-modal-close" id="btnCerrarTerminos" aria-label="Cerrar" title="Volver al Inicio">
+        <button class="terminos-modal-close" id="btnCerrarTerminos" aria-label="Cerrar" title="Cerrar">
             ✕
         </button>
 
         <!-- Encabezado del Modal -->
         <div class="terminos-modal-header">
-            <div class="inline-flex items-center gap-2 px-3 py-1 bg-[#9e2a2b]/10 rounded-full">
+            <div class="inline-flex items-center gap-2 px-3 py-1 bg-[#9e2a2b]/10 rounded-full mb-1">
                 <span class="w-2 h-2 rounded-full bg-[#9e2a2b] animate-ping"></span>
-                <span class="text-xs font-bold uppercase tracking-wider text-[#9e2a2b]">Obligatorio para Continuar</span>
+                <span class="text-xs font-bold uppercase tracking-wider text-[#9e2a2b]">Condiciones de Reserva</span>
             </div>
-            <h2 class="text-xl md:text-2xl font-bold text-gray-900 mt-2 font-serif">Términos y Condiciones BRASARGENT</h2>
-            <p class="text-xs md:text-sm text-gray-600 mt-1">Por favor revisa y acepta los términos para reservar y ver nuestras sucursales.</p>
+            <h2 class="text-xl md:text-2xl font-bold text-gray-900 mt-1 font-serif">
+                Términos y condiciones en la sucursal <span id="terminosNombreSucursal" class="text-[#9e2a2b]">...</span>
+            </h2>
+            <p class="text-xs md:text-sm text-gray-600 mt-1">
+                Por favor lee y acepta las condiciones antes de solicitar tu reserva.
+            </p>
         </div>
 
-        <!-- Contenedor de la Imagen (Amplia, nítida y con indicador de zoom) -->
-        <div class="terminos-modal-image-wrapper">
-            <div class="zoom-badge-hint" id="zoomBadgeHint">
-                🔍 Haz clic en la imagen para ver en pantalla completa
-            </div>
-            <div class="image-scroll-area">
-                <img 
-                    id="terminosImage"
-                    src="/img/terminosCond/terminosCondiciones.png" 
-                    alt="Términos y Condiciones BRASARGENT"
-                    loading="eager"
-                    title="Haz clic para ampliar"
-                />
+        <!-- Lista de Términos -->
+        <div class="terminos-modal-body">
+            <div class="terminos-lista-grid">
+                <!-- Tiempo de espera -->
+                <div class="termino-card-item">
+                    <div class="termino-info">
+                        <span class="termino-label">Puntualidad</span>
+                        <p class="termino-value">Tiempo de espera de <strong>10 Minutos</strong>.</p>
+                    </div>
+                </div>
+
+                <!-- Todos los comensales -->
+                <div class="termino-card-item">
+                    <div class="termino-info">
+                        <span class="termino-label">Ingreso de grupo</span>
+                        <p class="termino-value">Para ingresar deben de estar <strong>todos los comensales</strong>.</p>
+                    </div>
+                </div>
+
+                <!-- Liberación de cubiertos -->
+                <div class="termino-card-item">
+                    <div class="termino-info">
+                        <span class="termino-label">Tolerancia</span>
+                        <p class="termino-value">Si no llegan a tiempo <strong>se liberan los cubiertos</strong>.</p>
+                    </div>
+                </div>
+
+                <!-- Edad 0 a 5 años -->
+                <div class="termino-card-item">
+                    <div class="termino-info">
+                        <span class="termino-label">Niños pequeños</span>
+                        <p class="termino-value"><strong>No pagan</strong> de 0 a 5 años.</p>
+                    </div>
+                </div>
+
+                <!-- Edad 5 a 10 años -->
+                <div class="termino-card-item">
+                    <div class="termino-info">
+                        <span class="termino-label">Niños</span>
+                        <p class="termino-value"><strong>Pagan tarifa especial</strong> de 5 a 10 años.</p>
+                    </div>
+                </div>
+
+                <!-- Feriados y domingos -->
+                <div class="termino-card-item termino-card-highlight">
+                    <div class="termino-info">
+                        <span class="termino-label text-red-800 font-bold">Atención sin Reserva</span>
+                        <p class="termino-value text-red-900"><strong>Domingos, Feriados y Días festivos</strong> trabajamos por orden de llegada (sin reserva).</p>
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -54,138 +84,89 @@
                 id="btnAceptarTerminos"
                 class="terminos-btn-terminos btn-aceptar"
             >
-                ✅ Aceptar Términos y Continuar
+                Aceptar y Continuar
             </button>
             <button 
-                id="btnVolverInicio"
+                id="btnCancelarTerminos"
                 class="terminos-btn-terminos btn-volver"
             >
-                ⬅️ Volver al Inicio
+                Cancelar
             </button>
         </div>
 
         <!-- Footer Informativo -->
         <p class="terminos-modal-footer">
-            Al hacer clic en "Aceptar", declaras haber leído y aceptado todas las cláusulas de BRASARGENT.
+            Al continuar declaras estar de acuerdo con las condiciones de la sucursal.
         </p>
     </div>
 </div>
 
-<!-- 🔴 LIGHTBOX (ZOOM EN PANTALLA COMPLETA) PARA LECTURA PERFECTA -->
-<div id="lightboxModal" class="lightbox-overlay hidden">
-    <div class="lightbox-topbar">
-        <span class="text-white text-sm font-semibold">🔎 Vista Ampliada de Términos</span>
-        <button id="btnCloseLightbox" class="lightbox-close-btn">
-            ✕ Cerrar Zoom
-        </button>
-    </div>
-    <div class="lightbox-body">
-        <img 
-            src="/img/terminosCond/terminosCondiciones.png" 
-            alt="Términos Ampliados BRASARGENT" 
-            class="lightbox-img" 
-        />
-    </div>
-</div>
-
-<!-- ============================================
-🔴 SCRIPT DEL MODAL
-============================================ -->
+<!-- SCRIPT DEL MODAL DE TÉRMINOS -->
 <script>
-    document.addEventListener('DOMContentLoaded', () => {
-        const modal = document.getElementById('terminosModal');
-        const content = document.getElementById('sucursalesContent');
-        const btnAceptar = document.getElementById('btnAceptarTerminos');
-        const btnVolver = document.getElementById('btnVolverInicio');
-        const btnCerrar = document.getElementById('btnCerrarTerminos');
-        
-        // Elementos de Zoom / Lightbox
-        const terminosImage = document.getElementById('terminosImage');
-        const zoomBadgeHint = document.getElementById('zoomBadgeHint');
-        const lightboxModal = document.getElementById('lightboxModal');
-        const btnCloseLightbox = document.getElementById('btnCloseLightbox');
+    if (typeof window !== 'undefined') {
+        let pendingAceptarCallback: (() => void) | null = null;
 
-        // 🔴 TAREA 1: Solo mostrar si el usuario NO ha aceptado antes (localStorage)
-        const yaAcepto = localStorage.getItem('brasargent_terminos_aceptados') === 'true';
-        
-        if (yaAcepto) {
-            // Ya aceptó — ocultar modal directamente y desbloquear el contenido
-            if (modal) modal.style.display = 'none';
-            if (content) content.classList.remove('blocked');
-        } else {
-            // Primera visita — mostrar modal y bloquear contenido
-            if (modal) modal.style.display = 'flex';
-            if (content) content.classList.add('blocked');
-        }
+        (window as any).abrirTerminosModal = function(sucursalId: number, sucursalNombre: string, callback: () => void) {
+            const modal = document.getElementById('terminosModal');
+            const titleSucursal = document.getElementById('terminosNombreSucursal');
+            pendingAceptarCallback = callback;
 
-        // 🔴 Aceptar Términos: guardar en localStorage, cerrar modal y desbloquear el contenido
-        function aceptarTerminos() {
-            localStorage.setItem('brasargent_terminos_aceptados', 'true');
+            if (titleSucursal) {
+                titleSucursal.textContent = sucursalNombre;
+            }
+
+            if (modal) {
+                modal.style.display = 'flex';
+                document.body.classList.add('modal-open');
+            }
+        };
+
+        (window as any).cerrarTerminosModal = function() {
+            const modal = document.getElementById('terminosModal');
             if (modal) {
                 modal.classList.add('terminos-modal-fade-out');
                 setTimeout(() => {
                     modal.style.display = 'none';
                     modal.classList.remove('terminos-modal-fade-out');
-                }, 350);
+                    document.body.classList.remove('modal-open');
+                }, 300);
             }
-            if (content) {
-                content.classList.remove('blocked');
-            }
-        }
+            pendingAceptarCallback = null;
+        };
 
-        // 🔴 Redirigir al inicio
-        function volverInicio() {
-            window.location.href = '/';
-        }
+        document.addEventListener('DOMContentLoaded', () => {
+            const btnAceptar = document.getElementById('btnAceptarTerminos');
+            const btnCancelar = document.getElementById('btnCancelarTerminos');
+            const btnCerrar = document.getElementById('btnCerrarTerminos');
 
-        // Event listeners
-        if (btnAceptar) btnAceptar.addEventListener('click', aceptarTerminos);
-        if (btnVolver) btnVolver.addEventListener('click', volverInicio);
-        if (btnCerrar) btnCerrar.addEventListener('click', volverInicio);
-
-        // 🔴 TAREA 2: Abrir Zoom / Lightbox al hacer clic en la imagen
-        function abrirZoom() {
-            if (lightboxModal) {
-                lightboxModal.classList.remove('hidden');
-                document.body.style.overflow = 'hidden';
-            }
-        }
-
-        function cerrarZoom() {
-            if (lightboxModal) {
-                lightboxModal.classList.add('hidden');
-                document.body.style.overflow = '';
-            }
-        }
-
-        if (terminosImage) terminosImage.addEventListener('click', abrirZoom);
-        if (zoomBadgeHint) zoomBadgeHint.addEventListener('click', abrirZoom);
-        if (btnCloseLightbox) btnCloseLightbox.addEventListener('click', cerrarZoom);
-
-        if (lightboxModal) {
-            lightboxModal.addEventListener('click', (e) => {
-                if (e.target === lightboxModal) {
-                    cerrarZoom();
+            btnAceptar?.addEventListener('click', () => {
+                const cb = pendingAceptarCallback;
+                (window as any).cerrarTerminosModal();
+                if (cb && typeof cb === 'function') {
+                    cb();
                 }
             });
-        }
 
-        // Tecla ESC: Si lightbox está abierto lo cierra, sino redirige a inicio
-        document.addEventListener('keydown', (e) => {
-            if (e.key === 'Escape') {
-                if (lightboxModal && !lightboxModal.classList.contains('hidden')) {
-                    cerrarZoom();
-                } else if (modal && modal.style.display !== 'none') {
-                    volverInicio();
+            btnCancelar?.addEventListener('click', () => {
+                (window as any).cerrarTerminosModal();
+            });
+
+            btnCerrar?.addEventListener('click', () => {
+                (window as any).cerrarTerminosModal();
+            });
+
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape') {
+                    const modal = document.getElementById('terminosModal');
+                    if (modal && modal.style.display !== 'none') {
+                        (window as any).cerrarTerminosModal();
+                    }
                 }
-            }
+            });
         });
-    });
+    }
 </script>
 
-<!-- ============================================
-🔴 ESTILOS DEL MODAL Y LIGHTBOX
-============================================ -->
 <style>
     /* OVERLAY PRINCIPAL */
     .terminos-modal-overlay {
@@ -194,15 +175,15 @@
         left: 0;
         width: 100%;
         height: 100%;
-        background: rgba(0, 0, 0, 0.85);
-        backdrop-filter: blur(12px);
-        -webkit-backdrop-filter: blur(12px);
+        background: rgba(0, 0, 0, 0.75);
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
         display: flex;
         align-items: center;
         justify-content: center;
         z-index: 10001;
         padding: 16px;
-        animation: terminosFadeIn 0.35s ease;
+        animation: terminosFadeIn 0.3s ease;
     }
 
     @keyframes terminosFadeIn {
@@ -217,7 +198,7 @@
     }
 
     .terminos-modal-fade-out {
-        animation: terminosFadeOut 0.35s ease forwards;
+        animation: terminosFadeOut 0.3s ease forwards;
     }
 
     @keyframes terminosFadeOut {
@@ -231,17 +212,17 @@
         }
     }
 
-    /* CONTENEDOR DEL MODAL AMPLIADO (TAREA 2: max-width 920px) */
+    /* CONTENEDOR DEL MODAL */
     .terminos-modal-container {
         position: relative;
-        max-width: 920px;
+        max-width: 680px;
         width: 100%;
-        max-height: 94vh;
+        max-height: 92vh;
         background: #fffaf0;
         border-radius: 24px;
         overflow: hidden;
-        box-shadow: 0 30px 90px rgba(0, 0, 0, 0.7), 0 0 0 1px rgba(255, 255, 255, 0.15);
-        animation: terminosSlideUp 0.45s cubic-bezier(0.34, 1.56, 0.64, 1);
+        box-shadow: 0 30px 90px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(255, 255, 255, 0.2);
+        animation: terminosSlideUp 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
         display: flex;
         flex-direction: column;
     }
@@ -249,7 +230,7 @@
     @keyframes terminosSlideUp {
         from {
             opacity: 0;
-            transform: translateY(25px) scale(0.97);
+            transform: translateY(20px) scale(0.97);
         }
         to {
             opacity: 1;
@@ -262,12 +243,12 @@
         position: absolute;
         top: 16px;
         right: 18px;
-        background: rgba(0, 0, 0, 0.08);
+        background: rgba(0, 0, 0, 0.06);
         border: 1px solid rgba(0, 0, 0, 0.1);
         color: #1a1a1a;
-        font-size: 1.2rem;
-        width: 38px;
-        height: 38px;
+        font-size: 1.1rem;
+        width: 36px;
+        height: 36px;
         border-radius: 50%;
         cursor: pointer;
         transition: all 0.3s ease;
@@ -275,7 +256,6 @@
         align-items: center;
         justify-content: center;
         z-index: 20;
-        font-family: 'Inter', sans-serif;
     }
 
     .terminos-modal-close:hover {
@@ -286,87 +266,95 @@
 
     /* ENCABEZADO DEL MODAL */
     .terminos-modal-header {
-        padding: 20px 24px 14px;
+        padding: 24px 28px 16px;
         background: #fffaf0;
-        border-b: 1px solid rgba(26, 26, 26, 0.06);
+        border-bottom: 1px solid rgba(26, 26, 26, 0.06);
     }
 
-    /* ÁREA DE LA IMAGEN AMPLIADA */
-    .terminos-modal-image-wrapper {
-        position: relative;
-        width: 100%;
-        background: #ffffff;
+    /* BODY Y TARJETAS */
+    .terminos-modal-body {
+        padding: 20px 28px;
+        overflow-y: auto;
+        max-height: 60vh;
+    }
+
+    .terminos-lista-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 14px;
+    }
+
+    .termino-card-item {
         display: flex;
-        flex-direction: column;
+        align-items: center;
+        gap: 12px;
+        padding: 14px 16px;
+        background: #ffffff;
+        border: 1.5px solid rgba(26, 26, 26, 0.07);
+        border-radius: 16px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
+        transition: all 0.25s ease;
+    }
+
+    .termino-card-item:hover {
+        border-color: rgba(158, 42, 43, 0.3);
+        transform: translateY(-2px);
+        box-shadow: 0 6px 16px rgba(0, 0, 0, 0.06);
+    }
+
+    .termino-card-highlight {
+        grid-column: 1 / -1;
+        background: #fef2f2;
+        border-color: #fecaca;
+    }
+
+    .termino-icon-box {
+        width: 42px;
+        height: 42px;
+        border-radius: 12px;
+        display: flex;
         align-items: center;
         justify-content: center;
-        padding: 12px;
-        overflow: hidden;
+        font-size: 1.3rem;
+        flex-shrink: 0;
     }
 
-    .zoom-badge-hint {
-        position: absolute;
-        top: 18px;
-        right: 24px;
-        background: rgba(158, 42, 43, 0.9);
-        color: #ffffff;
-        font-size: 0.72rem;
-        font-weight: 700;
-        padding: 5px 12px;
-        border-radius: 20px;
-        cursor: pointer;
-        z-index: 10;
-        box-shadow: 0 4px 14px rgba(158, 42, 43, 0.4);
-        transition: all 0.3s ease;
-        user-select: none;
-    }
-
-    .zoom-badge-hint:hover {
-        background: #7a2021;
-        transform: scale(1.05);
-    }
-
-    .image-scroll-area {
-        width: 100%;
-        max-height: 65vh;
-        overflow-y: auto;
+    .termino-info {
         display: flex;
-        justify-content: center;
-        border-radius: 12px;
-        background: #ffffff;
-        scrollbar-width: thin;
-        scrollbar-color: #9e2a2b #f1f1f1;
+        flex-direction: column;
+        gap: 2px;
     }
 
-    .image-scroll-area img {
-        width: 100%;
-        height: auto;
-        object-fit: contain;
-        border-radius: 12px;
-        display: block;
-        cursor: zoom-in;
-        transition: transform 0.3s ease;
+    .termino-label {
+        font-size: 0.7rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        color: #888;
     }
 
-    .image-scroll-area img:hover {
-        transform: scale(1.01);
+    .termino-value {
+        font-size: 0.85rem;
+        color: #2c2c2c;
+        margin: 0;
+        line-height: 1.35;
     }
 
     /* BOTONES DE ACCIÓN */
     .terminos-modal-actions {
         display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 16px;
-        padding: 18px 24px 14px;
+        grid-template-columns: 1.5fr 1fr;
+        gap: 14px;
+        padding: 18px 28px;
         background: #fffaf0;
         border-top: 1px solid rgba(26, 26, 26, 0.08);
     }
 
     .terminos-btn-terminos {
-        padding: 16px 24px;
+        padding: 14px 20px;
         border: none;
         border-radius: 14px;
-        font-size: 1rem;
+        font-size: 0.95rem;
         font-weight: 700;
         cursor: pointer;
         transition: all 0.3s ease;
@@ -374,155 +362,62 @@
         display: flex;
         align-items: center;
         justify-content: center;
-        gap: 10px;
+        gap: 8px;
     }
 
     .btn-aceptar {
         background: linear-gradient(135deg, #9e2a2b, #7a2021);
         color: #fffaf0;
-        box-shadow: 0 6px 24px rgba(158, 42, 43, 0.35);
-        grid-column: 1 / 2;
+        box-shadow: 0 6px 20px rgba(158, 42, 43, 0.35);
     }
 
     .btn-aceptar:hover {
-        transform: translateY(-2px) scale(1.01);
-        box-shadow: 0 10px 32px rgba(158, 42, 43, 0.5);
-    }
-
-    .btn-aceptar:active {
-        transform: scale(0.98);
+        transform: translateY(-2px);
+        box-shadow: 0 10px 28px rgba(158, 42, 43, 0.45);
     }
 
     .btn-volver {
         background: #ffffff;
-        color: #1a1a1a;
-        border: 1.5px solid rgba(26, 26, 26, 0.18);
-        grid-column: 2 / 3;
+        color: #4a4a54;
+        border: 1.5px solid rgba(26, 26, 26, 0.15);
     }
 
     .btn-volver:hover {
-        background: rgba(26, 26, 26, 0.06);
-        transform: translateY(-2px) scale(1.01);
-    }
-
-    .btn-volver:active {
-        transform: scale(0.98);
+        background: rgba(26, 26, 26, 0.05);
+        color: #1a1a1f;
     }
 
     /* FOOTER INFORMATIVO */
     .terminos-modal-footer {
-        padding: 8px 24px 18px;
+        padding: 10px 28px 18px;
         background: #fffaf0;
         text-align: center;
-        font-size: 0.75rem;
-        color: rgba(26, 26, 26, 0.5);
-        border-top: 1px solid rgba(26, 26, 26, 0.04);
+        font-size: 0.72rem;
+        color: rgba(26, 26, 26, 0.45);
         margin: 0;
     }
 
-    /* LIGHTBOX FULLSCREEN ZOOM MODAL */
-    .lightbox-overlay {
-        position: fixed;
-        inset: 0;
-        background: rgba(0, 0, 0, 0.95);
-        z-index: 10000;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: flex-start;
-        padding: 20px;
-        animation: terminosFadeIn 0.3s ease;
-    }
-
-    .lightbox-topbar {
-        width: 100%;
-        max-width: 1200px;
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        padding: 10px 20px;
-        background: rgba(255, 255, 255, 0.1);
-        border-radius: 12px;
-        margin-bottom: 16px;
-        backdrop-filter: blur(10px);
-    }
-
-    .lightbox-close-btn {
-        background: #9e2a2b;
-        color: #ffffff;
-        border: none;
-        padding: 8px 18px;
-        border-radius: 20px;
-        font-weight: 700;
-        font-size: 0.85rem;
-        cursor: pointer;
-        transition: all 0.3s ease;
-    }
-
-    .lightbox-close-btn:hover {
-        background: #dc2626;
-        transform: scale(1.05);
-    }
-
-    .lightbox-body {
-        width: 100%;
-        max-width: 1200px;
-        height: 85vh;
-        overflow: auto;
-        display: flex;
-        justify-content: center;
-        background: #ffffff;
-        border-radius: 16px;
-        padding: 16px;
-    }
-
-    .lightbox-img {
-        max-width: 100%;
-        height: auto;
-        object-fit: contain;
-        display: block;
-    }
-
-    .hidden {
-        display: none !important;
-    }
-
     /* RESPONSIVE */
-    @media (max-width: 768px) {
-        .terminos-modal-container {
-            max-width: 100%;
-            border-radius: 20px;
-            max-height: 98vh;
-        }
-
-        .zoom-badge-hint {
-            top: 10px;
-            right: 12px;
-            font-size: 0.65rem;
-            padding: 4px 10px;
-        }
-
-        .image-scroll-area {
-            max-height: 55vh;
+    @media (max-width: 640px) {
+        .terminos-lista-grid {
+            grid-template-columns: 1fr;
         }
 
         .terminos-modal-actions {
             grid-template-columns: 1fr;
             gap: 10px;
-            padding: 14px 16px 10px;
-        }
-
-        .btn-aceptar, .btn-volver {
-            grid-column: 1;
-        }
-
-        .terminos-btn-terminos {
-            padding: 14px 16px;
-            font-size: 0.9rem;
         }
 
         .terminos-modal-header {
-            padding: 16px 16px 10px;
+            padding: 20px 20px 14px;
+        }
+
+        .terminos-modal-body {
+            padding: 16px 20px;
+        }
+
+        .terminos-modal-actions {
+            padding: 14px 20px;
         }
     }
 </style>

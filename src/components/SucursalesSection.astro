@@ -65,6 +65,25 @@ try {
       reviews: s.reviews ? s.reviews.toString() : "0",
     };
   });
+
+  // Ordenar tarjetas: 1. Churrasquería, 2. Rodizio, 3. Fast Grill
+  sucursales.sort((a: any, b: any) => {
+    const nameA = (a.name || '').toLowerCase();
+    const nameB = (b.name || '').toLowerCase();
+
+    let orderA = 99;
+    let orderB = 99;
+
+    if (nameA.includes('churrasquer')) orderA = 1;
+    else if (nameA.includes('rodizio')) orderA = 2;
+    else if (nameA.includes('fast')) orderA = 3;
+
+    if (nameB.includes('churrasquer')) orderB = 1;
+    else if (nameB.includes('rodizio')) orderB = 2;
+    else if (nameB.includes('fast')) orderB = 3;
+
+    return orderA - orderB;
+  });
 } catch (error) {
   console.error("Error al cargar sucursales en SucursalesSection:", error);
 }
@@ -72,11 +91,11 @@ try {
 
 <section
   id="sucursales"
-  class="relative pb-24 overflow-hidden"
+  class="relative w-full pb-24 overflow-hidden flex flex-col items-center justify-center"
   style="padding-top: 250px; background-image: linear-gradient(135deg, rgba(159, 159, 159, 0.46) 0%, rgba(159, 159, 159, 0.46) 14.286%,rgba(165, 165, 165, 0.46) 14.286%, rgba(165, 165, 165, 0.46) 28.572%,rgba(171, 171, 171, 0.46) 28.572%, rgba(171, 171, 171, 0.46) 42.858%,rgba(178, 178, 178, 0.46) 42.858%, rgba(178, 178, 178, 0.46) 57.144%,rgba(184, 184, 184, 0.46) 57.144%, rgba(184, 184, 184, 0.46) 71.43%,rgba(190, 190, 190, 0.46) 71.43%, rgba(190, 190, 190, 0.46) 85.716%,rgba(196, 196, 196, 0.46) 85.716%, rgba(196, 196, 196, 0.46) 100.002%),linear-gradient(45deg, rgb(252, 252, 252) 0%, rgb(252, 252, 252) 14.286%,rgb(246, 246, 246) 14.286%, rgb(246, 246, 246) 28.572%,rgb(241, 241, 241) 28.572%, rgb(241, 241, 241) 42.858%,rgb(235, 235, 235) 42.858%, rgb(235, 235, 235) 57.144%,rgb(229, 229, 229) 57.144%, rgb(229, 229, 229) 71.43%,rgb(224, 224, 224) 71.43%, rgb(224, 224, 224) 85.716%,rgb(218, 218, 218) 85.716%, rgb(218, 218, 218) 100.002%);"
 >
   <!-- Efectos de fondo decorativos (reducidos) -->
-  <div class="absolute inset-0 opacity-5">
+  <div class="absolute inset-0 opacity-5 pointer-events-none">
     <div
       class="absolute top-50 left-10 w-96 h-96 bg-[#d4af37] rounded-full filter blur-[120px] animate-pulse"
     >
@@ -88,27 +107,31 @@ try {
     </div>
   </div>
 
-  <div class="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+  <div
+    class="relative w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col items-center justify-center"
+  >
     <!-- Header -->
-    <div class="text-center mb-16 space-y-4" data-aos="fade-up">
+    <div
+      class="text-center mb-16 space-y-4 w-full flex flex-col items-center justify-center"
+      data-aos="fade-up"
+    >
       <h2
-        class="text-5xl md:text-6xl font-bold text-white drop-shadow-[0_2px_8px_rgba(0,0,0,0.8)]"
+        class="text-5xl md:text-6xl font-bold text-white drop-shadow-[0_2px_8px_rgba(0,0,0,0.8)] text-center"
       >
         <span
-          class="bg-gradient-to-r from-[#d4af37] via-[#f4d03f] to-[#d4af37] bg-clip-text text-transparent animate-gradient drop-shadow-[0_2px_8px_rgba(0,0,0,0.8)]"
+          class="bg-gradient-to-r to-[#d4af37] bg-clip-text bg-white text-center"
         >
           Encuentra tu Brasargent más cercano
         </span>
-        <br />
         <br />
         <br />
       </h2>
     </div>
     <div class="py-12"></div>
     <!-- Grid de Sucursales - Grid cuadrado centrado -->
-    <div class="flex justify-center">
+    <div class="w-full flex justify-center items-center">
       <div
-        class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 max-w-7xl mx-auto"
+        class="w-full grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 justify-items-center justify-center max-w-7xl mx-auto"
       >
         {
           sucursales.map((sucursal, index) => (
@@ -283,7 +306,9 @@ try {
                         alt="Ubicación"
                         class="gif-hover w-8 h-8 sm:w-9 sm:h-9 object-contain shrink-0"
                       />
-                      <span class="text-[10px] sm:text-xs font-semibold text-gray-500 group-hover:text-[#9e2a2b] transition-colors uppercase tracking-wider">Ubicación</span>
+                      <span class="text-[10px] sm:text-xs font-semibold text-gray-500 group-hover:text-[#9e2a2b] transition-colors uppercase tracking-wider">
+                        Ubicación
+                      </span>
                     </a>
 
                     {/* Botón Menú */}
@@ -301,7 +326,9 @@ try {
                         alt="Menú"
                         class="gif-hover w-8 h-8 sm:w-9 sm:h-9 object-contain shrink-0"
                       />
-                      <span class="text-[10px] sm:text-xs font-semibold text-gray-500 group-hover:text-[#9e2a2b] transition-colors uppercase tracking-wider">Menú</span>
+                      <span class="text-[10px] sm:text-xs font-semibold text-gray-500 group-hover:text-[#9e2a2b] transition-colors uppercase tracking-wider">
+                        Menú
+                      </span>
                     </button>
 
                     {/* Botón WhatsApp */}
@@ -317,11 +344,12 @@ try {
                         alt="WhatsApp"
                         class="w-8 h-8 sm:w-9 sm:h-9 object-contain shrink-0"
                       />
-                      <span class="text-[10px] sm:text-xs font-semibold text-gray-500 group-hover:text-green-600 transition-colors uppercase tracking-wider">WhatsApp</span>
+                      <span class="text-[10px] sm:text-xs font-semibold text-gray-500 group-hover:text-green-600 transition-colors uppercase tracking-wider">
+                        WhatsApp
+                      </span>
                     </a>
                   </div>
                 </div>
-
               </div>
 
               {/* ── CTA RESERVAR: Botón que llena toda la mitad inferior de la tarjeta ── */}
@@ -334,11 +362,19 @@ try {
                   aria-label={`Reservar mesa en ${sucursal.name}`}
                   class="btn-abrir-reserva w-full grow flex items-center justify-center gap-3 bg-[#9e2a2b] hover:bg-[#7a2022] active:scale-[0.98] text-white font-bold text-xl sm:text-2xl px-6 transition-all duration-300 cursor-pointer focus:outline-none border-t border-[#8a2426]/30 min-h-[120px] sm:min-h-[140px]"
                 >
-                  <svg class="w-6 h-6 sm:w-7 sm:h-7 shrink-0 opacity-90" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
-                    <line x1="16" y1="2" x2="16" y2="6"/>
-                    <line x1="8" y1="2" x2="8" y2="6"/>
-                    <line x1="3" y1="10" x2="21" y2="10"/>
+                  <svg
+                    class="w-6 h-6 sm:w-7 sm:h-7 shrink-0 opacity-90"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  >
+                    <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
+                    <line x1="16" y1="2" x2="16" y2="6" />
+                    <line x1="8" y1="2" x2="8" y2="6" />
+                    <line x1="3" y1="10" x2="21" y2="10" />
                   </svg>
                   <span class="tracking-wide">Reserve ahora !</span>
                 </button>
@@ -351,7 +387,11 @@ try {
     <div class="h-32 md:h-48"></div>
     <!-- Espaciador explícito -->
     {/* CTA Final */}
-    <div class="mt-20 text-center" data-aos="fade-up" data-aos-delay="200">
+    <div
+      class="mt-20 text-center w-full flex justify-center items-center"
+      data-aos="fade-up"
+      data-aos-delay="200"
+    >
       <div
         class="inline-block bg-white/80 backdrop-blur-xl rounded-2xl border border-gray-200 shadow-lg p-8"
       >
@@ -542,8 +582,14 @@ try {
           e.preventDefault();
           const sucursalId = btn.getAttribute("data-sucursal-id");
           const sucursalName = btn.getAttribute("data-sucursal-name");
-          if (sucursalId && typeof (window as any).abrirModalReserva === "function") {
-            (window as any).abrirModalReserva(Number(sucursalId), sucursalName || "");
+          if (
+            sucursalId &&
+            typeof (window as any).abrirModalReserva === "function"
+          ) {
+            (window as any).abrirModalReserva(
+              Number(sucursalId),
+              sucursalName || "",
+            );
           }
         }
       });
@@ -564,7 +610,7 @@ try {
   // MODAL DE RESERVA - CON VALIDACIÓN DE HORARIOS
   // ============================================
 
-  window.abrirModalReserva = function (sucursalId, sucursalNombre) {
+  window._mostrarFormularioReserva = function (sucursalId, sucursalNombre) {
     // Verificar si ya existe un modal abierto
     const existente = document.getElementById("modalReservaCliente");
     if (existente) {
@@ -742,6 +788,16 @@ try {
         e.preventDefault();
         await window.enviarReserva(sucursalId, sucursalNombre);
       });
+  };
+
+  window.abrirModalReserva = function (sucursalId, sucursalNombre) {
+    if (typeof (window as any).abrirTerminosModal === "function") {
+      (window as any).abrirTerminosModal(sucursalId, sucursalNombre, () => {
+        (window as any)._mostrarFormularioReserva(sucursalId, sucursalNombre);
+      });
+    } else {
+      (window as any)._mostrarFormularioReserva(sucursalId, sucursalNombre);
+    }
   };
 
   window._cargarTurnosModal = async function (sucursalId, fecha) {
@@ -2482,7 +2538,8 @@ try {
       let navHtml = "";
       let isFirst = true;
       for (const [catName, list] of Object.entries(categoriasMap)) {
-        const sectionId = "cat-" + catName.toLowerCase().replace(/[^a-z0-9]/g, "-");
+        const sectionId =
+          "cat-" + catName.toLowerCase().replace(/[^a-z0-9]/g, "-");
         navHtml += `
           <button
             data-section="${sectionId}"
@@ -2516,7 +2573,8 @@ try {
       let html = '<div class="space-y-16">';
 
       for (const [catName, list] of Object.entries(categoriasMap)) {
-        const sectionId = "cat-" + catName.toLowerCase().replace(/[^a-z0-9]/g, "-");
+        const sectionId =
+          "cat-" + catName.toLowerCase().replace(/[^a-z0-9]/g, "-");
         html += `
           <div id="${sectionId}" class="menu-section scroll-mt-32">
             <h4 class="text-3xl font-black text-[#9e2a2b] mb-10 pb-4 border-b-2 border-[#9e2a2b]/20 tracking-tight flex items-center gap-4">
@@ -2530,18 +2588,29 @@ try {
         list.forEach((item) => {
           const isAgotado = item.disponible === 0 || item.disponible === false;
           const isDestacado = item.destacado === 1 || item.destacado === true;
-          const precioNum = typeof item.precio === 'number' ? item.precio : parseFloat(item.precio || 0);
-          const precioFormatted = isNaN(precioNum) ? (item.precio || '') : (precioNum % 1 === 0 ? precioNum.toFixed(0) : precioNum.toFixed(2));
+          const precioNum =
+            typeof item.precio === "number"
+              ? item.precio
+              : parseFloat(item.precio || 0);
+          const precioFormatted = isNaN(precioNum)
+            ? item.precio || ""
+            : precioNum % 1 === 0
+              ? precioNum.toFixed(0)
+              : precioNum.toFixed(2);
 
           html += `
             <div class="group/item relative bg-white/80 backdrop-blur-sm p-4 rounded-2xl border border-gray-100 shadow-sm hover:shadow-md transition-all duration-300 flex items-center gap-4 ${isAgotado ? "opacity-60 bg-gray-50/80" : ""}">
-              ${item.imagen_url ? `
-                <img src="${item.imagen_url}" alt="${item.nombre}" class="w-20 h-20 object-cover rounded-xl shrink-0 border border-gray-200 shadow-sm" />
-              ` : `
+              ${
+                item.imagen_url
+                  ? `
+                <img src="${item.imagen_url}" alt="${item.nombre}" class="w-20 h-20 object-contain p-1 bg-gray-50 rounded-xl shrink-0 border border-gray-200 shadow-sm" />
+              `
+                  : `
                 <div class="w-20 h-20 bg-gray-100 rounded-xl shrink-0 flex items-center justify-center text-2xl border border-gray-200 text-gray-400">
                   🍽️
                 </div>
-              `}
+              `
+              }
               <div class="flex-1 min-w-0">
                 <div class="flex items-center gap-2 flex-wrap mb-1">
                   <span class="text-gray-900 font-bold tracking-wide uppercase text-base block">
@@ -2672,7 +2741,10 @@ try {
       sections.forEach((section) => observer.observe(section));
     };
 
-    const loadAndRenderMenu = async (sucursalId: number, sucursalName: string) => {
+    const loadAndRenderMenu = async (
+      sucursalId: number,
+      sucursalName: string,
+    ) => {
       if (!menuItemsContainer || !menuNav) return;
 
       menuNav.innerHTML = `
@@ -2691,13 +2763,18 @@ try {
         const res = await fetch(`/api/menu/sucursal/${sucursalId}`);
         const json = await res.json();
 
-        if (json.success && json.data && Array.isArray(json.data.platos) && json.data.platos.length > 0) {
+        if (
+          json.success &&
+          json.data &&
+          Array.isArray(json.data.platos) &&
+          json.data.platos.length > 0
+        ) {
           renderLiveMenu(json.data.platos);
         } else {
           if (MENUS[sucursalName]) {
             renderMenu(sucursalName);
           } else {
-            menuNav.innerHTML = '';
+            menuNav.innerHTML = "";
             menuItemsContainer.innerHTML = `
               <div class="text-center py-16 bg-white/80 rounded-3xl border border-gray-100 shadow-sm">
                 <span class="text-5xl block mb-4">🍽️</span>
@@ -2712,7 +2789,7 @@ try {
         if (MENUS[sucursalName]) {
           renderMenu(sucursalName);
         } else {
-          menuNav.innerHTML = '';
+          menuNav.innerHTML = "";
           menuItemsContainer.innerHTML = `
             <div class="text-center py-16 bg-white/80 rounded-3xl border border-gray-100 shadow-sm">
               <span class="text-5xl block mb-4">⚠️</span>

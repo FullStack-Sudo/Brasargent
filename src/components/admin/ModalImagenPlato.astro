@@ -1,75 +1,378 @@
 ---
+// ModalImagenPlato.astro — Rediseño Premium
 ---
 
-<div id="modalImagenPlato" class="fixed inset-0 z-50 flex items-center justify-center opacity-0 pointer-events-none transition-opacity duration-300 p-4">
-    <div class="absolute inset-0 bg-black/60 backdrop-blur-md" id="modalImagenOverlay"></div>
-    
-    <div class="relative bg-white rounded-3xl w-full max-w-md p-6 shadow-[0_25px_60px_-15px_rgba(0,0,0,0.4)] transform scale-95 transition-all duration-300 overflow-hidden border border-gray-100" id="modalImagenContent">
-        <div class="flex justify-between items-center mb-5">
-            <div class="flex items-center gap-3">
-                <div class="w-9 h-9 rounded-xl bg-[#9e2a2b]/10 text-[#9e2a2b] flex items-center justify-center text-lg font-bold">
-                    📷
+<div id="modalImagenPlato" class="mip-overlay">
+    <div class="mip-backdrop" id="modalImagenOverlay"></div>
+
+    <div class="mip-container modal-container" id="modalImagenContent">
+        <!-- Header -->
+        <div class="mip-header">
+            <div class="mip-header-left">
+                <div class="mip-icon-badge">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                        <circle cx="8.5" cy="8.5" r="1.5"></circle>
+                        <polyline points="21 15 16 10 5 21"></polyline>
+                    </svg>
                 </div>
-                <h3 class="modal-img-title font-serif font-bold text-gray-900 text-lg m-0">Subir Imagen</h3>
+                <div>
+                    <h3 class="mip-title">Subir Imagen</h3>
+                    <p class="mip-subtitle">Selecciona o arrastra una foto para el plato</p>
+                </div>
             </div>
-            <button id="btnCerrarModalImagen" type="button" class="w-8 h-8 rounded-xl bg-gray-100 text-gray-500 hover:bg-gray-200 hover:text-gray-800 flex items-center justify-center transition-all border-0 cursor-pointer">
-                ✕
+            <button id="btnCerrarModalImagen" type="button" class="mip-close-btn" title="Cerrar">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
             </button>
         </div>
-        
-        <form id="formSubirImagen" class="space-y-4">
-            <input type="hidden" id="upload_plato_id" name="plato_id" />
-            
-            <div id="dropZone" class="border-2 border-dashed border-gray-200 rounded-2xl p-8 text-center hover:bg-[#9e2a2b]/5 hover:border-[#9e2a2b]/40 transition-colors cursor-pointer group bg-gray-50/70">
-                <div class="upload-content flex flex-col items-center justify-center space-y-3">
-                    <span class="text-4xl group-hover:scale-110 transition-transform">📷</span>
-                    <p class="text-sm font-semibold text-gray-700 m-0">Arrastra una imagen aquí o haz clic para seleccionar</p>
-                    <span class="text-xs text-gray-400">JPG, PNG, WEBP • Max 2MB</span>
-                </div>
-                <input type="file" id="fileInput" name="imagen" accept="image/jpeg, image/png, image/webp" class="hidden" />
-            </div>
 
-            <!-- Preview de la imagen seleccionada -->
-            <div id="previewContainer" class="hidden relative mt-4">
-                <div class="aspect-video w-full rounded-xl overflow-hidden bg-gray-100 border border-gray-200">
-                    <img id="previewImage" src="" alt="Vista previa" class="w-full h-full object-cover" />
+        <!-- Body -->
+        <div class="mip-body">
+            <form id="formSubirImagen">
+                <input type="hidden" id="upload_plato_id" name="plato_id" />
+
+                <div id="dropZoneImg" class="mip-dropzone">
+                    <div id="uploadContentImg" class="mip-dropzone-content">
+                        <div class="mip-dropzone-icon">
+                            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                                <polyline points="17 8 12 3 7 8"></polyline>
+                                <line x1="12" y1="3" x2="12" y2="15"></line>
+                            </svg>
+                        </div>
+                        <p class="mip-dropzone-title">Arrastra una imagen aquí o haz clic para seleccionar</p>
+                        <p class="mip-dropzone-hint">JPG, PNG, WEBP — Máx 2 MB</p>
+                    </div>
+                    <input type="file" id="fileInputImg" name="imagen" accept="image/jpeg, image/png, image/webp" class="mip-file-input" />
                 </div>
-                <button type="button" id="btnRemoveImage" class="absolute top-2 right-2 bg-white text-gray-600 rounded-full w-8 h-8 flex items-center justify-center shadow-md hover:bg-red-50 hover:text-red-600 transition-colors cursor-pointer border-0">
-                    ✕
-                </button>
-            </div>
-            
-            <div class="pt-3 flex gap-3 justify-end border-t border-gray-100">
-                <button type="button" id="btnCancelarImagen" class="px-5 py-2.5 bg-white text-gray-700 border border-gray-200 rounded-xl text-xs sm:text-sm font-semibold hover:bg-gray-100 transition-colors shadow-sm cursor-pointer">
-                    Cancelar
-                </button>
-                <button type="submit" id="btnGuardarImagen" class="px-6 py-2.5 bg-gradient-to-r from-[#9e2a2b] to-[#7a2021] text-white rounded-xl text-xs sm:text-sm font-semibold hover:shadow-[0_6px_20px_rgba(158,42,43,0.4)] transition-all cursor-pointer border-0 disabled:opacity-50 disabled:cursor-not-allowed" disabled>
-                    <span class="btn-text">Subir Imagen</span>
-                    <span class="loader hidden absolute inset-0 flex items-center justify-center">
-                        <svg class="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
-                    </span>
-                </button>
-            </div>
-        </form>
+
+                <!-- Preview -->
+                <div id="previewContainerImg" class="mip-preview-container" style="display:none;">
+                    <div class="mip-preview-frame">
+                        <img id="previewImageImg" src="" alt="Vista previa" class="mip-preview-img" />
+                        <button type="button" id="btnRemoveImageImg" class="mip-remove-btn" title="Quitar imagen">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+
+        <!-- Footer -->
+        <div class="mip-footer">
+            <button type="button" id="btnCancelarImagen" class="mip-btn-cancel">Cancelar</button>
+            <button type="submit" form="formSubirImagen" id="btnGuardarImagen" class="mip-btn-save" disabled>
+                <span class="btn-text">Subir Imagen</span>
+                <svg class="btn-spinner" style="display:none;" width="16" height="16" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" opacity="0.25"></circle><path d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" fill="currentColor" opacity="0.75"></path></svg>
+            </button>
+        </div>
     </div>
 </div>
 
 <style>
-    #modalImagenPlato h3.modal-img-title {
-        font-size: 1.15rem !important;
-        line-height: 1.3 !important;
-        margin: 0 !important;
-        font-family: 'Playfair Display', Georgia, serif !important;
+    .mip-overlay {
+        position: fixed; inset: 0; z-index: 100;
+        display: flex; align-items: center; justify-content: center;
+        padding: 1rem;
+        opacity: 0; pointer-events: none;
+        transition: opacity .3s cubic-bezier(.4,0,.2,1);
     }
-    .modal-img-active {
+    .mip-overlay.modal-active, .mip-overlay.modal-img-active {
+        opacity: 1; pointer-events: auto;
+    }
+    .mip-backdrop {
+        position: absolute; inset: 0;
+        background: rgba(15,15,20,.55);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+    }
+
+    .mip-container {
+        position: relative; z-index: 10;
+        background: #fff;
+        border-radius: 1.5rem;
+        width: 100%; max-width: 520px;
+        max-height: 92vh;
+        display: flex; flex-direction: column;
+        overflow: hidden;
+        box-shadow: 0 30px 80px -20px rgba(0,0,0,.35), 0 0 0 1px rgba(0,0,0,.04);
+        transform: scale(.96) translateY(12px);
+        transition: transform .35s cubic-bezier(.4,0,.2,1), opacity .3s;
+    }
+    .mip-overlay.modal-active > .mip-container,
+    .mip-overlay.modal-img-active > .mip-container {
+        transform: scale(1) translateY(0) !important;
         opacity: 1 !important;
-        pointer-events: auto !important;
     }
-    .modal-img-active #modalImagenContent {
-        transform: scale(1) !important;
+
+    .mip-header {
+        display: flex; align-items: center; justify-content: space-between;
+        padding: 1.15rem 1.75rem;
+        border-bottom: 1px solid #f0f0f2;
+        background: linear-gradient(135deg, #fdfcfb 0%, #f9f7f5 100%);
+        flex-shrink: 0;
     }
-    .drop-active {
-        border-color: #9e2a2b !important;
-        background-color: rgba(158, 42, 43, 0.05) !important;
+    .mip-header-left { display: flex; align-items: center; gap: .75rem; }
+    .mip-icon-badge {
+        width: 40px; height: 40px;
+        border-radius: 12px;
+        background: linear-gradient(135deg, #059669 0%, #047857 100%);
+        color: #fff;
+        display: flex; align-items: center; justify-content: center;
+        flex-shrink: 0;
+        box-shadow: 0 4px 12px rgba(5,150,105,.3);
     }
+    .mip-title {
+        font-family: 'Playfair Display', Georgia, serif !important;
+        font-size: 1.15rem !important; font-weight: 700 !important;
+        color: #1a1a1f !important;
+        margin: 0 !important; line-height: 1.2 !important;
+    }
+    .mip-subtitle {
+        font-size: .78rem !important; color: #8b8b94 !important;
+        margin: .1rem 0 0 !important; line-height: 1.3 !important;
+    }
+    .mip-close-btn {
+        width: 34px; height: 34px;
+        border-radius: 10px; border: 1px solid #e8e8ec;
+        background: #fff; color: #8b8b94;
+        display: flex; align-items: center; justify-content: center;
+        cursor: pointer; transition: all .2s;
+    }
+    .mip-close-btn:hover { background: #f5f5f7; color: #333; }
+
+    .mip-body {
+        padding: 1.5rem 1.75rem;
+        flex: 1; overflow-y: auto;
+    }
+
+    .mip-dropzone {
+        border: 2px dashed #ddd;
+        border-radius: 1rem;
+        background: #fafafa;
+        min-height: 180px;
+        display: flex; flex-direction: column;
+        align-items: center; justify-content: center;
+        cursor: pointer;
+        transition: all .25s;
+        overflow: hidden;
+    }
+    .mip-dropzone:hover { border-color: #059669; background: rgba(5,150,105,.03); }
+    .mip-dropzone.drop-active { border-color: #059669; background: rgba(5,150,105,.06); }
+    .mip-dropzone-content {
+        display: flex; flex-direction: column;
+        align-items: center; justify-content: center;
+        padding: 1.5rem 1rem;
+    }
+    .mip-dropzone-icon {
+        width: 56px; height: 56px;
+        border-radius: 16px;
+        background: #fff;
+        border: 1px solid #eee;
+        display: flex; align-items: center; justify-content: center;
+        color: #059669;
+        margin-bottom: .75rem;
+        box-shadow: 0 2px 8px rgba(0,0,0,.05);
+        transition: transform .2s;
+    }
+    .mip-dropzone:hover .mip-dropzone-icon { transform: translateY(-2px); }
+    .mip-dropzone-title { font-size: .82rem !important; font-weight: 600; color: #444; margin: 0 0 .25rem; }
+    .mip-dropzone-hint { font-size: .72rem !important; color: #aaa; margin: 0; }
+    .mip-file-input { display: none; }
+
+    .mip-preview-container {
+        margin-top: 1rem;
+        position: relative;
+    }
+    .mip-preview-frame {
+        position: relative;
+        border-radius: .875rem;
+        overflow: hidden;
+        background: #f5f5f7;
+        border: 1px solid #e8e8ec;
+        padding: .5rem;
+        display: flex; align-items: center; justify-content: center;
+        aspect-ratio: 16/10;
+    }
+    .mip-preview-img {
+        width: 100%; height: 100%;
+        object-fit: contain;
+        border-radius: .5rem;
+    }
+    .mip-remove-btn {
+        position: absolute; top: 8px; right: 8px;
+        width: 28px; height: 28px;
+        border-radius: 50%;
+        background: #ef4444; color: #fff;
+        border: 2px solid #fff;
+        display: flex; align-items: center; justify-content: center;
+        cursor: pointer;
+        box-shadow: 0 2px 8px rgba(239,68,68,.4);
+        transition: all .2s;
+    }
+    .mip-remove-btn:hover { background: #dc2626; transform: scale(1.1); }
+
+    .mip-footer {
+        display: flex; align-items: center; justify-content: flex-end; gap: .75rem;
+        padding: 1rem 1.75rem;
+        border-top: 1px solid #f0f0f2;
+        background: linear-gradient(135deg, #fdfcfb 0%, #f9f7f5 100%);
+        flex-shrink: 0;
+    }
+    .mip-btn-cancel {
+        padding: .55rem 1.3rem;
+        background: #fff;
+        border: 1.5px solid #e0e0e5;
+        border-radius: .75rem;
+        font-size: .82rem !important; font-weight: 600;
+        color: #555; cursor: pointer; transition: all .2s;
+    }
+    .mip-btn-cancel:hover { background: #f5f5f7; border-color: #ccc; }
+    .mip-btn-save {
+        padding: .55rem 1.5rem;
+        background: linear-gradient(135deg, #059669 0%, #047857 100%);
+        color: #fff;
+        border: none; border-radius: .75rem;
+        font-size: .82rem !important; font-weight: 600;
+        cursor: pointer;
+        display: flex; align-items: center; gap: .5rem;
+        box-shadow: 0 4px 14px rgba(5,150,105,.3);
+        transition: all .25s;
+        min-width: 130px; justify-content: center;
+    }
+    .mip-btn-save:hover:not(:disabled) {
+        box-shadow: 0 6px 20px rgba(5,150,105,.4);
+        transform: translateY(-1px);
+    }
+    .mip-btn-save:active:not(:disabled) { transform: translateY(0) scale(.98); }
+    .mip-btn-save:disabled { opacity: .5; cursor: not-allowed; }
+
+    .btn-spinner { animation: mip-spin .8s linear infinite; }
+    @keyframes mip-spin { to { transform: rotate(360deg); } }
 </style>
+
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const dropZone = document.getElementById('dropZoneImg');
+        const fileInput = document.getElementById('fileInputImg') as HTMLInputElement;
+        const previewContainer = document.getElementById('previewContainerImg');
+        const previewImage = document.getElementById('previewImageImg') as HTMLImageElement;
+        const uploadContent = document.getElementById('uploadContentImg');
+        const btnRemove = document.getElementById('btnRemoveImageImg');
+        const btnSubmit = document.getElementById('btnGuardarImagen') as HTMLButtonElement;
+        const form = document.getElementById('formSubirImagen') as HTMLFormElement;
+        const modal = document.getElementById('modalImagenPlato');
+
+        function resetForm() {
+            if (form) form.reset();
+            if (fileInput) fileInput.value = '';
+            if (previewContainer) previewContainer.style.display = 'none';
+            if (uploadContent) uploadContent.style.display = 'flex';
+            if (previewImage) previewImage.removeAttribute('src');
+            if (btnSubmit) btnSubmit.disabled = true;
+        }
+
+        function closeModal() {
+            if (modal) {
+                modal.classList.remove('modal-active', 'modal-img-active');
+            }
+            resetForm();
+        }
+
+        function handleFile(file: File) {
+            if (!file || !file.type.startsWith('image/')) return;
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                if (e.target?.result && previewImage && previewContainer && uploadContent) {
+                    previewImage.src = e.target.result as string;
+                    previewContainer.style.display = 'block';
+                    uploadContent.style.display = 'none';
+                    if (btnSubmit) btnSubmit.disabled = false;
+                }
+            };
+            reader.readAsDataURL(file);
+        }
+
+        if (dropZone && fileInput) {
+            dropZone.addEventListener('click', (e) => {
+                if (e.target !== btnRemove && !(btnRemove && btnRemove.contains(e.target as Node))) {
+                    fileInput.click();
+                }
+            });
+
+            dropZone.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                dropZone.classList.add('drop-active');
+            });
+
+            dropZone.addEventListener('dragleave', (e) => {
+                e.preventDefault();
+                dropZone.classList.remove('drop-active');
+            });
+
+            dropZone.addEventListener('drop', (e) => {
+                e.preventDefault();
+                dropZone.classList.remove('drop-active');
+                if (e.dataTransfer?.files.length) {
+                    const dt = new DataTransfer();
+                    dt.items.add(e.dataTransfer.files[0]);
+                    fileInput.files = dt.files;
+                    handleFile(e.dataTransfer.files[0]);
+                }
+            });
+
+            fileInput.addEventListener('change', () => {
+                if (fileInput.files?.length) {
+                    handleFile(fileInput.files[0]);
+                }
+            });
+        }
+
+        if (btnRemove) {
+            btnRemove.addEventListener('click', (e) => {
+                e.stopPropagation();
+                resetForm();
+            });
+        }
+
+        document.getElementById('btnCerrarModalImagen')?.addEventListener('click', closeModal);
+        document.getElementById('btnCancelarImagen')?.addEventListener('click', closeModal);
+        document.getElementById('modalImagenOverlay')?.addEventListener('click', closeModal);
+
+        if (form) {
+            form.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                if (!fileInput || !fileInput.files || fileInput.files.length === 0) return;
+
+                const formData = new FormData(form);
+                if (btnSubmit) btnSubmit.disabled = true;
+
+                try {
+                    const res = await fetch('/api/menu/plato/imagen', {
+                        method: 'POST',
+                        body: formData
+                    });
+                    const result = await res.json();
+                    if (result.success) {
+                        if ((window as any).showToast) {
+                            (window as any).showToast('✅ Imagen actualizada con éxito');
+                        } else {
+                            alert('✅ Imagen actualizada con éxito');
+                        }
+                        closeModal();
+                        setTimeout(() => window.location.reload(), 600);
+                    } else {
+                        alert('❌ ' + (result.message || 'Error al subir la imagen'));
+                        if (btnSubmit) btnSubmit.disabled = false;
+                    }
+                } catch (err) {
+                    alert('❌ Error de conexión al subir la imagen');
+                    if (btnSubmit) btnSubmit.disabled = false;
+                }
+            });
+        }
+    });
+</script>

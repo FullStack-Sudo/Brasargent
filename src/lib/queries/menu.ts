@@ -135,6 +135,7 @@ export async function getMenuSucursal(sucursalId: number) {
                 p.nombre,
                 p.descripcion,
                 p.precio,
+                p.categoria_id,
                 c.nombre AS categoria,
                 p.imagen_url,
                 ms.disponible,
@@ -167,24 +168,37 @@ export async function getMenuSucursal(sucursalId: number) {
 }
 
 export async function toggleDisponibilidad(sucursalId: number, platoId: number, disponible: boolean) {
+    const val = disponible ? 1 : 0;
+    const item = mockData.menu.find(p => p.id === platoId && p.sucursal_id === sucursalId);
+    if (item) item.disponible = val;
+
     try {
-        const val = disponible ? 1 : 0;
         const query = `
             UPDATE menu_sucursal
             SET disponible = ?
             WHERE sucursal_id = ? AND plato_id = ?;
         `;
-        const [result] = await pool.query<ResultSetHeader>(query, [val, sucursalId, platoId]);
-        
-        // Simular éxito si la BD está vacía (0 filas afectadas pero query no falla)
+        await pool.query<ResultSetHeader>(query, [val, sucursalId, platoId]);
         return true; 
     } catch (error) {
-        console.warn("Error DB (toggleDisponibilidad): Simulado MOCK");
+        console.warn("Error DB (toggleDisponibilidad): Usando MOCK DATA");
         return true;
     }
 }
 
 export async function actualizarPlato(id: number, nombre: string, descripcion: string, precio: number, categoria_id: number) {
+    const categorias = await getCategorias();
+    const catObj = categorias.find((c: any) => c.id === categoria_id);
+    const catNombre = catObj ? catObj.nombre : 'General';
+
+    const item = mockData.menu.find(p => p.id === id);
+    if (item) {
+        item.nombre = nombre;
+        item.descripcion = descripcion;
+        item.precio = precio;
+        item.categoria = catNombre;
+    }
+
     try {
         const query = `
             UPDATE platos
@@ -195,30 +209,51 @@ export async function actualizarPlato(id: number, nombre: string, descripcion: s
                 categoria_id = ?
             WHERE id = ?;
         `;
-        const [result] = await pool.query<ResultSetHeader>(query, [nombre, descripcion, precio, categoria_id, id]);
+        await pool.query<ResultSetHeader>(query, [nombre, descripcion, precio, categoria_id, id]);
         return true;
     } catch (error) {
-        console.warn("Error DB (actualizarPlato): Simulado MOCK");
+        console.warn("Error DB (actualizarPlato): Usando MOCK DATA");
         return true;
     }
 }
 
 export async function actualizarImagenPlato(id: number, imagen_url: string) {
+    const item = mockData.menu.find(p => p.id === id);
+    if (item) item.imagen_url = imagen_url;
+
     try {
         const query = `
             UPDATE platos
             SET imagen_url = ?
             WHERE id = ?;
         `;
-        const [result] = await pool.query<ResultSetHeader>(query, [imagen_url, id]);
+        await pool.query<ResultSetHeader>(query, [imagen_url, id]);
         return true;
     } catch (error) {
-        console.warn("Error DB (actualizarImagenPlato): Simulado MOCK");
+        console.warn("Error DB (actualizarImagenPlato): Usando MOCK DATA");
         return true;
     }
 }
 
 export async function crearPlato(sucursalId: number, nombre: string, descripcion: string, precio: number, categoria_id: number) {
+    const categorias = await getCategorias();
+    const catObj = categorias.find((c: any) => c.id === categoria_id);
+    const catNombre = catObj ? catObj.nombre : 'General';
+    const newPlatoId = Math.floor(Math.random() * 1000) + 100;
+
+    const newMockItem = {
+        id: newPlatoId,
+        nombre,
+        descripcion,
+        precio,
+        categoria: catNombre,
+        imagen_url: '',
+        disponible: 1,
+        destacado: 0,
+        sucursal_id: sucursalId
+    };
+    mockData.menu.push(newMockItem);
+
     try {
         // Insertar en la tabla platos
         const queryPlato = `
@@ -227,24 +262,29 @@ export async function crearPlato(sucursalId: number, nombre: string, descripcion
         `;
         const [resultPlato] = await pool.query<ResultSetHeader>(queryPlato, [nombre, descripcion, precio, categoria_id]);
         
-        const newPlatoId = resultPlato.insertId;
+        const realId = resultPlato.insertId;
+        newMockItem.id = realId;
 
         // Vincular a la sucursal
         const queryVinculo = `
             INSERT INTO menu_sucursal (sucursal_id, plato_id, disponible)
             VALUES (?, ?, 1);
         `;
-        await pool.query<ResultSetHeader>(queryVinculo, [sucursalId, newPlatoId]);
+        await pool.query<ResultSetHeader>(queryVinculo, [sucursalId, realId]);
         
-        return { success: true, id: newPlatoId };
+        return { success: true, id: realId };
     } catch (error) {
-        console.error("Error DB (crearPlato):", error);
-        // Si hay error (o BD no disponible), simulamos éxito
-        return { success: true, id: Math.floor(Math.random() * 1000) + 100 };
+        console.error("Error DB (crearPlato): Usando MOCK DATA", error);
+        return { success: true, id: newPlatoId };
     }
 }
 
 export async function eliminarPlato(platoId: number, sucursalId?: number) {
+    const idx = mockData.menu.findIndex(p => p.id === platoId && (!sucursalId || p.sucursal_id === sucursalId));
+    if (idx !== -1) {
+        mockData.menu.splice(idx, 1);
+    }
+
     try {
         if (sucursalId) {
             await pool.query('DELETE FROM menu_sucursal WHERE sucursal_id = ? AND plato_id = ?', [sucursalId, platoId]);
@@ -258,7 +298,7 @@ export async function eliminarPlato(platoId: number, sucursalId?: number) {
         }
         return true;
     } catch (error) {
-        console.warn("Error DB (eliminarPlato): Simulado MOCK", error);
+        console.warn("Error DB (eliminarPlato): Usando MOCK DATA", error);
         return true;
     }
 }

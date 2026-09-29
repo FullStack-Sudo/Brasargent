@@ -1,298 +1,409 @@
 ---
-// ModalCrearPlato.astro
+// ModalCrearPlato.astro — Rediseño Premium (Sin opción de imagen)
 import { getCategorias } from '../../lib/queries/menu';
 
 const categoriasList = await getCategorias();
 ---
-<div class="modal-overlay fixed inset-0 z-[100] flex items-center justify-center opacity-0 pointer-events-none transition-all duration-300 p-3 sm:p-6" id="modalCrearPlato">
-    <!-- Backdrop Overlay -->
-    <div class="absolute inset-0 bg-black/60 backdrop-blur-md" id="modalCrearOverlay"></div>
+
+<div class="mcr-overlay" id="modalCrearPlato">
+    <!-- Backdrop -->
+    <div class="mcr-backdrop" id="modalCrearOverlay"></div>
 
     <!-- Modal Container -->
-    <div class="modal-container relative bg-white rounded-3xl w-full max-w-[780px] max-h-[92vh] flex flex-col shadow-[0_25px_60px_-15px_rgba(0,0,0,0.4)] transform scale-95 transition-all duration-300 overflow-hidden z-10 border border-gray-100">
-        
-        <!-- Header Sticky -->
-        <div class="modal-header px-6 py-4 sm:px-8 sm:py-4.5 border-b border-gray-100 flex items-center justify-between bg-white shrink-0">
-            <div class="flex items-center gap-3.5">
-                <div class="w-10 h-10 rounded-2xl bg-[#9e2a2b]/10 text-[#9e2a2b] flex items-center justify-center text-xl font-bold shrink-0">
-                    🍳
+    <div class="mcr-container modal-container">
+        <!-- Header -->
+        <div class="mcr-header">
+            <div class="mcr-header-left">
+                <div class="mcr-icon-badge">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="10"></circle>
+                        <line x1="12" y1="8" x2="12" y2="16"></line>
+                        <line x1="8" y1="12" x2="16" y2="12"></line>
+                    </svg>
                 </div>
                 <div>
-                    <h2 class="modal-title-text font-serif font-bold text-gray-900 text-lg sm:text-xl m-0 tracking-tight">Añadir Nuevo Plato al Menú</h2>
-                    <p class="modal-subtitle-text text-gray-400 text-xs sm:text-sm m-0 mt-0.5">Completa la información para incluirlo en el menú</p>
+                    <h2 class="mcr-title">Añadir Nuevo Plato</h2>
+                    <p class="mcr-subtitle">Completa la información para incluirlo en el menú</p>
                 </div>
             </div>
-            <button type="button" class="modal-close-btn w-9 h-9 rounded-xl bg-gray-100 text-gray-500 hover:bg-gray-200 hover:text-gray-800 flex items-center justify-center transition-all border-0 cursor-pointer" id="btnCerrarModalCrear" title="Cerrar modal">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+            <button type="button" class="mcr-close-btn" id="btnCerrarModalCrear" title="Cerrar">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
             </button>
         </div>
-        
-        <!-- Body Scrollable -->
-        <div class="modal-body-scroll overflow-y-auto px-6 py-5 sm:px-8 sm:py-6">
-            <form id="formCrearPlato" class="space-y-6">
+
+        <!-- Body -->
+        <div class="mcr-body">
+            <form id="formCrearPlato">
                 <input type="hidden" name="sucursal_id" id="create_sucursal_id" />
-                
-                <!-- Main Grid Layout: 2 Columns on Desktop -->
-                <div class="grid grid-cols-1 md:grid-cols-12 gap-6">
-                    
-                    <!-- Left Column: Imagen y Destacado (5 cols) -->
-                    <div class="md:col-span-5 flex flex-col justify-start">
-                        <label class="block font-semibold text-gray-700 text-xs sm:text-sm mb-2 uppercase tracking-wider">
-                            📷 Imagen del Plato
-                        </label>
-                        <div class="upload-area border-2 border-dashed border-gray-200 rounded-2xl p-4 text-center cursor-pointer transition-all bg-gray-50/70 hover:bg-[#9e2a2b]/5 hover:border-[#9e2a2b]/40 min-h-[200px] flex flex-col items-center justify-center relative group" id="dropZone">
-                            
-                            <div class="upload-content flex flex-col items-center justify-center py-2" id="uploadContent">
-                                <div class="w-12 h-12 rounded-2xl bg-white shadow-sm border border-gray-100 flex items-center justify-center text-2xl mb-2.5 group-hover:scale-110 transition-transform">
-                                    📸
-                                </div>
-                                <p class="text-gray-700 font-semibold text-xs sm:text-sm m-0 mb-1">Haz clic o arrastra una imagen</p>
-                                <span class="text-gray-400 text-[11px]">PNG, JPG, WEBP • Máx 2MB</span>
-                            </div>
-                            
-                            <input type="file" id="imagenInput" name="imagen" accept="image/*" class="hidden" />
-                            
-                            <div id="previewContainer" class="hidden relative w-full h-full min-h-[180px] flex items-center justify-center" style="display: none;">
-                                <img id="previewImage" alt="Vista previa" class="max-h-[170px] w-full object-cover rounded-xl shadow-md border border-gray-100" />
-                                <button type="button" id="removeImage" class="absolute -top-2 -right-2 w-7 h-7 rounded-full bg-red-500 text-white flex items-center justify-center hover:bg-red-600 transition-all shadow-md text-xs font-bold border-0 cursor-pointer">✕</button>
-                            </div>
-                        </div>
-                        
-                        <!-- Switch Destacado -->
-                        <div class="mt-4 p-3.5 bg-amber-50/60 border border-amber-200/60 rounded-2xl">
-                            <label class="flex items-center justify-between cursor-pointer select-none">
-                                <div class="flex items-center gap-2.5">
-                                    <span class="text-lg">🔥</span>
-                                    <div>
-                                        <span class="block text-gray-900 font-semibold text-xs sm:text-sm">Plato Destacado</span>
-                                        <span class="block text-gray-500 text-[11px]">Badge "🔥 Destacado" en el menú</span>
-                                    </div>
-                                </div>
-                                <div class="relative inline-flex items-center cursor-pointer">
-                                    <input type="checkbox" name="destacado" id="create_destacado" class="sr-only peer" value="1" />
-                                    <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#9e2a2b]"></div>
-                                </div>
-                            </label>
-                        </div>
+
+                <div class="mcr-section-label">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+                    <span>Información del Plato</span>
+                </div>
+
+                <!-- Nombre -->
+                <div class="mcr-field">
+                    <label for="create_nombre" class="mcr-field-label">Nombre del Plato <span class="mcr-req">*</span></label>
+                    <input type="text" id="create_nombre" name="nombre" placeholder="Ej: Picaña Premium Especial" maxlength="100" required class="mcr-input" />
+                </div>
+
+                <!-- Categoría + Precio -->
+                <div class="mcr-row-2">
+                    <div class="mcr-field">
+                        <label for="create_categoria" class="mcr-field-label">Categoría <span class="mcr-req">*</span></label>
+                        <select id="create_categoria" name="categoria_id" required class="mcr-input mcr-select">
+                            <option value="">Seleccionar categoría</option>
+                            {categoriasList.map((cat: any) => (
+                                <option value={cat.id}>{cat.nombre}</option>
+                            ))}
+                        </select>
                     </div>
-                    
-                    <!-- Right Column: Form Fields (7 cols) -->
-                    <div class="md:col-span-7 flex flex-col space-y-4">
-                        <label class="block font-semibold text-gray-700 text-xs sm:text-sm mb-0.5 uppercase tracking-wider">
-                            📝 Información del Plato
-                        </label>
-                        
-                        <!-- Nombre del Plato -->
-                        <div>
-                            <label for="create_nombre" class="block font-medium text-gray-700 text-xs sm:text-sm mb-1">
-                                Nombre del Plato <span class="text-red-500">*</span>
-                            </label>
-                            <input type="text" id="create_nombre" name="nombre" placeholder="Ej: Picaña Premium Especial" maxlength="100" required 
-                                class="form-field-input w-full px-3.5 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm text-gray-900 focus:bg-white focus:outline-none focus:border-[#9e2a2b] focus:ring-2 focus:ring-[#9e2a2b]/15 transition-all placeholder:text-gray-400" />
-                        </div>
-                        
-                        <!-- Categoría y Precio Grid -->
-                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                            <div>
-                                <label for="create_categoria" class="block font-medium text-gray-700 text-xs sm:text-sm mb-1">
-                                    Categoría <span class="text-red-500">*</span>
-                                </label>
-                                <select id="create_categoria" name="categoria_id" required
-                                    class="form-field-input w-full px-3.5 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm text-gray-900 focus:bg-white focus:outline-none focus:border-[#9e2a2b] focus:ring-2 focus:ring-[#9e2a2b]/15 transition-all">
-                                    <option value="">Seleccionar categoría</option>
-                                    {categoriasList.map((cat: any) => (
-                                        <option value={cat.id}>{cat.nombre}</option>
-                                    ))}
-                                </select>
-                            </div>
-                            
-                            <div>
-                                <label for="create_precio" class="block font-medium text-gray-700 text-xs sm:text-sm mb-1">
-                                    Precio (Bs.) <span class="text-red-500">*</span>
-                                </label>
-                                <div class="relative">
-                                    <span class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 font-semibold text-xs select-none">Bs.</span>
-                                    <input type="number" id="create_precio" name="precio" placeholder="120.00" step="0.50" min="0" required 
-                                        class="form-field-input w-full py-2.5 pr-3 bg-gray-50 border border-gray-200 rounded-xl text-sm text-gray-900 font-semibold focus:bg-white focus:outline-none focus:border-[#9e2a2b] focus:ring-2 focus:ring-[#9e2a2b]/15 transition-all placeholder:text-gray-300" style="padding-left: 2.4rem !important;" />
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <!-- Descripción -->
-                        <div>
-                            <div class="flex items-center justify-between mb-1">
-                                <label for="create_descripcion" class="block font-medium text-gray-700 text-xs sm:text-sm">
-                                    Descripción
-                                </label>
-                                <span class="text-[11px] text-gray-400" id="charCounter">0/500</span>
-                            </div>
-                            <textarea id="create_descripcion" name="descripcion" rows="3" placeholder="Ingredientes principales, preparación o detalles..." maxlength="500"
-                                class="form-field-input w-full px-3.5 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm text-gray-900 focus:bg-white focus:outline-none focus:border-[#9e2a2b] focus:ring-2 focus:ring-[#9e2a2b]/15 transition-all placeholder:text-gray-400 resize-none"></textarea>
+                    <div class="mcr-field">
+                        <label for="create_precio" class="mcr-field-label">Precio (Bs.) <span class="mcr-req">*</span></label>
+                        <div class="mcr-price-wrap">
+                            <span class="mcr-price-prefix">Bs.</span>
+                            <input type="number" id="create_precio" name="precio" placeholder="120.00" step="0.50" min="0" required class="mcr-input mcr-price-input" />
                         </div>
                     </div>
                 </div>
-                
-                <!-- Bottom Section: Sucursales -->
-                <div class="mt-4 pt-4 border-t border-gray-100">
-                    <label class="block font-medium text-gray-800 text-xs sm:text-sm mb-2">
-                        Sucursales disponibles <span class="text-red-500">*</span>
-                    </label>
-                    <div class="sucursales-grid grid grid-cols-1 sm:grid-cols-3 gap-2.5">
-                        <label class="sucursal-chip flex items-center gap-2.5 p-2.5 px-3.5 bg-gray-50 border border-gray-200 rounded-xl cursor-pointer transition-all hover:bg-gray-100 [&:has(:checked)]:bg-[#9e2a2b]/10 [&:has(:checked)]:border-[#9e2a2b]">
-                            <input type="checkbox" name="sucursales" value="1" class="accent-[#9e2a2b] w-4 h-4 rounded" checked />
-                            <span class="text-sm">🔥</span>
-                            <span class="font-medium text-gray-800 text-xs sm:text-sm">Churrasquería</span>
-                        </label>
-                        <label class="sucursal-chip flex items-center gap-2.5 p-2.5 px-3.5 bg-gray-50 border border-gray-200 rounded-xl cursor-pointer transition-all hover:bg-gray-100 [&:has(:checked)]:bg-[#9e2a2b]/10 [&:has(:checked)]:border-[#9e2a2b]">
-                            <input type="checkbox" name="sucursales" value="2" class="accent-[#9e2a2b] w-4 h-4 rounded" checked />
-                            <span class="text-sm">⚡</span>
-                            <span class="font-medium text-gray-800 text-xs sm:text-sm">Fast Grill</span>
-                        </label>
-                        <label class="sucursal-chip flex items-center gap-2.5 p-2.5 px-3.5 bg-gray-50 border border-gray-200 rounded-xl cursor-pointer transition-all hover:bg-gray-100 [&:has(:checked)]:bg-[#9e2a2b]/10 [&:has(:checked)]:border-[#9e2a2b]">
-                            <input type="checkbox" name="sucursales" value="3" class="accent-[#9e2a2b] w-4 h-4 rounded" checked />
-                            <span class="text-sm">🥩</span>
-                            <span class="font-medium text-gray-800 text-xs sm:text-sm">Rodizio</span>
+
+                <!-- Descripción -->
+                <div class="mcr-field">
+                    <div class="mcr-field-top">
+                        <label for="create_descripcion" class="mcr-field-label">Descripción</label>
+                        <span class="mcr-char-counter" id="charCounter">0/500</span>
+                    </div>
+                    <textarea id="create_descripcion" name="descripcion" rows="3" placeholder="Ingredientes principales, preparación o detalles del plato..." maxlength="500" class="mcr-input mcr-textarea"></textarea>
+                </div>
+
+                <!-- Sucursales & Destacado -->
+                <div class="mcr-row-bottom">
+                    <div class="mcr-field mcr-field-sucursales">
+                        <label class="mcr-field-label">Sucursales disponibles <span class="mcr-req">*</span></label>
+                        <div class="mcr-chips-grid">
+                            <label class="mcr-chip">
+                                <input type="checkbox" name="sucursales" value="1" checked />
+                                <span class="mcr-chip-body"><span class="mcr-chip-icon">🔥</span> Churrasquería</span>
+                            </label>
+                            <label class="mcr-chip">
+                                <input type="checkbox" name="sucursales" value="2" checked />
+                                <span class="mcr-chip-body"><span class="mcr-chip-icon">⚡</span> Fast Grill</span>
+                            </label>
+                            <label class="mcr-chip">
+                                <input type="checkbox" name="sucursales" value="3" checked />
+                                <span class="mcr-chip-body"><span class="mcr-chip-icon">🥩</span> Rodizio</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Destacado Switch -->
+                    <div class="mcr-featured-card">
+                        <label class="mcr-featured-label">
+                            <div class="mcr-featured-info">
+                                <span class="mcr-featured-emoji">🔥</span>
+                                <div>
+                                    <span class="mcr-featured-name">Plato Destacado</span>
+                                    <span class="mcr-featured-hint">Badge en el menú</span>
+                                </div>
+                            </div>
+                            <div class="mcr-toggle-wrap">
+                                <input type="checkbox" name="destacado" id="create_destacado" class="mcr-toggle-input" value="1" />
+                                <div class="mcr-toggle-track"><div class="mcr-toggle-thumb"></div></div>
+                            </div>
                         </label>
                     </div>
                 </div>
-                
-                <div id="formError" class="hidden mt-3 p-3 bg-red-50 text-red-600 rounded-xl border border-red-200 text-xs font-medium"></div>
+
+                <div id="formError" class="mcr-form-error" style="display:none;"></div>
             </form>
         </div>
-        
-        <!-- Footer Sticky -->
-        <div class="modal-footer px-6 py-4 sm:px-8 sm:py-4 border-t border-gray-100 flex items-center justify-end gap-3 bg-gray-50/80 shrink-0">
-            <button type="button" class="px-5 py-2.5 bg-white text-gray-700 border border-gray-200 rounded-xl text-xs sm:text-sm font-semibold hover:bg-gray-100 transition-colors shadow-sm cursor-pointer" id="btnCancelarCrear">
-                Cancelar
-            </button>
-            <button type="submit" form="formCrearPlato" class="px-6 py-2.5 bg-gradient-to-r from-[#9e2a2b] to-[#7a2021] text-white rounded-xl text-xs sm:text-sm font-semibold shadow-[0_4px_14px_rgba(158,42,43,0.35)] hover:shadow-[0_6px_20px_rgba(158,42,43,0.45)] hover:scale-[1.01] active:scale-[0.99] transition-all cursor-pointer min-w-[140px] flex items-center justify-center gap-2 border-0" id="btnGuardarCrear">
+
+        <!-- Footer -->
+        <div class="mcr-footer">
+            <button type="button" class="mcr-btn-cancel" id="btnCancelarCrear">Cancelar</button>
+            <button type="submit" form="formCrearPlato" class="mcr-btn-save" id="btnGuardarCrear">
                 <span class="btn-text">Guardar Plato</span>
-                <svg class="btn-spinner hidden w-4 h-4 animate-spin text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                <svg class="btn-spinner" style="display:none;" width="16" height="16" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" opacity="0.25"></circle><path d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" fill="currentColor" opacity="0.75"></path></svg>
             </button>
         </div>
     </div>
 </div>
 
 <style>
-    /* Enforce scoped typography so global.css does not force giant clamp sizes */
-    #modalCrearPlato h2.modal-title-text {
-        font-size: 1.25rem !important;
-        line-height: 1.3 !important;
-        margin: 0 !important;
-        font-family: 'Playfair Display', Georgia, serif !important;
+    /* ===== OVERLAY ===== */
+    .mcr-overlay {
+        position: fixed; inset: 0; z-index: 100;
+        display: flex; align-items: center; justify-content: center;
+        padding: 1rem;
+        opacity: 0; pointer-events: none;
+        transition: opacity .3s cubic-bezier(.4,0,.2,1);
     }
-    #modalCrearPlato p.modal-subtitle-text {
-        font-size: 0.85rem !important;
-        line-height: 1.4 !important;
-        margin: 0 !important;
+    .mcr-overlay.modal-active {
+        opacity: 1; pointer-events: auto;
     }
-    #modalCrearPlato label {
-        font-size: 0.8rem !important;
-        line-height: 1.4 !important;
-    }
-    #modalCrearPlato .form-field-input {
-        font-size: 0.875rem !important;
-        line-height: 1.4 !important;
+    .mcr-backdrop {
+        position: absolute; inset: 0;
+        background: rgba(15,15,20,.55);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
     }
 
-    .modal-active {
-        opacity: 1 !important;
-        pointer-events: auto !important;
+    /* ===== CONTAINER ===== */
+    .mcr-container {
+        position: relative; z-index: 10;
+        background: #fff;
+        border-radius: 1.5rem;
+        width: 100%; max-width: 650px;
+        max-height: 94vh;
+        display: flex; flex-direction: column;
+        overflow: hidden;
+        box-shadow: 0 30px 80px -20px rgba(0,0,0,.35), 0 0 0 1px rgba(0,0,0,.04);
+        transform: scale(.96) translateY(12px);
+        transition: transform .35s cubic-bezier(.4,0,.2,1), opacity .3s;
     }
-    .modal-active > .modal-container {
+    .mcr-overlay.modal-active > .mcr-container {
         transform: scale(1) translateY(0) !important;
         opacity: 1 !important;
     }
-    .form-group input.error,
-    .form-group select.error {
-        border-color: #ef4444 !important;
-        box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.15) !important;
+
+    /* ===== HEADER ===== */
+    .mcr-header {
+        display: flex; align-items: center; justify-content: space-between;
+        padding: 1.25rem 2rem;
+        border-bottom: 1px solid #f0f0f2;
+        background: linear-gradient(135deg, #fdfcfb 0%, #f9f7f5 100%);
+        flex-shrink: 0;
     }
+    .mcr-header-left { display: flex; align-items: center; gap: .875rem; }
+    .mcr-icon-badge {
+        width: 44px; height: 44px;
+        border-radius: 14px;
+        background: linear-gradient(135deg, #9e2a2b 0%, #7a2021 100%);
+        color: #fff;
+        display: flex; align-items: center; justify-content: center;
+        flex-shrink: 0;
+        box-shadow: 0 4px 12px rgba(158,42,43,.3);
+    }
+    .mcr-title {
+        font-family: 'Playfair Display', Georgia, serif !important;
+        font-size: 1.3rem !important; font-weight: 700 !important;
+        color: #1a1a1f !important;
+        margin: 0 !important; line-height: 1.2 !important;
+        letter-spacing: -.02em;
+    }
+    .mcr-subtitle {
+        font-size: .82rem !important; color: #8b8b94 !important;
+        margin: .15rem 0 0 !important; line-height: 1.3 !important;
+    }
+    .mcr-close-btn {
+        width: 36px; height: 36px;
+        border-radius: 10px; border: 1px solid #e8e8ec;
+        background: #fff; color: #8b8b94;
+        display: flex; align-items: center; justify-content: center;
+        cursor: pointer;
+        transition: all .2s;
+    }
+    .mcr-close-btn:hover { background: #f5f5f7; color: #333; border-color: #d5d5da; }
+
+    /* ===== BODY ===== */
+    .mcr-body {
+        overflow-y: auto; flex: 1;
+        padding: 1.75rem 2rem;
+        scrollbar-width: thin;
+        scrollbar-color: #d5d5da transparent;
+    }
+
+    /* ===== SECTION LABEL ===== */
+    .mcr-section-label {
+        display: flex; align-items: center; gap: .5rem;
+        font-size: .7rem !important; font-weight: 700;
+        text-transform: uppercase; letter-spacing: .08em;
+        color: #9e2a2b; margin-bottom: 1.25rem;
+    }
+
+    /* ===== FEATURED CARD ===== */
+    .mcr-featured-card {
+        background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%);
+        border: 1px solid #fde68a;
+        border-radius: 1rem;
+        padding: .85rem 1rem;
+        display: flex; align-items: center;
+    }
+    .mcr-featured-label {
+        display: flex; align-items: center; justify-content: space-between;
+        width: 100%;
+        cursor: pointer; user-select: none;
+    }
+    .mcr-featured-info { display: flex; align-items: center; gap: .6rem; }
+    .mcr-featured-emoji { font-size: 1.3rem; }
+    .mcr-featured-name { display: block; font-size: .8rem !important; font-weight: 600; color: #333; }
+    .mcr-featured-hint { display: block; font-size: .68rem !important; color: #92702d; }
+
+    /* Toggle */
+    .mcr-toggle-wrap { position: relative; }
+    .mcr-toggle-input { position: absolute; opacity: 0; width: 0; height: 0; }
+    .mcr-toggle-track {
+        width: 44px; height: 24px;
+        background: #d1d5db;
+        border-radius: 999px;
+        position: relative;
+        transition: background .25s;
+        cursor: pointer;
+    }
+    .mcr-toggle-thumb {
+        position: absolute; top: 2px; left: 2px;
+        width: 20px; height: 20px;
+        background: #fff;
+        border-radius: 50%;
+        box-shadow: 0 1px 4px rgba(0,0,0,.15);
+        transition: transform .25s;
+    }
+    .mcr-toggle-input:checked + .mcr-toggle-track { background: #9e2a2b; }
+    .mcr-toggle-input:checked + .mcr-toggle-track .mcr-toggle-thumb { transform: translateX(20px); }
+
+    /* ===== FORM FIELDS ===== */
+    .mcr-field { margin-bottom: 1.1rem; }
+    .mcr-field-label {
+        display: block; font-size: .78rem !important;
+        font-weight: 600; color: #4a4a54;
+        margin-bottom: .4rem;
+    }
+    .mcr-req { color: #ef4444; }
+    .mcr-field-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: .4rem; }
+    .mcr-char-counter { font-size: .68rem !important; color: #aaa; font-variant-numeric: tabular-nums; }
+
+    .mcr-input {
+        width: 100%;
+        padding: .65rem .9rem;
+        background: #f8f8fa;
+        border: 1.5px solid #e5e5ea;
+        border-radius: .75rem;
+        font-size: .85rem !important;
+        color: #1a1a1f;
+        transition: all .2s;
+        outline: none;
+        font-family: inherit;
+    }
+    .mcr-input:focus {
+        background: #fff;
+        border-color: #9e2a2b;
+        box-shadow: 0 0 0 3px rgba(158,42,43,.1);
+    }
+    .mcr-input::placeholder { color: #bbb; }
+
+    .mcr-select {
+        appearance: none;
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%239a9a9a' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+        background-repeat: no-repeat;
+        background-position: right .8rem center;
+        padding-right: 2.2rem;
+        cursor: pointer;
+    }
+    .mcr-textarea { resize: none; line-height: 1.55; }
+
+    .mcr-row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+    .mcr-row-bottom { display: grid; grid-template-columns: 1.4fr 1fr; gap: 1rem; align-items: flex-end; margin-bottom: 1.1rem; }
+    @media (max-width: 580px) {
+        .mcr-row-2, .mcr-row-bottom { grid-template-columns: 1fr; }
+    }
+
+    .mcr-field-sucursales { margin-bottom: 0; }
+
+    .mcr-price-wrap { position: relative; }
+    .mcr-price-prefix {
+        position: absolute; left: .9rem; top: 50%; transform: translateY(-50%);
+        font-size: .75rem !important; font-weight: 700; color: #999;
+        pointer-events: none; user-select: none;
+    }
+    .mcr-price-input { padding-left: 2.6rem !important; font-weight: 600; }
+
+    /* ===== CHIPS ===== */
+    .mcr-chips-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: .5rem; }
+    @media (max-width: 480px) { .mcr-chips-grid { grid-template-columns: 1fr; } }
+    .mcr-chip {
+        cursor: pointer; user-select: none;
+    }
+    .mcr-chip input { position: absolute; opacity: 0; width: 0; height: 0; }
+    .mcr-chip-body {
+        display: flex; align-items: center; justify-content: center; gap: .3rem;
+        padding: .55rem .6rem;
+        background: #f8f8fa;
+        border: 1.5px solid #e5e5ea;
+        border-radius: .75rem;
+        font-size: .75rem !important; font-weight: 600; color: #555;
+        transition: all .2s;
+        text-align: center;
+    }
+    .mcr-chip-icon { font-size: .85rem; }
+    .mcr-chip input:checked + .mcr-chip-body {
+        background: rgba(158,42,43,.08);
+        border-color: #9e2a2b;
+        color: #9e2a2b;
+    }
+    .mcr-chip:hover .mcr-chip-body { border-color: #ccc; }
+
+    /* ===== ERROR ===== */
+    .mcr-form-error {
+        margin-top: 1rem;
+        padding: .75rem 1rem;
+        background: #fef2f2;
+        color: #dc2626;
+        border: 1px solid #fecaca;
+        border-radius: .75rem;
+        font-size: .78rem; font-weight: 500;
+    }
+
+    /* ===== FOOTER ===== */
+    .mcr-footer {
+        display: flex; align-items: center; justify-content: flex-end; gap: .75rem;
+        padding: 1rem 2rem;
+        border-top: 1px solid #f0f0f2;
+        background: linear-gradient(135deg, #fdfcfb 0%, #f9f7f5 100%);
+        flex-shrink: 0;
+    }
+    .mcr-btn-cancel {
+        padding: .6rem 1.4rem;
+        background: #fff;
+        border: 1.5px solid #e0e0e5;
+        border-radius: .75rem;
+        font-size: .82rem !important; font-weight: 600;
+        color: #555; cursor: pointer;
+        transition: all .2s;
+    }
+    .mcr-btn-cancel:hover { background: #f5f5f7; border-color: #ccc; }
+    .mcr-btn-save {
+        padding: .6rem 1.8rem;
+        background: linear-gradient(135deg, #9e2a2b 0%, #7a2021 100%);
+        color: #fff;
+        border: none; border-radius: .75rem;
+        font-size: .82rem !important; font-weight: 600;
+        cursor: pointer;
+        display: flex; align-items: center; gap: .5rem;
+        box-shadow: 0 4px 14px rgba(158,42,43,.3);
+        transition: all .25s;
+        min-width: 140px; justify-content: center;
+    }
+    .mcr-btn-save:hover {
+        box-shadow: 0 6px 20px rgba(158,42,43,.4);
+        transform: translateY(-1px);
+    }
+    .mcr-btn-save:active { transform: translateY(0) scale(.98); }
+
+    .btn-spinner { animation: spin .8s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
 </style>
 
 <script>
-    // Validaciones del frontend
-    const form = document.getElementById('formCrearPlato') as HTMLFormElement;
+    // Char counter
     const desc = document.getElementById('create_descripcion') as HTMLTextAreaElement;
     const charCounter = document.getElementById('charCounter');
-    
+
     if (desc && charCounter) {
         desc.addEventListener('input', () => {
             charCounter.textContent = `${desc.value.length}/500`;
-        });
-    }
-
-    // Lógica de Image Upload
-    const dropZone = document.getElementById('dropZone');
-    const fileInput = document.getElementById('imagenInput') as HTMLInputElement;
-    const previewContainer = document.getElementById('previewContainer');
-    const previewImage = document.getElementById('previewImage') as HTMLImageElement;
-    const uploadContent = document.getElementById('uploadContent');
-    const removeImageBtn = document.getElementById('removeImage');
-
-    function handleFile(file: File) {
-        if (!file || !file.type.startsWith('image/')) return;
-        const reader = new FileReader();
-        reader.onload = (e) => {
-            if(e.target?.result && previewImage && previewContainer && uploadContent) {
-                previewImage.src = e.target.result as string;
-                previewContainer.classList.remove('hidden');
-                previewContainer.style.display = 'flex';
-                uploadContent.classList.add('hidden');
-                uploadContent.style.display = 'none';
-            }
-        };
-        reader.readAsDataURL(file);
-    }
-
-    if (dropZone && fileInput) {
-        dropZone.addEventListener('click', (e) => {
-            if (e.target !== removeImageBtn) {
-                fileInput.click();
-            }
-        });
-
-        dropZone.addEventListener('dragover', (e) => {
-            e.preventDefault();
-            dropZone.classList.add('border-[#9e2a2b]', 'bg-[#9e2a2b]/5');
-        });
-
-        dropZone.addEventListener('dragleave', (e) => {
-            e.preventDefault();
-            dropZone.classList.remove('border-[#9e2a2b]', 'bg-[#9e2a2b]/5');
-        });
-
-        dropZone.addEventListener('drop', (e) => {
-            e.preventDefault();
-            dropZone.classList.remove('border-[#9e2a2b]', 'bg-[#9e2a2b]/5');
-            if (e.dataTransfer?.files.length) {
-                const dt = new DataTransfer();
-                dt.items.add(e.dataTransfer.files[0]);
-                fileInput.files = dt.files;
-                handleFile(e.dataTransfer.files[0]);
-            }
-        });
-
-        fileInput.addEventListener('change', () => {
-            if (fileInput.files?.length) {
-                handleFile(fileInput.files[0]);
-            }
-        });
-    }
-
-    if (removeImageBtn) {
-        removeImageBtn.addEventListener('click', (e) => {
-            e.stopPropagation();
-            if (fileInput) fileInput.value = '';
-            if (previewContainer) {
-                previewContainer.classList.add('hidden');
-                previewContainer.style.display = 'none';
-            }
-            if (uploadContent) {
-                uploadContent.classList.remove('hidden');
-                uploadContent.style.display = 'flex';
-            }
-            if (previewImage) previewImage.removeAttribute('src');
         });
     }
 </script>

@@ -1,111 +1,514 @@
 ---
+// ModalEditarPlato.astro — Rediseño Premium
 import { getCategorias } from '../../lib/queries/menu';
 
 const categoriasList = await getCategorias();
 ---
 
-<div id="modalEditarPlato" class="fixed inset-0 z-50 flex items-center justify-center opacity-0 pointer-events-none transition-opacity duration-300 p-4">
-    <div class="absolute inset-0 bg-black/60 backdrop-blur-md" id="modalEditarOverlay"></div>
-    
-    <div class="relative bg-white rounded-3xl w-full max-w-lg shadow-[0_25px_60px_-15px_rgba(0,0,0,0.4)] transform scale-95 transition-all duration-300 overflow-hidden border border-gray-100" id="modalEditarContent">
+<div class="med-overlay" id="modalEditarPlato">
+    <!-- Backdrop -->
+    <div class="med-backdrop" id="modalEditarOverlay"></div>
+
+    <!-- Modal Container -->
+    <div class="med-container modal-container" id="modalEditarContent">
         <!-- Header -->
-        <div class="px-6 py-4 border-b border-gray-100 flex items-center justify-between bg-white">
-            <div class="flex items-center gap-3">
-                <div class="w-9 h-9 rounded-xl bg-[#9e2a2b]/10 text-[#9e2a2b] flex items-center justify-center text-lg font-bold">
-                    ✏️
+        <div class="med-header">
+            <div class="med-header-left">
+                <div class="med-icon-badge">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                        <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                    </svg>
                 </div>
-                <h3 class="modal-edit-title font-serif font-bold text-gray-900 text-lg m-0">Editar Plato</h3>
+                <div>
+                    <h2 class="med-title">Editar Plato del Menú</h2>
+                    <p class="med-subtitle">Modifica la información, precio, categoría o la foto del plato</p>
+                </div>
             </div>
-            <button id="btnCerrarModalEditar" type="button" class="w-8 h-8 rounded-xl bg-gray-100 text-gray-500 hover:bg-gray-200 hover:text-gray-800 flex items-center justify-center transition-all border-0 cursor-pointer">
-                ✕
+            <button type="button" class="med-close-btn" id="btnCerrarModalEditar" title="Cerrar">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
             </button>
         </div>
-        
-        <form id="formEditarPlato" class="p-6 space-y-4">
-            <input type="hidden" id="edit_plato_id" name="plato_id" />
-            
-            <div>
-                <label for="edit_nombre" class="block text-xs font-semibold text-gray-700 uppercase tracking-wider mb-1">Nombre del Plato</label>
-                <input 
-                    type="text" 
-                    id="edit_nombre" 
-                    name="nombre" 
-                    class="w-full px-3.5 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-gray-900 text-sm focus:bg-white focus:ring-2 focus:ring-[#9e2a2b]/15 focus:border-[#9e2a2b] outline-none transition-all"
-                    required 
-                    maxlength="100"
-                />
-            </div>
-            
-            <div class="grid grid-cols-2 gap-3">
-                <div>
-                    <label for="edit_categoria" class="block text-xs font-semibold text-gray-700 uppercase tracking-wider mb-1">Categoría</label>
-                    <select 
-                        id="edit_categoria" 
-                        name="categoria_id"
-                        class="w-full px-3.5 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-gray-900 text-sm focus:bg-white focus:ring-2 focus:ring-[#9e2a2b]/15 focus:border-[#9e2a2b] outline-none transition-all"
-                    >
-                        <option value="">Seleccionar categoría</option>
-                        {categoriasList.map((cat: any) => (
-                            <option value={cat.id}>{cat.nombre}</option>
-                        ))}
-                    </select>
-                </div>
-                <div>
-                    <label for="edit_precio" class="block text-xs font-semibold text-gray-700 uppercase tracking-wider mb-1">Precio (Bs.)</label>
-                    <div class="relative">
-                        <span class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 font-semibold text-xs select-none">Bs.</span>
-                        <input 
-                            type="number" 
-                            id="edit_precio" 
-                            name="precio" 
-                            step="0.50" 
-                            min="0"
-                            class="w-full py-2.5 pr-3 bg-gray-50 border border-gray-200 rounded-xl text-gray-900 font-semibold text-sm focus:bg-white focus:ring-2 focus:ring-[#9e2a2b]/15 focus:border-[#9e2a2b] outline-none transition-all"
-                            style="padding-left: 2.4rem !important;"
-                            required
-                        />
+
+        <!-- Body -->
+        <div class="med-body">
+            <form id="formEditarPlato">
+                <input type="hidden" name="plato_id" id="edit_plato_id" />
+                <input type="hidden" name="sucursal_id" id="edit_sucursal_id" />
+
+                <div class="med-grid">
+                    <!-- LEFT: Image Upload + Destacado -->
+                    <div class="med-col-left">
+                        <div class="med-section-label">
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>
+                            <span>Foto del Plato</span>
+                        </div>
+                        <div class="med-dropzone" id="dropZoneEdit">
+                            <div class="med-dropzone-content" id="uploadContentEdit">
+                                <div class="med-dropzone-icon">
+                                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                                        <polyline points="17 8 12 3 7 8"></polyline>
+                                        <line x1="12" y1="3" x2="12" y2="15"></line>
+                                    </svg>
+                                </div>
+                                <p class="med-dropzone-title">Haz clic o arrastra para cambiar imagen</p>
+                                <p class="med-dropzone-hint">PNG, JPG, WEBP — Máx 2 MB</p>
+                            </div>
+                            <input type="file" id="edit_imagenInput" name="imagen" accept="image/jpeg, image/png, image/webp" class="med-file-input" />
+                            <div id="previewContainerEdit" class="med-preview-wrap" style="display:none;">
+                                <img id="previewImageEdit" alt="Vista previa" class="med-preview-img" />
+                                <button type="button" id="removeImageEdit" class="med-remove-img" title="Quitar nueva foto">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Destacado Switch -->
+                        <div class="med-featured-card">
+                            <label class="med-featured-label">
+                                <div class="med-featured-info">
+                                    <span class="med-featured-emoji">⭐</span>
+                                    <div>
+                                        <span class="med-featured-name">Plato Destacado</span>
+                                        <span class="med-featured-hint">Badge "⭐ DESTACADO" en el menú</span>
+                                    </div>
+                                </div>
+                                <div class="med-toggle-wrap">
+                                    <input type="checkbox" name="destacado" id="edit_destacado" class="med-toggle-input" value="1" />
+                                    <div class="med-toggle-track"><div class="med-toggle-thumb"></div></div>
+                                </div>
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- RIGHT: Form Fields -->
+                    <div class="med-col-right">
+                        <div class="med-section-label">
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+                            <span>Detalles del Plato</span>
+                        </div>
+
+                        <!-- Nombre -->
+                        <div class="med-field">
+                            <label for="edit_nombre" class="med-field-label">Nombre del Plato <span class="med-req">*</span></label>
+                            <input type="text" id="edit_nombre" name="nombre" placeholder="Ej: Picaña Premium Especial" maxlength="100" required class="med-input" />
+                        </div>
+
+                        <!-- Categoría + Precio -->
+                        <div class="med-row-2">
+                            <div class="med-field">
+                                <label for="edit_categoria" class="med-field-label">Categoría <span class="med-req">*</span></label>
+                                <select id="edit_categoria" name="categoria_id" required class="med-input med-select">
+                                    <option value="">Seleccionar categoría</option>
+                                    {categoriasList.map((cat: any) => (
+                                        <option value={cat.id}>{cat.nombre}</option>
+                                    ))}
+                                </select>
+                            </div>
+                            <div class="med-field">
+                                <label for="edit_precio" class="med-field-label">Precio (Bs.) <span class="med-req">*</span></label>
+                                <div class="med-price-wrap">
+                                    <span class="med-price-prefix">Bs.</span>
+                                    <input type="number" id="edit_precio" name="precio" placeholder="120.00" step="0.50" min="0" required class="med-input med-price-input" />
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Descripción -->
+                        <div class="med-field">
+                            <div class="med-field-top">
+                                <label for="edit_descripcion" class="med-field-label">Descripción</label>
+                                <span class="med-char-counter" id="edit_charCounter">0/500</span>
+                            </div>
+                            <textarea id="edit_descripcion" name="descripcion" rows="5" placeholder="Ingredientes principales, preparación o detalles del plato..." maxlength="500" class="med-input med-textarea"></textarea>
+                        </div>
                     </div>
                 </div>
-            </div>
-            
-            <div>
-                <label for="edit_descripcion" class="block text-xs font-semibold text-gray-700 uppercase tracking-wider mb-1">Descripción</label>
-                <textarea 
-                    id="edit_descripcion" 
-                    name="descripcion" 
-                    rows="3" 
-                    class="w-full px-3.5 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-gray-900 text-sm focus:bg-white focus:ring-2 focus:ring-[#9e2a2b]/15 focus:border-[#9e2a2b] outline-none transition-all resize-none"
-                    placeholder="Descripción del plato..."
-                ></textarea>
-            </div>
-            
-            <div class="pt-3 flex gap-3 justify-end border-t border-gray-100">
-                <button type="button" id="btnCancelarEditar" class="px-5 py-2.5 bg-white text-gray-700 border border-gray-200 rounded-xl text-xs sm:text-sm font-semibold hover:bg-gray-100 transition-colors shadow-sm cursor-pointer">
-                    Cancelar
-                </button>
-                <button type="submit" id="btnGuardarEditar" class="px-6 py-2.5 bg-gradient-to-r from-[#9e2a2b] to-[#7a2021] text-white rounded-xl text-xs sm:text-sm font-semibold hover:shadow-[0_6px_20px_rgba(158,42,43,0.4)] transition-all cursor-pointer border-0">
-                    <span class="btn-text">Guardar Cambios</span>
-                    <span class="loader hidden absolute inset-0 flex items-center justify-center">
-                        <svg class="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
-                    </span>
-                </button>
-            </div>
-        </form>
+            </form>
+        </div>
+
+        <!-- Footer -->
+        <div class="med-footer">
+            <button type="button" class="med-btn-cancel" id="btnCancelarEditar">Cancelar</button>
+            <button type="submit" form="formEditarPlato" class="med-btn-save" id="btnGuardarEditar">
+                <span class="btn-text">Guardar Cambios</span>
+                <svg class="btn-spinner" style="display:none;" width="16" height="16" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" opacity="0.25"></circle><path d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" fill="currentColor" opacity="0.75"></path></svg>
+            </button>
+        </div>
     </div>
 </div>
 
 <style>
-    #modalEditarPlato h3.modal-edit-title {
-        font-size: 1.15rem !important;
-        line-height: 1.3 !important;
-        margin: 0 !important;
-        font-family: 'Playfair Display', Georgia, serif !important;
+    /* ===== OVERLAY ===== */
+    .med-overlay {
+        position: fixed; inset: 0; z-index: 100;
+        display: flex; align-items: center; justify-content: center;
+        padding: 1rem;
+        opacity: 0; pointer-events: none;
+        transition: opacity .3s cubic-bezier(.4,0,.2,1);
     }
-    .modal-active {
+    .med-overlay.modal-active {
+        opacity: 1; pointer-events: auto;
+    }
+    .med-backdrop {
+        position: absolute; inset: 0;
+        background: rgba(15,15,20,.55);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+    }
+
+    /* ===== CONTAINER ===== */
+    .med-container {
+        position: relative; z-index: 10;
+        background: #fff;
+        border-radius: 1.5rem;
+        width: 100%; max-width: 900px;
+        max-height: 94vh;
+        display: flex; flex-direction: column;
+        overflow: hidden;
+        box-shadow: 0 30px 80px -20px rgba(0,0,0,.35), 0 0 0 1px rgba(0,0,0,.04);
+        transform: scale(.96) translateY(12px);
+        transition: transform .35s cubic-bezier(.4,0,.2,1), opacity .3s;
+    }
+    .med-overlay.modal-active > .med-container {
+        transform: scale(1) translateY(0) !important;
         opacity: 1 !important;
-        pointer-events: auto !important;
     }
-    .modal-active #modalEditarContent {
-        transform: scale(1) !important;
+
+    /* ===== HEADER ===== */
+    .med-header {
+        display: flex; align-items: center; justify-content: space-between;
+        padding: 1.25rem 2rem;
+        border-bottom: 1px solid #f0f0f2;
+        background: linear-gradient(135deg, #fdfcfb 0%, #f9f7f5 100%);
+        flex-shrink: 0;
     }
+    .med-header-left { display: flex; align-items: center; gap: .875rem; }
+    .med-icon-badge {
+        width: 44px; height: 44px;
+        border-radius: 14px;
+        background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+        color: #fff;
+        display: flex; align-items: center; justify-content: center;
+        flex-shrink: 0;
+        box-shadow: 0 4px 12px rgba(37,99,235,.3);
+    }
+    .med-title {
+        font-family: 'Playfair Display', Georgia, serif !important;
+        font-size: 1.3rem !important; font-weight: 700 !important;
+        color: #1a1a1f !important;
+        margin: 0 !important; line-height: 1.2 !important;
+        letter-spacing: -.02em;
+    }
+    .med-subtitle {
+        font-size: .82rem !important; color: #8b8b94 !important;
+        margin: .15rem 0 0 !important; line-height: 1.3 !important;
+    }
+    .med-close-btn {
+        width: 36px; height: 36px;
+        border-radius: 10px; border: 1px solid #e8e8ec;
+        background: #fff; color: #8b8b94;
+        display: flex; align-items: center; justify-content: center;
+        cursor: pointer;
+        transition: all .2s;
+    }
+    .med-close-btn:hover { background: #f5f5f7; color: #333; border-color: #d5d5da; }
+
+    /* ===== BODY ===== */
+    .med-body {
+        overflow-y: auto; flex: 1;
+        padding: 1.75rem 2rem;
+        scrollbar-width: thin;
+        scrollbar-color: #d5d5da transparent;
+    }
+
+    /* ===== GRID ===== */
+    .med-grid {
+        display: grid;
+        grid-template-columns: 1fr 1.4fr;
+        gap: 2rem;
+    }
+    @media (max-width: 700px) { .med-grid { grid-template-columns: 1fr; } }
+
+    /* ===== SECTION LABEL ===== */
+    .med-section-label {
+        display: flex; align-items: center; gap: .5rem;
+        font-size: .7rem !important; font-weight: 700;
+        text-transform: uppercase; letter-spacing: .08em;
+        color: #2563eb; margin-bottom: 1rem;
+    }
+
+    /* ===== DROPZONE ===== */
+    .med-dropzone {
+        border: 2px dashed #ddd;
+        border-radius: 1rem;
+        background: #fafafa;
+        min-height: 220px;
+        display: flex; flex-direction: column;
+        align-items: center; justify-content: center;
+        position: relative;
+        cursor: pointer;
+        transition: all .25s;
+        overflow: hidden;
+    }
+    .med-dropzone:hover { border-color: #2563eb; background: rgba(37,99,235,.03); }
+    .med-dropzone.drag-over { border-color: #2563eb; background: rgba(37,99,235,.06); }
+    .med-dropzone-content {
+        display: flex; flex-direction: column;
+        align-items: center; justify-content: center;
+        padding: 1rem;
+    }
+    .med-dropzone-icon {
+        width: 52px; height: 52px;
+        border-radius: 16px;
+        background: #fff;
+        border: 1px solid #eee;
+        display: flex; align-items: center; justify-content: center;
+        color: #2563eb;
+        margin-bottom: .75rem;
+        box-shadow: 0 2px 8px rgba(0,0,0,.05);
+        transition: transform .2s;
+    }
+    .med-dropzone:hover .med-dropzone-icon { transform: translateY(-2px); }
+    .med-dropzone-title { font-size: .82rem !important; font-weight: 600; color: #444; margin: 0 0 .25rem; }
+    .med-dropzone-hint { font-size: .72rem !important; color: #aaa; margin: 0; }
+    .med-file-input { display: none; }
+
+    /* Preview */
+    .med-preview-wrap {
+        width: 100%; height: 100%;
+        min-height: 210px;
+        display: flex; align-items: center; justify-content: center;
+        position: relative;
+        padding: .75rem;
+    }
+    .med-preview-img {
+        max-height: 200px; width: 100%;
+        object-fit: contain;
+        border-radius: .75rem;
+    }
+    .med-remove-img {
+        position: absolute; top: 6px; right: 6px;
+        width: 28px; height: 28px;
+        border-radius: 50%;
+        background: #ef4444; color: #fff;
+        border: 2px solid #fff;
+        display: flex; align-items: center; justify-content: center;
+        cursor: pointer;
+        box-shadow: 0 2px 8px rgba(239,68,68,.4);
+        transition: all .2s;
+    }
+    .med-remove-img:hover { background: #dc2626; transform: scale(1.1); }
+
+    /* ===== FEATURED CARD ===== */
+    .med-featured-card {
+        margin-top: 1rem;
+        background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%);
+        border: 1px solid #fde68a;
+        border-radius: 1rem;
+        padding: 1rem 1.1rem;
+    }
+    .med-featured-label {
+        display: flex; align-items: center; justify-content: space-between;
+        cursor: pointer; user-select: none;
+    }
+    .med-featured-info { display: flex; align-items: center; gap: .6rem; }
+    .med-featured-emoji { font-size: 1.3rem; }
+    .med-featured-name { display: block; font-size: .8rem !important; font-weight: 600; color: #333; }
+    .med-featured-hint { display: block; font-size: .68rem !important; color: #92702d; }
+
+    /* Toggle */
+    .med-toggle-wrap { position: relative; }
+    .med-toggle-input { position: absolute; opacity: 0; width: 0; height: 0; }
+    .med-toggle-track {
+        width: 44px; height: 24px;
+        background: #d1d5db;
+        border-radius: 999px;
+        position: relative;
+        transition: background .25s;
+        cursor: pointer;
+    }
+    .med-toggle-thumb {
+        position: absolute; top: 2px; left: 2px;
+        width: 20px; height: 20px;
+        background: #fff;
+        border-radius: 50%;
+        box-shadow: 0 1px 4px rgba(0,0,0,.15);
+        transition: transform .25s;
+    }
+    .med-toggle-input:checked + .med-toggle-track { background: #2563eb; }
+    .med-toggle-input:checked + .med-toggle-track .med-toggle-thumb { transform: translateX(20px); }
+
+    /* ===== FORM FIELDS ===== */
+    .med-field { margin-bottom: .9rem; }
+    .med-field-label {
+        display: block; font-size: .78rem !important;
+        font-weight: 600; color: #4a4a54;
+        margin-bottom: .4rem;
+    }
+    .med-req { color: #ef4444; }
+    .med-field-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: .4rem; }
+    .med-char-counter { font-size: .68rem !important; color: #aaa; font-variant-numeric: tabular-nums; }
+
+    .med-input {
+        width: 100%;
+        padding: .65rem .9rem;
+        background: #f8f8fa;
+        border: 1.5px solid #e5e5ea;
+        border-radius: .75rem;
+        font-size: .85rem !important;
+        color: #1a1a1f;
+        transition: all .2s;
+        outline: none;
+        font-family: inherit;
+    }
+    .med-input:focus {
+        background: #fff;
+        border-color: #2563eb;
+        box-shadow: 0 0 0 3px rgba(37,99,235,.1);
+    }
+    .med-input::placeholder { color: #bbb; }
+
+    .med-select {
+        appearance: none;
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%239a9a9a' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+        background-repeat: no-repeat;
+        background-position: right .8rem center;
+        padding-right: 2.2rem;
+        cursor: pointer;
+    }
+    .med-textarea { resize: none; line-height: 1.55; }
+
+    .med-row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: .75rem; }
+    @media (max-width: 480px) { .med-row-2 { grid-template-columns: 1fr; } }
+
+    .med-price-wrap { position: relative; }
+    .med-price-prefix {
+        position: absolute; left: .9rem; top: 50%; transform: translateY(-50%);
+        font-size: .75rem !important; font-weight: 700; color: #999;
+        pointer-events: none; user-select: none;
+    }
+    .med-price-input { padding-left: 2.6rem !important; font-weight: 600; }
+
+    /* ===== FOOTER ===== */
+    .med-footer {
+        display: flex; align-items: center; justify-content: flex-end; gap: .75rem;
+        padding: 1rem 2rem;
+        border-top: 1px solid #f0f0f2;
+        background: linear-gradient(135deg, #fdfcfb 0%, #f9f7f5 100%);
+        flex-shrink: 0;
+    }
+    .med-btn-cancel {
+        padding: .6rem 1.4rem;
+        background: #fff;
+        border: 1.5px solid #e0e0e5;
+        border-radius: .75rem;
+        font-size: .82rem !important; font-weight: 600;
+        color: #555; cursor: pointer;
+        transition: all .2s;
+    }
+    .med-btn-cancel:hover { background: #f5f5f7; border-color: #ccc; }
+    .med-btn-save {
+        padding: .6rem 1.8rem;
+        background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+        color: #fff;
+        border: none; border-radius: .75rem;
+        font-size: .82rem !important; font-weight: 600;
+        cursor: pointer;
+        display: flex; align-items: center; gap: .5rem;
+        box-shadow: 0 4px 14px rgba(37,99,235,.3);
+        transition: all .25s;
+        min-width: 150px; justify-content: center;
+    }
+    .med-btn-save:hover {
+        box-shadow: 0 6px 20px rgba(37,99,235,.4);
+        transform: translateY(-1px);
+    }
+    .med-btn-save:active { transform: translateY(0) scale(.98); }
+
+    .btn-spinner { animation: med-spin .8s linear infinite; }
+    @keyframes med-spin { to { transform: rotate(360deg); } }
 </style>
+
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const desc = document.getElementById('edit_descripcion') as HTMLTextAreaElement;
+        const charCounter = document.getElementById('edit_charCounter');
+
+        if (desc && charCounter) {
+            desc.addEventListener('input', () => {
+                charCounter.textContent = `${desc.value.length}/500`;
+            });
+        }
+
+        // Dropzone e imagen preview en editar
+        const dropZone = document.getElementById('dropZoneEdit');
+        const fileInput = document.getElementById('edit_imagenInput') as HTMLInputElement;
+        const previewContainer = document.getElementById('previewContainerEdit');
+        const previewImage = document.getElementById('previewImageEdit') as HTMLImageElement;
+        const uploadContent = document.getElementById('uploadContentEdit');
+        const removeBtn = document.getElementById('removeImageEdit');
+
+        function handleFile(file: File) {
+            if (!file || !file.type.startsWith('image/')) return;
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                if (e.target?.result && previewImage && previewContainer && uploadContent) {
+                    previewImage.src = e.target.result as string;
+                    previewContainer.style.display = 'flex';
+                    uploadContent.style.display = 'none';
+                }
+            };
+            reader.readAsDataURL(file);
+        }
+
+        if (dropZone && fileInput) {
+            dropZone.addEventListener('click', (e) => {
+                if (e.target !== removeBtn && !(removeBtn && removeBtn.contains(e.target as Node))) {
+                    fileInput.click();
+                }
+            });
+
+            dropZone.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                dropZone.classList.add('drag-over');
+            });
+
+            dropZone.addEventListener('dragleave', (e) => {
+                e.preventDefault();
+                dropZone.classList.remove('drag-over');
+            });
+
+            dropZone.addEventListener('drop', (e) => {
+                e.preventDefault();
+                dropZone.classList.remove('drag-over');
+                if (e.dataTransfer?.files.length) {
+                    const dt = new DataTransfer();
+                    dt.items.add(e.dataTransfer.files[0]);
+                    fileInput.files = dt.files;
+                    handleFile(e.dataTransfer.files[0]);
+                }
+            });
+
+            fileInput.addEventListener('change', () => {
+                if (fileInput.files?.length) {
+                    handleFile(fileInput.files[0]);
+                }
+            });
+        }
+
+        if (removeBtn) {
+            removeBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                if (fileInput) fileInput.value = '';
+                if (previewContainer) previewContainer.style.display = 'none';
+                if (uploadContent) uploadContent.style.display = 'flex';
+                if (previewImage) previewImage.removeAttribute('src');
+            });
+        }
+    });
+</script>
