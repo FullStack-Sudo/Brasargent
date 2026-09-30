@@ -66,7 +66,7 @@ try {
     };
   });
 
-  // Ordenar tarjetas: 1. Churrasquería, 2. Rodizio, 3. Fast Grill
+  // Ordenar tarjetas: 1. Rodizio, 2. Churrasquería, 3. Fast Grill
   sucursales.sort((a: any, b: any) => {
     const nameA = (a.name || '').toLowerCase();
     const nameB = (b.name || '').toLowerCase();
@@ -74,12 +74,12 @@ try {
     let orderA = 99;
     let orderB = 99;
 
-    if (nameA.includes('churrasquer')) orderA = 1;
-    else if (nameA.includes('rodizio')) orderA = 2;
+    if (nameA.includes('rodizio')) orderA = 1;
+    else if (nameA.includes('churrasquer')) orderA = 2;
     else if (nameA.includes('fast')) orderA = 3;
 
-    if (nameB.includes('churrasquer')) orderB = 1;
-    else if (nameB.includes('rodizio')) orderB = 2;
+    if (nameB.includes('rodizio')) orderB = 1;
+    else if (nameB.includes('churrasquer')) orderB = 2;
     else if (nameB.includes('fast')) orderB = 3;
 
     return orderA - orderB;

@@ -59,6 +59,24 @@ export const GET: APIRoute = async ({ request }) => {
       };
     });
 
+    sucursales.sort((a: any, b: any) => {
+      const nameA = (a.nombre || '').toLowerCase();
+      const nameB = (b.nombre || '').toLowerCase();
+
+      let orderA = 99;
+      let orderB = 99;
+
+      if (nameA.includes('rodizio')) orderA = 1;
+      else if (nameA.includes('churrasquer')) orderA = 2;
+      else if (nameA.includes('fast')) orderA = 3;
+
+      if (nameB.includes('rodizio')) orderB = 1;
+      else if (nameB.includes('churrasquer')) orderB = 2;
+      else if (nameB.includes('fast')) orderB = 3;
+
+      return orderA - orderB;
+    });
+
     return new Response(JSON.stringify(sucursales), {
       status: 200,
       headers: {
