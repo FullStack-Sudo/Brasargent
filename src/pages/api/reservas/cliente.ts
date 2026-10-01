@@ -1,6 +1,7 @@
 import type { APIRoute } from 'astro';
 import { query } from '../../../lib/db';
 import { openwa } from '../../../lib/whatsapp/openwa';
+import { openwaMulti } from '../../../lib/whatsapp/openwa-multi';
 import { verificarCubiertosSuficientes, actualizarCubiertosAlAprobar } from '../../../lib/cubiertos';
 import { generarNumeroReserva } from '../../../lib/reservas';
 
@@ -122,11 +123,24 @@ export const POST: APIRoute = async ({ request }) => {
             
             const telefonoCliente = finalTelefonoCompleto;
             
-            // Enviar por OpenWA
-            const result = await openwa.sendMessage({
-                to: telefonoCliente,
-                text: mensajeWhatsApp
-            });
+            // Enviar por OpenWA multi-sesión por sucursal
+            let result = await openwaMulti.sendMessage(
+                Number(sucursal_id),
+                telefonoCliente,
+                mensajeWhatsApp
+            );
+            if (!result.success) {
+                // Fallback a cliente general
+                const fallbackRes = await openwa.sendMessage({
+                    to: telefonoCliente,
+                    text: mensajeWhatsApp
+                });
+                result = {
+                    success: fallbackRes.success,
+                    messageId: fallbackRes.messageId,
+                    error: fallbackRes.error
+                };
+            }
             
             whatsappResult = {
                 success: result.success,
