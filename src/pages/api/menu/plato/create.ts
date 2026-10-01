@@ -3,7 +3,6 @@ import { crearPlato, actualizarImagenPlato } from '../../../../lib/queries/menu'
 import { z } from 'zod';
 import fs from 'fs/promises';
 import path from 'path';
-import { fileURLToPath } from 'url';
 
 const createPlatoSchema = z.object({
     sucursal_id: z.coerce.number().int().positive(),

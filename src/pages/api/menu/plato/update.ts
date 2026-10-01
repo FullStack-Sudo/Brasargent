@@ -3,7 +3,6 @@ import { actualizarPlato, actualizarImagenPlato } from '../../../../lib/queries/
 import { z } from 'zod';
 import fs from 'fs/promises';
 import path from 'path';
-import { fileURLToPath } from 'url';
 
 const updateSchema = z.object({
     plato_id: z.coerce.number().int().positive(),
@@ -61,10 +60,7 @@ export const POST: APIRoute = async ({ request }) => {
                 const buffer = Buffer.from(arrayBuffer);
                 const ext = imageFile.type.split('/')[1] || 'jpg';
                 const fileName = `plato_${plato_id}_${Date.now()}.${ext}`;
-                const __filename = fileURLToPath(import.meta.url);
-                const __dirname = path.dirname(__filename);
-                const projectRoot = path.resolve(__dirname, '../../../../../');
-                const uploadDir = path.join(projectRoot, 'public', 'uploads', 'platos');
+		const uploadDir = path.join(process.cwd(), 'public', 'uploads', 'platos');
                 await fs.mkdir(uploadDir, { recursive: true });
                 const filePath = path.join(uploadDir, fileName);
                 await fs.writeFile(filePath, buffer);

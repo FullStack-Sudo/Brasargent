@@ -39,6 +39,13 @@ RUN addgroup --system astro && adduser --system astro --ingroup astro
 COPY --from=builder --chown=astro:astro /app/dist ./dist
 COPY --from=deps --chown=astro:astro /app/node_modules ./node_modules
 
+# ✅ AGREGAR: copiar public/ (uploads, favicon, etc.)
+COPY --from=builder --chown=astro:astro /app/public ./public
+
+# ⚠️ Importante: dar permisos de escritura al usuario astro en uploads
+RUN mkdir -p /app/public/uploads/platos && \
+    chown -R astro:astro /app/public
+
 # Cambiar a usuario no-root
 USER astro
 
