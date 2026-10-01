@@ -1,5 +1,7 @@
 import type { APIRoute } from 'astro';
-import pool from '../../../lib/db';
+import { query } from '../../../lib/db';
+import { openwa } from '../../../lib/whatsapp/openwa';
+import { verificarCubiertosSuficientes, actualizarCubiertosAlAprobar } from '../../../lib/cubiertos';
 import { generarNumeroReserva } from '../../../lib/reservas';
 
 export const POST: APIRoute = async ({ request }) => {
@@ -9,19 +11,21 @@ export const POST: APIRoute = async ({ request }) => {
         const { 
             sucursal_id, 
             nombre_cliente, 
-            telefono,
+            telefono, 
             codigo_pais,
+            telefono_completo,
             fecha, 
-            hora,
-            turno,
+            hora, 
             numero_personas,
             cantidad_ninos,
+            ninos,
             necesita_silla_bebe,
+            necesita_menu_infantil,
             observaciones
         } = data;
         
         // ============================================
-        // VALIDACIONES BÁSICAS
+        // 1. VALIDACIONES
         // ============================================
         
         if (!sucursal_id || !nombre_cliente || !telefono || !fecha || !hora || !numero_personas) {
@@ -31,202 +35,209 @@ export const POST: APIRoute = async ({ request }) => {
             }), { status: 400 });
         }
         
-        // ============================================
-        // 🔴 VALIDACIÓN DE HORARIO DEL ADMIN
-        // ============================================
+        const totalNinos = (cantidad_ninos !== undefined ? cantidad_ninos : ninos) || 0;
+        // Calcular cubiertos necesarios (Adultos + Niños)
+        const cubiertosNecesarios = (parseInt(numero_personas) || 0) + (parseInt(totalNinos) || 0);
         
-        // 1. Obtener datos de la sucursal
-        const [sucursalRows] = await pool.query(
-            `SELECT horarios, permite_reservas, capacidad_total 
-             FROM sucursales 
-             WHERE id = ? AND activo = 1`,
-            [sucursal_id]
-        ) as any[];
+        // Verificar disponibilidad de cubiertos
+        const verificacion = await verificarCubiertosSuficientes(Number(sucursal_id), cubiertosNecesarios);
         
-        const sucursal = (sucursalRows as any[])[0];
-        
-        if (!sucursal) {
+        if (!verificacion.success) {
             return new Response(JSON.stringify({
                 success: false,
-                error: 'Sucursal no encontrada o inactiva'
-            }), { status: 404 });
-        }
-        
-        // 2. Verificar si permite reservas generales
-        if (!sucursal.permite_reservas) {
-            return new Response(JSON.stringify({
-                success: false,
-                error: 'Esta sucursal no acepta reservas'
-            }), { status: 403 });
-        }
-
-        // 2b. 🔴 VERIFICAR DOMINGOS Y DÍAS FESTIVOS (SIN RESERVAS)
-        const { permiteReservas } = await import('../../../lib/precios');
-        const checkFestivo = await permiteReservas(sucursal_id, fecha);
-        if (!checkFestivo.permite) {
-            return new Response(JSON.stringify({
-                success: false,
-                error: checkFestivo.motivo || 'No se aceptan reservas en domingos, feriados o días festivos. Trabajamos por orden de llegada.'
-            }), { status: 403 });
-        }
-        
-        // 3. Parsear horarios configurados por el admin
-        let horarios: any = {};
-        try {
-            horarios = typeof sucursal.horarios === 'string' 
-                ? JSON.parse(sucursal.horarios) 
-                : sucursal.horarios || {};
-        } catch {
-            return new Response(JSON.stringify({
-                success: false,
-                error: 'Error en la configuración de horarios de la sucursal'
-            }), { status: 500 });
-        }
-        
-        // 4. Obtener el día de la semana de la fecha solicitada
-        const diasSemana = ['domingo', 'lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado'];
-        const fechaObj = new Date(fecha + 'T12:00:00'); // T12 para evitar problemas de timezone
-        const diaSemana = diasSemana[fechaObj.getDay()];
-        
-        // 5. Verificar si la sucursal está abierta ese día
-        const horarioDia = horarios[diaSemana];
-        
-        if (!horarioDia || !horarioDia.activo || !horarioDia.bloques || horarioDia.bloques.length === 0) {
-            return new Response(JSON.stringify({
-                success: false,
-                error: `La sucursal está cerrada el día ${diaSemana}. No se pueden hacer reservas.`
-            }), { status: 403 });
-        }
-        
-        // 6. 🔴 VERIFICAR QUE LA HORA ESTÁ DENTRO DE ALGÚN BLOQUE HORARIO
-        let horaValida = false;
-        for (const bloque of horarioDia.bloques) {
-            if (hora >= bloque.inicio && hora <= bloque.fin) {
-                horaValida = true;
-                break;
-            }
-        }
-        
-        if (!horaValida) {
-            const horariosStr = horarioDia.bloques
-                .map((b: any) => `${b.inicio} - ${b.fin}`)
-                .join(' y ');
-            return new Response(JSON.stringify({
-                success: false,
-                error: `La hora ${hora} no está dentro del horario de atención (${horariosStr}). Selecciona una hora válida.`
-            }), { status: 403 });
-        }
-        
-        // 7. Validar capacidad disponible para esa hora
-        // Calcular cubiertos: Adultos + Niños (sin bebés)
-        const adultos = parseInt(numero_personas) || 0;
-        const ninos = parseInt(cantidad_ninos) || 0;
-        const cubiertos_necesarios = adultos + ninos;
-
-        const [reservasEnHora] = await pool.query(
-            `SELECT COALESCE(SUM(COALESCE(cubiertos_reservados, numero_personas)), 0) as total
-             FROM reservas 
-             WHERE sucursal_id = ? 
-             AND fecha = ? 
-             AND hora = ? 
-             AND estado IN ('pendiente', 'confirmada')`,
-            [sucursal_id, fecha, hora]
-        ) as any[];
-        
-        const ocupadosEnHora = Number((reservasEnHora as any[])[0]?.total) || 0;
-        const capacidadTotal = Number(sucursal.capacidad_total) || 120;
-        
-        if (ocupadosEnHora + cubiertos_necesarios > capacidadTotal) {
-            return new Response(JSON.stringify({
-                success: false,
-                error: `No hay capacidad suficiente para ${cubiertos_necesarios} cubiertos a las ${hora}. Disponibles: ${capacidadTotal - ocupadosEnHora} cubiertos.`
+                error: verificacion.message
             }), { status: 409 });
         }
         
         // ============================================
-        // ✅ TODAS LAS VALIDACIONES PASARON - GUARDAR
+        // 2. GENERAR NÚMERO DE RESERVA
         // ============================================
         
-        const telefono_completo = `${codigo_pais || '591'}${telefono.replace(/[^0-9]/g, '')}`;
-        const numeroReserva = await generarNumeroReserva(sucursal_id);
+        const numeroReserva = await generarNumeroReserva(Number(sucursal_id));
+        
+        // ============================================
+        // 3. INSERTAR RESERVA COMO CONFIRMADA
+        // ============================================
+        
+        const finalTelefonoCompleto = telefono_completo || `${codigo_pais || '591'}${telefono.toString().replace(/\D/g, '')}`;
 
-        const [result] = await pool.query(
+        const [insertResult] = await query(
             `INSERT INTO reservas 
-             (sucursal_id, nombre_cliente, telefono, codigo_pais, telefono_completo, fecha, hora, turno, numero_personas, cantidad_ninos, necesita_silla_bebe, observaciones, cubiertos_reservados, numero_reserva, estado) 
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pendiente')`,
+             (sucursal_id, nombre_cliente, telefono, codigo_pais, telefono_completo, 
+              fecha, hora, numero_personas, cantidad_ninos,
+              necesita_silla_bebe, necesita_menu_infantil, observaciones,
+              cubiertos_reservados, numero_reserva, estado, fecha_confirmacion) 
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'confirmada', NOW())`,
             [
                 sucursal_id,
                 nombre_cliente,
                 telefono,
                 codigo_pais || '591',
-                telefono_completo,
+                finalTelefonoCompleto,
                 fecha,
                 hora,
-                turno || null,
                 numero_personas,
-                cantidad_ninos || 0,
+                totalNinos,
                 necesita_silla_bebe ? 1 : 0,
+                necesita_menu_infantil ? 1 : 0,
                 observaciones || null,
-                cubiertos_necesarios,
+                cubiertosNecesarios,
                 numeroReserva
             ]
-        );
+        ) as any[];
         
-        // Registrar en logs
+        const reservaId = insertResult?.insertId || (Array.isArray(insertResult) ? insertResult[0]?.insertId : null);
+        
+        // ============================================
+        // 4. ACTUALIZAR CUBIERTOS
+        // ============================================
+        
+        await actualizarCubiertosAlAprobar(Number(sucursal_id), cubiertosNecesarios);
+        
+        // ============================================
+        // 5. ENVIAR WHATSAPP AUTOMÁTICAMENTE
+        // ============================================
+        
+        let whatsappResult = { success: false, error: 'No se pudo enviar' };
+        
         try {
-            await pool.query(
+            const [sucursalDataRows] = await query(
+                `SELECT nombre, direccion, telefono FROM sucursales WHERE id = ?`,
+                [sucursal_id]
+            ) as any[];
+            const sucursalData = Array.isArray(sucursalDataRows) && sucursalDataRows.length > 0 ? sucursalDataRows[0] : null;
+            
+            const mensajeWhatsApp = generarMensajeConfirmacion({
+                nombre_cliente,
+                numero_reserva: numeroReserva,
+                sucursal_nombre: sucursalData?.nombre || 'BRASARGENT',
+                direccion: sucursalData?.direccion || '',
+                fecha,
+                hora,
+                numero_personas,
+                cantidad_ninos: totalNinos,
+                necesita_silla_bebe: necesita_silla_bebe || false,
+                necesita_menu_infantil: necesita_menu_infantil || false
+            });
+            
+            const telefonoCliente = finalTelefonoCompleto;
+            
+            // Enviar por OpenWA
+            const result = await openwa.sendMessage({
+                to: telefonoCliente,
+                text: mensajeWhatsApp
+            });
+            
+            whatsappResult = {
+                success: result.success,
+                error: result.error || null
+            };
+            
+        } catch (error: any) {
+            console.error('❌ Error enviando WhatsApp:', error);
+            whatsappResult = {
+                success: false,
+                error: error.message || 'Error desconocido'
+            };
+        }
+        
+        // ============================================
+        // 6. REGISTRAR EN LOGS
+        // ============================================
+        
+        try {
+            await query(
                 `INSERT INTO logs_actividad 
                  (accion, tabla_afectada, registro_id, detalles) 
-                 VALUES ('NUEVA_RESERVA_CLIENTE', 'reservas', ?, ?)`,
+                 VALUES ('RESERVA_AUTOMATICA', 'reservas', ?, ?)`,
                 [
-                    (result as any).insertId,
+                    reservaId,
                     JSON.stringify({
                         cliente: nombre_cliente,
-                        telefono: telefono_completo,
-                        sucursal_id,
+                        numero_reserva: numeroReserva,
+                        telefono: finalTelefonoCompleto,
+                        cubiertos: cubiertosNecesarios,
+                        whatsapp_enviado: whatsappResult.success,
                         fecha,
-                        hora,
-                        personas: numero_personas,
-                        validacion_horario: 'APROBADA'
+                        hora
                     })
                 ]
             );
-        } catch {
-            // Logs opcionales — no romper la reserva si falla
+        } catch (e) {
+            console.error('Error registrando actividad:', e);
         }
         
-        const insertId = (result as any).insertId;
-
-        // Obtener el numero_reserva generado por el trigger
-        let numero_reserva = `BR-${new Date().getFullYear()}-0001`;
-        try {
-            const [createdRows] = await pool.query(
-                `SELECT numero_reserva FROM reservas WHERE id = ?`,
-                [insertId]
-            ) as any[];
-            if (createdRows && createdRows[0]?.numero_reserva) {
-                numero_reserva = createdRows[0].numero_reserva;
-            }
-        } catch {
-            // Fallback si no se consulta
-        }
-
+        // ============================================
+        // 7. RESPUESTA
+        // ============================================
+        
         return new Response(JSON.stringify({
             success: true,
-            mensaje: '¡Reserva solicitada! Espera confirmación por WhatsApp.',
-            reserva_id: insertId,
-            numero_reserva: numero_reserva
+            mensaje: '¡Reserva confirmada automáticamente!',
+            reserva_id: reservaId,
+            numero_reserva: numeroReserva,
+            reserva: {
+                id: reservaId,
+                numero_reserva: numeroReserva,
+                estado: 'confirmada',
+                whatsapp_enviado: whatsappResult.success
+            }
         }), { status: 201 });
         
     } catch (error: any) {
         console.error('Error en reserva:', error);
-        let errorMsg = error.message || 'Error al procesar la reserva';
-        if (errorMsg.includes('ECONNREFUSED') || errorMsg.includes('connect')) {
-            errorMsg = 'El servicio de reservas no está disponible en este momento';
-        }
         return new Response(JSON.stringify({
             success: false,
-            error: errorMsg
+            error: error.message || 'Error al procesar la reserva'
         }), { status: 500 });
     }
 };
+
+// ============================================
+// GENERAR MENSAJE DE CONFIRMACIÓN
+// ============================================
+
+function generarMensajeConfirmacion(data: any): string {
+    let fechaFormateada = data.fecha;
+    try {
+        const fechaObj = new Date(data.fecha + 'T12:00:00');
+        if (!isNaN(fechaObj.getTime())) {
+            fechaFormateada = fechaObj.toLocaleDateString('es-ES', {
+                weekday: 'long',
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric'
+            });
+        }
+    } catch (e) {}
+    
+    const totalPersonas = (data.numero_personas || 0) + (data.cantidad_ninos || 0);
+    let personasTexto = `${data.numero_personas || 0} Adultos`;
+    if (data.cantidad_ninos > 0) {
+        personasTexto += `\n${data.cantidad_ninos} Niños (2-12 años)`;
+    }
+    personasTexto += `\nTotal: ${totalPersonas} personas`;
+    
+    return `BRASARGENT - Tu Reserva fue Exitosa!
+
+Hola ${data.nombre_cliente}!
+
+Tu reserva en ${data.sucursal_nombre} ha sido confirmada.
+
+Numero de Reserva: ${data.numero_reserva}
+
+Fecha: ${fechaFormateada}
+Hora: ${data.hora}
+Ubicacion: ${data.direccion}
+
+Detalle de Personas:
+${personasTexto}
+
+Te recordamos que tienes que estar 10 minutos antes de la hora de tu reserva.
+
+¡Te esperamos!
+
+Si no vas a poder asistir, por favor notifica al restaurante.
+
+BRASARGENT - El mejor churrasco de Santa Cruz, Bolivia`;
+}

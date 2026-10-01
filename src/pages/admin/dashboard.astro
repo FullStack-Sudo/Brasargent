@@ -2,10 +2,16 @@
 // src/pages/admin/dashboard.astro
 // Dashboard rediseñado en columna sin scroll horizontal
 import AdminLayout from '../../layouts/AdminLayout.astro';
+import ModalAlertas from '../../components/admin/ModalAlertas.astro';
+import BurbujaFuturas from '../../components/admin/BurbujaFuturas.astro';
+import ModalFuturas from '../../components/admin/ModalFuturas.astro';
 import pool, { query } from '../../lib/db';
 import { getEstadisticasCubiertos } from '../../lib/cubiertos';
 import { getReservasAceptables } from '../../lib/reservas';
 import { verificarReservasParaLiberar } from '../../lib/liberacion-cubiertos';
+
+// Fecha de HOY (para filtrar cubiertos y recepción en vivo estrictamente para hoy)
+const hoy = new Date().toISOString().split('T')[0];
 
 // Obtener usuario actual desde locals (seteado en middleware)
 const usuario = Astro.locals.usuario;
@@ -19,8 +25,8 @@ const reservasAceptables = (!esSuperAdmin && userSucursalId)
     ? reservasAceptablesAll.filter((r: any) => r.sucursal_id === userSucursalId)
     : reservasAceptablesAll;
 
-// Obtener estadísticas de cubiertos
-const cubiertosAll = await getEstadisticasCubiertos();
+// Obtener estadísticas de cubiertos para HOY
+const cubiertosAll = await getEstadisticasCubiertos(undefined, hoy);
 const cubiertos = (!esSuperAdmin && userSucursalId)
     ? cubiertosAll.filter((s: any) => s.id === userSucursalId)
     : cubiertosAll;
@@ -78,9 +84,9 @@ const [reservasRecientesRows] = await pool.query(`
 
 const reservasRecientes = Array.isArray(reservasRecientesRows) ? reservasRecientesRows : [];
 
-// Obtener reservas confirmadas y en_curso para el modulo de Asistencia en Vivo
-let asisWhere = ` WHERE r.estado IN ('confirmada', 'en_curso')`;
-const asisParams: any[] = [];
+// Obtener reservas confirmadas y en_curso para el modulo de Asistencia en Vivo (SOLO DE HOY)
+let asisWhere = ` WHERE r.estado IN ('confirmada', 'en_curso') AND r.fecha = ?`;
+const asisParams: any[] = [hoy];
 if (!esSuperAdmin && userSucursalId) {
     asisWhere += ` AND r.sucursal_id = ?`;
     asisParams.push(userSucursalId);
@@ -127,6 +133,9 @@ const totalConfirmadasAsistencia = reservasAsistencia.filter((r: any) => r.estad
                 <p>Monitoreo en tiempo real de reservas y cubiertos</p>
             </div>
             <div class="header-actions">
+                <button type="button" class="btn-reporte btn-futuras-action" onclick="window.abrirModalFuturas()">
+                    📅 Futuras <span id="btnFuturasBadge" class="badge-count-pill" style="display:none;">0</span>
+                </button>
                 <button type="button" class="btn-reporte btn-excel" onclick="window.abrirModalReportes()">
                     📊 Reportes
                 </button>
@@ -472,6 +481,15 @@ const totalConfirmadasAsistencia = reservasAsistencia.filter((r: any) => r.estad
             </div>
         </div>
     </div>
+
+    <!-- 🔴 BURBUJA FLOTANTE DE RESERVAS FUTURAS -->
+    <BurbujaFuturas />
+
+    <!-- 🔴 MODAL DE RESERVAS FUTURAS -->
+    <ModalFuturas />
+
+    <!-- 🔴 MODAL DE ALERTAS (se muestra automáticamente si hay reservas mañana) -->
+    <ModalAlertas />
 </AdminLayout>
 
 <style>
@@ -990,6 +1008,17 @@ const totalConfirmadasAsistencia = reservasAsistencia.filter((r: any) => r.estad
 .btn-pdf { background: #3B82F6; color: white; }
 .btn-openwa { background: #25D366; color: white; }
 .btn-reiniciar { background: #9E2A2B; color: white; }
+.btn-futuras-action { background: #8B1A1A; color: white; }
+.btn-futuras-action:hover { background: #6B1414; }
+.badge-count-pill {
+    background: #C9A87C;
+    color: #1A1A1A;
+    font-size: 0.72rem;
+    font-weight: 800;
+    padding: 2px 7px;
+    border-radius: 50px;
+    margin-left: 4px;
+}
 
 .btn-reporte:hover, .btn-reiniciar:hover {
     transform: translateY(-1px);
@@ -1303,6 +1332,21 @@ const totalConfirmadasAsistencia = reservasAsistencia.filter((r: any) => r.estad
 </style>
 
 <script is:inline>
+window.abrirModalFuturas = function() {
+    let modal = document.getElementById('modalFuturas');
+    if (modal) {
+        if (modal.parentElement !== document.body) {
+            document.body.appendChild(modal);
+        }
+        modal.style.display = 'flex';
+        modal.style.zIndex = '9999999';
+        document.body.style.overflow = 'hidden';
+        if (typeof window.cargarReservasFuturas === 'function') {
+            window.cargarReservasFuturas();
+        }
+    }
+};
+
 window.seleccionarFormato = function(fmt) {
     document.querySelectorAll('.formato-btn').forEach(btn => btn.classList.remove('active'));
     const btn = document.querySelector(`.formato-btn[data-formato="${fmt}"]`);

@@ -1,0 +1,786 @@
+---
+// src/components/admin/ModalFuturas.astro
+// Modal de reservas futuras agrupadas por fecha
+---
+
+<div id="modalFuturas" class="futuras-overlay" style="display: none;">
+    <div class="futuras-container">
+        <!-- Header -->
+        <div class="futuras-header">
+            <div class="futuras-title">
+                <span class="futuras-icon">📅</span>
+                <div>
+                    <h2>Reservas Futuras</h2>
+                    <p id="futurasSubtitle">Cargando...</p>
+                </div>
+            </div>
+            <button class="futuras-close" onclick="cerrarModalFuturas()">✕</button>
+        </div>
+
+        <!-- Resumen -->
+        <div class="futuras-resumen" id="futurasResumen">
+            <div class="resumen-item">
+                <span class="resumen-numero" id="futurasTotalReservas">0</span>
+                <span class="resumen-label">Reservas</span>
+            </div>
+            <div class="resumen-item">
+                <span class="resumen-numero" id="futurasTotalFechas">0</span>
+                <span class="resumen-label">Fechas</span>
+            </div>
+        </div>
+
+        <!-- Filtros por sucursal -->
+        <div class="futuras-filtros">
+            <button class="filtro-btn active" onclick="filtrarFuturas('todas', this)">
+                📋 Todas
+            </button>
+            <button class="filtro-btn" onclick="filtrarFuturas('churrasqueria', this)">
+                🔥 Churrasquería
+            </button>
+            <button class="filtro-btn" onclick="filtrarFuturas('fastgrill', this)">
+                ⚡ Fast Grill
+            </button>
+            <button class="filtro-btn" onclick="filtrarFuturas('rodizio', this)">
+                🥩 Rodizio
+            </button>
+        </div>
+
+        <!-- Lista de fechas -->
+        <div class="futuras-body" id="futurasBody">
+            <div class="futuras-loading">⏳ Cargando reservas...</div>
+        </div>
+    </div>
+</div>
+
+<script>
+// ============================================
+// CARGAR RESERVAS FUTURAS
+// ============================================
+
+async function cargarReservasFuturas() {
+    const body = document.getElementById('futurasBody');
+    if (!body) return;
+    body.innerHTML = '<div class="futuras-loading">⏳ Cargando reservas...</div>';
+
+    try {
+        const response = await fetch('/api/reservas/futuras');
+        const data = await response.json();
+
+        if (!data.success) {
+            body.innerHTML = '<div class="futuras-error">❌ Error al cargar reservas</div>';
+            return;
+        }
+
+        // Actualizar resumen
+        const elTotalRes = document.getElementById('futurasTotalReservas');
+        if (elTotalRes) elTotalRes.textContent = String(data.totalReservas || 0);
+
+        const elTotalFec = document.getElementById('futurasTotalFechas');
+        if (elTotalFec) elTotalFec.textContent = String(data.totalFechas || 0);
+
+        const elSub = document.getElementById('futurasSubtitle');
+        if (elSub) {
+            elSub.textContent = `${data.totalReservas || 0} reservas en ${data.totalFechas || 0} fechas futuras`;
+        }
+
+        if (!data.totalReservas || data.totalReservas === 0) {
+            body.innerHTML = `
+                <div class="futuras-vacio">
+                    <span>🎉</span>
+                    <p>No hay reservas futuras</p>
+                    <small>Todas las reservas están al día</small>
+                </div>
+            `;
+            return;
+        }
+
+        // Generar HTML
+        let html = '';
+        
+        data.fechas.forEach((fecha: any) => {
+            html += `
+                <div class="fecha-grupo" data-fecha="${fecha.fecha}">
+                    <div class="fecha-header">
+                        <div class="fecha-titulo">
+                            <span class="fecha-icon">📅</span>
+                            <span class="fecha-texto">${fecha.fechaFormateada}</span>
+                        </div>
+                        <div class="fecha-stats">
+                            <span class="stat-item">📋 ${fecha.totalReservas} reservas</span>
+                            <span class="stat-item">🪑 ${fecha.totalCubiertos} cubiertos</span>
+                            <span class="stat-item">👥 ${fecha.totalPersonas} personas</span>
+                        </div>
+                    </div>
+                    <div class="fecha-sucursales">
+            `;
+
+            // Por sucursal
+            Object.values(fecha.sucursales).forEach((sucursal: any) => {
+                html += `
+                    <div class="sucursal-grupo">
+                        <div class="sucursal-header">
+                            <span class="sucursal-icono">${sucursal.icono}</span>
+                            <span class="sucursal-nombre">${sucursal.nombre}</span>
+                            <span class="sucursal-stats">
+                                ${sucursal.reservas.length} reservas · ${sucursal.cubiertos} cubiertos
+                            </span>
+                        </div>
+                        <div class="sucursal-reservas">
+                `;
+
+                sucursal.reservas.forEach((r: any) => {
+                    const horaStr = r.hora ? r.hora.substring(0, 5) : '';
+                    const rawPhone = r.telefono_completo || (r.codigo_pais ? `${r.codigo_pais}${r.telefono}` : `591${r.telefono}`);
+                    const cleanPhone = rawPhone ? rawPhone.replace(/[^\d]/g, '') : '';
+                    const displayPhone = r.telefono_completo || (r.telefono ? `${r.codigo_pais || ''} ${r.telefono}`.trim() : '');
+                    
+                    const tieneSilla = r.necesita_silla_bebe == 1 || r.necesita_silla_bebe === true || r.necesita_silla_bebe === '1';
+                    const tieneMenuInfantil = r.necesita_menu_infantil == 1 || r.necesita_menu_infantil === true || r.necesita_menu_infantil === '1';
+                    const tieneObs = r.observaciones && String(r.observaciones).trim() !== '';
+
+                    html += `
+                        <div class="reserva-card">
+                            <div class="reserva-card-top">
+                                <div class="reserva-hora-badge">⏰ ${horaStr} hrs</div>
+                                <div class="reserva-cliente-info">
+                                    <span class="reserva-cliente-nombre">${r.nombre_cliente}</span>
+                                </div>
+                                <span class="reserva-codigo">#${r.numero_reserva || ''}</span>
+                            </div>
+
+                            <div class="reserva-card-datos">
+                                ${displayPhone ? `
+                                    <a href="https://wa.me/${cleanPhone}" target="_blank" rel="noopener noreferrer" class="reserva-phone-link" title="Contactar por WhatsApp">
+                                        <span class="wa-icon">💬</span> ${displayPhone}
+                                    </a>
+                                ` : ''}
+                                ${r.email ? `<span class="reserva-email">✉️ ${r.email}</span>` : ''}
+                            </div>
+
+                            <div class="reserva-card-badges">
+                                <span class="badge-item badge-personas">
+                                    👥 ${r.numero_personas || 0} adultos ${r.cantidad_ninos > 0 ? ` · 🧒 ${r.cantidad_ninos} niños` : ''}
+                                </span>
+                                ${tieneSilla ? `<span class="badge-item badge-bebe">🪑 Silla de Bebé</span>` : ''}
+                                ${tieneMenuInfantil ? `<span class="badge-item badge-menu">🧒 Menú Infantil</span>` : ''}
+                            </div>
+
+                            ${tieneObs ? `
+                                <div class="reserva-obs-box">
+                                    <div class="obs-title">
+                                        <span>📝</span> <strong>Requisitos del Comensal:</strong>
+                                    </div>
+                                    <div class="obs-text">"${r.observaciones}"</div>
+                                </div>
+                            ` : ''}
+                        </div>
+                    `;
+                });
+
+                html += `
+                        </div>
+                    </div>
+                `;
+            });
+
+            html += `
+                    </div>
+                </div>
+            `;
+        });
+
+        body.innerHTML = html;
+
+        // Si había un botón activo en los filtros, aplicar el filtro nuevamente
+        const activeBtn = document.querySelector('.futuras-filtros .filtro-btn.active');
+        if (activeBtn) {
+            const onclickAttr = activeBtn.getAttribute('onclick') || '';
+            if (onclickAttr.includes('churrasqueria')) filtrarFuturas('churrasqueria', activeBtn as HTMLElement);
+            else if (onclickAttr.includes('fastgrill')) filtrarFuturas('fastgrill', activeBtn as HTMLElement);
+            else if (onclickAttr.includes('rodizio')) filtrarFuturas('rodizio', activeBtn as HTMLElement);
+        }
+
+    } catch (error) {
+        console.error('Error cargando reservas futuras:', error);
+        body.innerHTML = '<div class="futuras-error">❌ Error de conexión</div>';
+    }
+}
+
+// ============================================
+// FILTRAR POR SUCURSAL (CON OCULTAMIENTO DE FECHA Y MENSAJE VACÍO)
+// ============================================
+
+function filtrarFuturas(sucursal: string, btnElement?: HTMLElement) {
+    const botones = document.querySelectorAll('.filtro-btn');
+    botones.forEach(btn => btn.classList.remove('active'));
+    if (btnElement) {
+        btnElement.classList.add('active');
+    }
+
+    const nombresMap: Record<string, { label: string; keywords: string[] }> = {
+        'churrasqueria': { label: 'Churrasquería', keywords: ['churrasquería', 'churrasqueria'] },
+        'fastgrill': { label: 'Fast Grill', keywords: ['fast grill', 'fastgrill'] },
+        'rodizio': { label: 'Rodizio', keywords: ['rodizio'] }
+    };
+
+    const sucursalData = nombresMap[sucursal];
+    const permitidos = sucursalData ? sucursalData.keywords : [];
+
+    const fechaGrupos = document.querySelectorAll('#futurasBody .fecha-grupo');
+    let totalVisiblesEnFiltro = 0;
+
+    fechaGrupos.forEach(fechaEl => {
+        const sucursalGrupos = fechaEl.querySelectorAll('.sucursal-grupo');
+        let sucursalesVisiblesEnFecha = 0;
+
+        sucursalGrupos.forEach(sucEl => {
+            if (sucursal === 'todas') {
+                (sucEl as HTMLElement).style.display = 'block';
+                sucursalesVisiblesEnFecha++;
+            } else {
+                const nombreSuc = (sucEl.querySelector('.sucursal-nombre')?.textContent || '').toLowerCase();
+                const coincide = permitidos.some(k => nombreSuc.includes(k));
+                if (coincide) {
+                    (sucEl as HTMLElement).style.display = 'block';
+                    sucursalesVisiblesEnFecha++;
+                } else {
+                    (sucEl as HTMLElement).style.display = 'none';
+                }
+            }
+        });
+
+        // 🔴 Mostrar u ocultar la fecha completa si contiene sucursales visibles
+        if (sucursalesVisiblesEnFecha > 0) {
+            (fechaEl as HTMLElement).style.display = 'block';
+            totalVisiblesEnFiltro += sucursalesVisiblesEnFecha;
+        } else {
+            (fechaEl as HTMLElement).style.display = 'none';
+        }
+    });
+
+    // 🔴 Mostrar estado vacío cuando la sucursal seleccionada no tiene reservas futuras
+    let emptyFilterMsg = document.getElementById('futurasEmptyFilterMsg');
+    if (totalVisiblesEnFiltro === 0 && sucursal !== 'todas') {
+        if (!emptyFilterMsg) {
+            emptyFilterMsg = document.createElement('div');
+            emptyFilterMsg.id = 'futurasEmptyFilterMsg';
+            emptyFilterMsg.className = 'futuras-vacio';
+            const body = document.getElementById('futurasBody');
+            if (body) body.appendChild(emptyFilterMsg);
+        }
+        const sucursalLabel = sucursalData ? sucursalData.label : 'esta sucursal';
+        emptyFilterMsg.innerHTML = `
+            <span>🎉</span>
+            <p>No hay reservas futuras para ${sucursalLabel}</p>
+            <small>No se registran reservas futuras en esta sucursal</small>
+        `;
+        emptyFilterMsg.style.display = 'block';
+    } else {
+        if (emptyFilterMsg) {
+            emptyFilterMsg.style.display = 'none';
+        }
+    }
+}
+
+// ============================================
+// CERRAR MODAL
+// ============================================
+
+function cerrarModalFuturas() {
+    const modal = document.getElementById('modalFuturas');
+    if (modal) {
+        modal.style.display = 'none';
+        document.body.style.overflow = '';
+    }
+}
+
+// Exponer a window
+(window as any).cargarReservasFuturas = cargarReservasFuturas;
+(window as any).filtrarFuturas = filtrarFuturas;
+(window as any).cerrarModalFuturas = cerrarModalFuturas;
+
+// Delegación global de clicks para cerrar
+document.addEventListener('click', function(e) {
+    const target = e.target as HTMLElement;
+    if (target && target.id === 'modalFuturas') {
+        cerrarModalFuturas();
+    }
+    if (target && target.closest('.futuras-close')) {
+        cerrarModalFuturas();
+    }
+});
+
+// Cerrar con ESC
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+        cerrarModalFuturas();
+    }
+});
+</script>
+
+<style is:global>
+/* ============================================
+   MODAL DE RESERVAS FUTURAS GLOBAL
+   ============================================ */
+.futuras-overlay {
+    position: fixed !important;
+    inset: 0 !important;
+    background: rgba(0, 0, 0, 0.6) !important;
+    backdrop-filter: blur(8px) !important;
+    display: none;
+    align-items: center !important;
+    justify-content: center !important;
+    z-index: 9999999 !important;
+    padding: 20px !important;
+}
+
+.futuras-container {
+    background: white !important;
+    border-radius: 20px !important;
+    max-width: 720px !important;
+    width: 100% !important;
+    max-height: 90vh !important;
+    overflow-y: auto !important;
+    box-shadow: 0 24px 80px rgba(0, 0, 0, 0.25) !important;
+    animation: futurasIn 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) !important;
+}
+
+@keyframes futurasIn {
+    from { opacity: 0; transform: scale(0.95) translateY(20px); }
+    to { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+/* Header */
+.futuras-header {
+    padding: 28px 32px 20px;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.04);
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    position: sticky;
+    top: 0;
+    background: white;
+    border-radius: 20px 20px 0 0;
+    z-index: 10;
+}
+
+.futuras-title {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+}
+
+.futuras-icon {
+    font-size: 2rem;
+}
+
+.futuras-title h2 {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.3rem;
+    color: #1A1A1A;
+    margin: 0;
+}
+
+.futuras-title p {
+    font-size: 0.85rem;
+    color: #6B6B6B;
+    margin: 2px 0 0;
+}
+
+.futuras-close {
+    background: transparent;
+    border: none;
+    font-size: 1.2rem;
+    color: #6B6B6B;
+    cursor: pointer;
+    transition: transform 0.3s;
+}
+
+.futuras-close:hover {
+    transform: rotate(90deg);
+    color: #8B1A1A;
+}
+
+/* Resumen */
+.futuras-resumen {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 16px;
+    padding: 20px 32px;
+    background: rgba(245, 237, 227, 0.4);
+}
+
+.resumen-item {
+    text-align: center;
+}
+
+.resumen-numero {
+    display: block;
+    font-size: 1.8rem;
+    font-weight: 700;
+    color: #8B1A1A;
+}
+
+.resumen-label {
+    font-size: 0.7rem;
+    color: #6B6B6B;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+/* Filtros */
+.futuras-filtros {
+    display: flex;
+    gap: 8px;
+    padding: 16px 32px;
+    overflow-x: auto;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.04);
+}
+
+.filtro-btn {
+    padding: 6px 16px;
+    border: 1.5px solid rgba(0, 0, 0, 0.04);
+    border-radius: 50px;
+    background: transparent;
+    font-size: 0.75rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.3s;
+    color: #6B6B6B;
+    white-space: nowrap;
+}
+
+.filtro-btn.active {
+    border-color: #8B1A1A;
+    background: #8B1A1A;
+    color: white;
+}
+
+.filtro-btn:hover:not(.active) {
+    border-color: #C9A87C;
+}
+
+/* Body */
+.futuras-body {
+    padding: 20px 32px 28px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.futuras-loading,
+.futuras-error {
+    text-align: center;
+    padding: 40px;
+    color: #6B6B6B;
+}
+
+.futuras-vacio {
+    text-align: center;
+    padding: 48px 24px;
+}
+
+.futuras-vacio span {
+    font-size: 3rem;
+    display: block;
+    margin-bottom: 8px;
+}
+
+.futuras-vacio p {
+    font-size: 1rem;
+    font-weight: 500;
+    color: #1A1A1A;
+    margin: 0;
+}
+
+.futuras-vacio small {
+    color: #6B6B6B;
+    font-size: 0.85rem;
+}
+
+/* Grupo por fecha */
+.fecha-grupo {
+    background: rgba(245, 237, 227, 0.3);
+    border-radius: 12px;
+    padding: 16px 18px;
+    border-left: 3px solid #8B1A1A;
+}
+
+.fecha-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 12px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.04);
+}
+
+.fecha-titulo {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 600;
+    color: #1A1A1A;
+    font-size: 0.95rem;
+}
+
+.fecha-stats {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    font-size: 0.75rem;
+    color: #6B6B6B;
+}
+
+/* Grupo por sucursal */
+.sucursal-grupo {
+    margin-bottom: 12px;
+    background: white;
+    border-radius: 10px;
+    padding: 12px 14px;
+}
+
+.sucursal-grupo:last-child {
+    margin-bottom: 0;
+}
+
+.sucursal-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 8px;
+    padding-bottom: 6px;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.03);
+}
+
+.sucursal-icono {
+    font-size: 1.1rem;
+}
+
+.sucursal-nombre {
+    font-weight: 600;
+    font-size: 0.85rem;
+    color: #1A1A1A;
+    flex: 1;
+}
+
+.sucursal-stats {
+    font-size: 0.7rem;
+    color: #6B6B6B;
+}
+
+/* Reservas Cards */
+.sucursal-reservas {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.reserva-card {
+    background: #FFFFFF;
+    border: 1px solid rgba(139, 26, 26, 0.1);
+    border-radius: 12px;
+    padding: 12px 16px;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.03);
+    transition: all 0.2s ease;
+}
+
+.reserva-card:hover {
+    border-color: rgba(139, 26, 26, 0.3);
+    box-shadow: 0 4px 12px rgba(139, 26, 26, 0.08);
+}
+
+.reserva-card-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 8px;
+}
+
+.reserva-hora-badge {
+    background: #8B1A1A;
+    color: white;
+    padding: 4px 10px;
+    border-radius: 6px;
+    font-weight: 700;
+    font-size: 0.8rem;
+    font-family: monospace;
+    white-space: nowrap;
+}
+
+.reserva-cliente-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.reserva-cliente-nombre {
+    font-weight: 700;
+    font-size: 0.95rem;
+    color: #1A1A1A;
+    display: block;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.reserva-codigo {
+    font-size: 0.75rem;
+    color: #C9A87C;
+    font-weight: 600;
+    background: rgba(201, 168, 124, 0.15);
+    padding: 3px 8px;
+    border-radius: 4px;
+    white-space: nowrap;
+}
+
+.reserva-card-datos {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 12px;
+    font-size: 0.8rem;
+    margin-bottom: 8px;
+}
+
+.reserva-phone-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    color: #1E7E34;
+    font-weight: 600;
+    text-decoration: none;
+    background: rgba(37, 211, 102, 0.12);
+    padding: 4px 10px;
+    border-radius: 6px;
+    transition: background 0.2s;
+}
+
+.reserva-phone-link:hover {
+    background: rgba(37, 211, 102, 0.25);
+}
+
+.reserva-email {
+    color: #6B6B6B;
+    font-size: 0.78rem;
+}
+
+.reserva-card-badges {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.badge-item {
+    font-size: 0.75rem;
+    padding: 4px 9px;
+    border-radius: 6px;
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.badge-personas {
+    background: rgba(245, 237, 227, 0.8);
+    color: #5C4033;
+}
+
+.badge-bebe {
+    background: #E3F2FD;
+    color: #1565C0;
+    border: 1px solid #BBDEFB;
+}
+
+.badge-menu {
+    background: #FFF3E0;
+    color: #E65100;
+    border: 1px solid #FFE0B2;
+}
+
+.reserva-obs-box {
+    margin-top: 10px;
+    padding: 10px 14px;
+    background: #FFF9E6;
+    border-left: 4px solid #F5A623;
+    border-radius: 6px;
+}
+
+.obs-title {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.78rem;
+    color: #9B6B00;
+    font-weight: 700;
+    margin-bottom: 4px;
+}
+
+.obs-text {
+    font-size: 0.85rem;
+    color: #333333;
+    font-style: italic;
+    line-height: 1.4;
+    word-break: break-word;
+}
+
+/* Responsive */
+@media (max-width: 640px) {
+    .futuras-container {
+        max-width: 100%;
+        margin: 12px;
+        border-radius: 16px;
+    }
+
+    .futuras-header {
+        padding: 20px 20px 16px;
+    }
+
+    .futuras-resumen {
+        padding: 16px 20px;
+    }
+
+    .resumen-numero {
+        font-size: 1.4rem;
+    }
+
+    .futuras-filtros {
+        padding: 12px 20px;
+        gap: 6px;
+    }
+
+    .futuras-body {
+        padding: 16px 20px 20px;
+    }
+
+    .fecha-grupo {
+        padding: 12px 14px;
+    }
+
+    .fecha-header {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .fecha-stats {
+        gap: 8px;
+        font-size: 0.7rem;
+    }
+
+    .sucursal-header {
+        flex-wrap: wrap;
+    }
+
+    .sucursal-stats {
+        width: 100%;
+        margin-top: 4px;
+    }
+
+    .reserva-card-top {
+        flex-wrap: wrap;
+        gap: 6px;
+    }
+}
+</style>

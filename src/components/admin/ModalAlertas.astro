@@ -1,0 +1,489 @@
+---
+// src/components/admin/ModalAlertas.astro
+// Modal de alertas de reservas para el día siguiente
+---
+
+<div id="modalAlertas" class="alerta-overlay" style="display: none;">
+    <div class="alerta-container">
+        <!-- Header -->
+        <div class="alerta-header">
+            <div class="alerta-title">
+                <span class="alerta-icon">📋</span>
+                <div>
+                    <h2>Reservas para Mañana</h2>
+                    <p id="alertaFecha">Cargando...</p>
+                </div>
+            </div>
+            <button class="alerta-close" onclick="cerrarAlerta()">✕</button>
+        </div>
+        
+        <!-- Resumen -->
+        <div class="alerta-resumen">
+            <div class="resumen-item">
+                <span class="resumen-numero" id="totalReservas">0</span>
+                <span class="resumen-label">Reservas</span>
+            </div>
+            <div class="resumen-item">
+                <span class="resumen-numero" id="totalCubiertos">0</span>
+                <span class="resumen-label">Cubiertos</span>
+            </div>
+            <div class="resumen-item">
+                <span class="resumen-numero" id="totalPersonas">0</span>
+                <span class="resumen-label">Personas</span>
+            </div>
+        </div>
+        
+        <!-- Lista por sucursal -->
+        <div class="alerta-body" id="alertaBody">
+            <div class="alerta-loading">⏳ Cargando reservas...</div>
+        </div>
+        
+        <!-- Footer -->
+        <div class="alerta-footer">
+            <button class="btn-cerrar" onclick="cerrarAlerta()">Entendido</button>
+            <a href="/admin/reservas" class="btn-ver-todas">Ver todas las reservas →</a>
+        </div>
+    </div>
+</div>
+
+<script>
+// ============================================
+// CARGAR ALERTAS
+// ============================================
+
+async function cargarAlertas() {
+    try {
+        const response = await fetch('/api/reservas/alertas');
+        const data = await response.json();
+        
+        if (!data.success) return;
+        
+        // Actualizar fecha
+        const fechaObj = new Date(data.fecha + 'T12:00:00');
+        const fechaFormateada = isNaN(fechaObj.getTime()) ? data.fecha : fechaObj.toLocaleDateString('es-ES', {
+            weekday: 'long',
+            day: 'numeric',
+            month: 'long',
+            year: 'numeric'
+        });
+        const elFecha = document.getElementById('alertaFecha');
+        if (elFecha) elFecha.textContent = fechaFormateada;
+        
+        // Actualizar resumen
+        const elRes = document.getElementById('totalReservas');
+        if (elRes) elRes.textContent = data.totalReservas;
+        
+        const elCub = document.getElementById('totalCubiertos');
+        if (elCub) elCub.textContent = data.totalCubiertos;
+        
+        const elPer = document.getElementById('totalPersonas');
+        if (elPer) elPer.textContent = data.totalPersonas;
+        
+        // Generar lista
+        const body = document.getElementById('alertaBody');
+        if (!body) return;
+        
+        if (data.totalReservas === 0) {
+            body.innerHTML = `
+                <div class="alerta-vacio">
+                    <span>🎉</span>
+                    <p>No hay reservas para mañana</p>
+                </div>
+            `;
+            return;
+        }
+        
+        let html = '';
+        data.porSucursal.forEach((sucursal: any) => {
+            html += `
+                <div class="alerta-sucursal">
+                    <div class="sucursal-header">
+                        <span class="sucursal-icono">${sucursal.icono}</span>
+                        <span class="sucursal-nombre">${sucursal.nombre}</span>
+                        <span class="sucursal-stats">
+                            ${sucursal.reservas.length} reservas · ${sucursal.totalCubiertos} cubiertos
+                        </span>
+                    </div>
+                    <div class="sucursal-reservas">
+                        ${sucursal.reservas.map((r: any) => `
+                            <div class="reserva-item">
+                                <div class="reserva-hora">${r.hora ? r.hora.substring(0, 5) : ''}</div>
+                                <div class="reserva-info">
+                                    <span class="reserva-cliente">${r.nombre_cliente}</span>
+                                    <span class="reserva-personas">${(r.numero_personas || 0) + (r.cantidad_ninos || 0)} personas</span>
+                                </div>
+                                <div class="reserva-numero">${r.numero_reserva || ''}</div>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            `;
+        });
+        
+        body.innerHTML = html;
+        
+    } catch (error) {
+        console.error('Error cargando alertas:', error);
+    }
+}
+
+// ============================================
+// MOSTRAR ALERTA AL CARGAR
+// ============================================
+
+document.addEventListener('DOMContentLoaded', function() {
+    const hoy = new Date().toISOString().split('T')[0];
+    const ultimaAlerta = localStorage.getItem('ultima_alerta');
+    
+    if (ultimaAlerta !== hoy) {
+        // Verificar si hay reservas para mañana
+        fetch('/api/reservas/alertas')
+            .then(res => res.json())
+            .then(data => {
+                if (data.success && data.totalReservas > 0) {
+                    cargarAlertas();
+                    const modal = document.getElementById('modalAlertas');
+                    if (modal) modal.style.display = 'flex';
+                    document.body.style.overflow = 'hidden';
+                    localStorage.setItem('ultima_alerta', hoy);
+                }
+            })
+            .catch(() => {});
+    }
+});
+
+// ============================================
+// CERRAR ALERTA
+// ============================================
+
+function cerrarAlerta() {
+    const modal = document.getElementById('modalAlertas');
+    if (modal) modal.style.display = 'none';
+    document.body.style.overflow = '';
+}
+
+// Exponer a window para eventos inline
+(window as any).cargarAlertas = cargarAlertas;
+(window as any).cerrarAlerta = cerrarAlerta;
+
+// Cerrar con ESC
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+        cerrarAlerta();
+    }
+});
+</script>
+
+<style>
+/* ============================================
+   MODAL DE ALERTAS
+   ============================================ */
+.alerta-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(8px);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+    padding: 20px;
+}
+
+.alerta-container {
+    background: white;
+    border-radius: 20px;
+    max-width: 640px;
+    width: 100%;
+    max-height: 90vh;
+    overflow-y: auto;
+    box-shadow: 0 24px 80px rgba(0, 0, 0, 0.15);
+    animation: alertaIn 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes alertaIn {
+    from { opacity: 0; transform: scale(0.95) translateY(20px); }
+    to { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+/* Header */
+.alerta-header {
+    padding: 28px 32px 20px;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.04);
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    position: sticky;
+    top: 0;
+    background: white;
+    border-radius: 20px 20px 0 0;
+}
+
+.alerta-title {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+}
+
+.alerta-icon {
+    font-size: 2rem;
+}
+
+.alerta-title h2 {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.3rem;
+    color: #1A1A1A;
+    margin: 0;
+}
+
+.alerta-title p {
+    font-size: 0.85rem;
+    color: #6B6B6B;
+    margin: 2px 0 0;
+}
+
+.alerta-close {
+    background: transparent;
+    border: none;
+    font-size: 1.2rem;
+    color: #6B6B6B;
+    cursor: pointer;
+    transition: transform 0.3s;
+}
+
+.alerta-close:hover {
+    transform: rotate(90deg);
+    color: #8B1A1A;
+}
+
+/* Resumen */
+.alerta-resumen {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+    padding: 20px 32px;
+    background: rgba(245, 237, 227, 0.4);
+}
+
+.resumen-item {
+    text-align: center;
+}
+
+.resumen-numero {
+    display: block;
+    font-size: 1.8rem;
+    font-weight: 700;
+    color: #8B1A1A;
+}
+
+.resumen-label {
+    font-size: 0.7rem;
+    color: #6B6B6B;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+/* Body */
+.alerta-body {
+    padding: 20px 32px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.alerta-loading {
+    text-align: center;
+    padding: 40px;
+    color: #6B6B6B;
+}
+
+.alerta-vacio {
+    text-align: center;
+    padding: 40px;
+}
+
+.alerta-vacio span {
+    font-size: 3rem;
+    display: block;
+    margin-bottom: 8px;
+}
+
+.alerta-vacio p {
+    color: #6B6B6B;
+    font-size: 0.95rem;
+}
+
+/* Sucursal */
+.alerta-sucursal {
+    background: rgba(245, 237, 227, 0.3);
+    border-radius: 12px;
+    padding: 16px 18px;
+}
+
+.sucursal-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 12px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.04);
+}
+
+.sucursal-icono {
+    font-size: 1.2rem;
+}
+
+.sucursal-nombre {
+    font-weight: 600;
+    font-size: 0.95rem;
+    color: #1A1A1A;
+    flex: 1;
+}
+
+.sucursal-stats {
+    font-size: 0.75rem;
+    color: #6B6B6B;
+}
+
+.sucursal-reservas {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.reserva-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 8px 12px;
+    background: white;
+    border-radius: 8px;
+    font-size: 0.85rem;
+}
+
+.reserva-hora {
+    font-weight: 700;
+    color: #8B1A1A;
+    min-width: 50px;
+}
+
+.reserva-info {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+.reserva-cliente {
+    font-weight: 500;
+    color: #1A1A1A;
+}
+
+.reserva-personas {
+    font-size: 0.75rem;
+    color: #6B6B6B;
+}
+
+.reserva-numero {
+    font-size: 0.7rem;
+    color: #C9A87C;
+    font-weight: 500;
+}
+
+/* Footer */
+.alerta-footer {
+    padding: 16px 32px 24px;
+    border-top: 1px solid rgba(0, 0, 0, 0.04);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+}
+
+.btn-cerrar {
+    padding: 10px 28px;
+    background: #8B1A1A;
+    color: white;
+    border: none;
+    border-radius: 10px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.3s;
+}
+
+.btn-cerrar:hover {
+    background: #6B1414;
+    transform: translateY(-2px);
+}
+
+.btn-ver-todas {
+    color: #8B1A1A;
+    text-decoration: none;
+    font-size: 0.85rem;
+    font-weight: 500;
+    transition: color 0.3s;
+}
+
+.btn-ver-todas:hover {
+    color: #6B1414;
+    text-decoration: underline;
+}
+
+/* Responsive */
+@media (max-width: 640px) {
+    .alerta-container {
+        max-width: 100%;
+        margin: 12px;
+        border-radius: 16px;
+    }
+
+    .alerta-header {
+        padding: 20px 20px 16px;
+    }
+
+    .alerta-resumen {
+        padding: 16px 20px;
+        gap: 8px;
+    }
+
+    .resumen-numero {
+        font-size: 1.4rem;
+    }
+
+    .alerta-body {
+        padding: 16px 20px;
+    }
+
+    .alerta-footer {
+        padding: 12px 20px 20px;
+        flex-direction: column;
+    }
+
+    .btn-cerrar {
+        width: 100%;
+        text-align: center;
+    }
+
+    .btn-ver-todas {
+        text-align: center;
+    }
+
+    .sucursal-header {
+        flex-wrap: wrap;
+    }
+
+    .sucursal-stats {
+        width: 100%;
+        margin-top: 4px;
+    }
+
+    .reserva-item {
+        flex-wrap: wrap;
+        gap: 6px;
+    }
+
+    .reserva-numero {
+        width: 100%;
+        text-align: right;
+    }
+}
+</style>

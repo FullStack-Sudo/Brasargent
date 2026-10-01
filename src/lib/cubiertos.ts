@@ -1,14 +1,17 @@
 import { query } from './db';
 
 // ============================================
-// OBTENER CUBIERTOS DISPONIBLES EN TIEMPO REAL
+// OBTENER CUBIERTOS DISPONIBLES EN TIEMPO REAL POR FECHA
 // ============================================
 
-export async function getCubiertosDisponibles(sucursalId: number): Promise<{
+export async function getCubiertosDisponibles(sucursalId: number, fechaTarget?: string): Promise<{
     disponibles: number;
     ocupados: number;
     total: number;
 }> {
+    const hoy = new Date().toISOString().split('T')[0];
+    const targetFecha = fechaTarget || hoy;
+
     const [sucursalRows] = await query(
         `SELECT 
             capacidad_total,
@@ -25,13 +28,14 @@ export async function getCubiertosDisponibles(sucursalId: number): Promise<{
         return { disponibles: 0, ocupados: 0, total: 0 };
     }
 
-    // 🔴 RECALCULAR en tiempo real desde reservas confirmadas y en curso
+    // 🔴 RECALCULAR en tiempo real desde reservas confirmadas y en curso PARA LA FECHA ESPECÍFICA
     const [reservasRows] = await query(
         `SELECT COALESCE(SUM(cubiertos_reservados), 0) as total
          FROM reservas 
          WHERE sucursal_id = ? 
+         AND fecha = ?
          AND estado IN ('confirmada', 'en_curso')`,
-        [sucursalId]
+        [sucursalId, targetFecha]
     ) as any[];
 
     const reservas = Array.isArray(reservasRows) && reservasRows.length > 0 ? reservasRows[0] : null;
@@ -39,15 +43,30 @@ export async function getCubiertosDisponibles(sucursalId: number): Promise<{
     const total = parseInt(sucursal.capacidad_total || '0', 10);
     const disponibles = Math.max(0, total - ocupadosReales);
 
-    // 🔴 ACTUALIZAR la base de datos con los valores sincronizados
-    await query(
-        `UPDATE sucursales 
-         SET 
-             cubiertos_ocupados = ?,
-             cubiertos_disponibles = ?
-         WHERE id = ?`,
-        [ocupadosReales, disponibles, sucursalId]
-    );
+    // Si la fecha es hoy, sincronizar las columnas en sucursales
+    if (targetFecha === hoy) {
+        await query(
+            `UPDATE sucursales 
+             SET 
+                 cubiertos_ocupados = ?,
+                 cubiertos_disponibles = ?
+             WHERE id = ?`,
+            [ocupadosReales, disponibles, sucursalId]
+        );
+    }
+
+    // También actualizar/sincronizar en cubiertos_por_fecha
+    try {
+        await query(
+            `INSERT INTO cubiertos_por_fecha
+                (sucursal_id, fecha, capacidad_total, cubiertos_ocupados, cubiertos_disponibles)
+             VALUES (?, ?, ?, ?, ?)
+             ON DUPLICATE KEY UPDATE
+                cubiertos_ocupados = VALUES(cubiertos_ocupados),
+                cubiertos_disponibles = VALUES(cubiertos_disponibles)`,
+            [sucursalId, targetFecha, total, ocupadosReales, disponibles]
+        );
+    } catch (e) {}
 
     return {
         disponibles: disponibles,
@@ -62,13 +81,13 @@ export async function getCubiertosDisponibles(sucursalId: number): Promise<{
 
 export async function verificarCubiertosSuficientes(
     sucursalId: number,
-    personas: number
+    personas: number,
+    fechaTarget?: string
 ): Promise<{ success: boolean; message: string; disponibles: number }> {
-    // 🔴 OBTENER DATOS EN TIEMPO REAL
-    const stats = await getCubiertosDisponibles(sucursalId);
+    // 🔴 OBTENER DATOS EN TIEMPO REAL PARA LA FECHA ESPECÍFICA
+    const stats = await getCubiertosDisponibles(sucursalId, fechaTarget);
     
-    // Logs de depuración
-    console.log(`🔍 Verificando cubiertos para sucursal ${sucursalId}:`);
+    console.log(`🔍 Verificando cubiertos para sucursal ${sucursalId} (Fecha: ${fechaTarget || 'HOY'}):`);
     console.log(`   📊 Total: ${stats.total}`);
     console.log(`   📊 Ocupados: ${stats.ocupados}`);
     console.log(`   📊 Disponibles: ${stats.disponibles}`);
@@ -90,32 +109,20 @@ export async function verificarCubiertosSuficientes(
 }
 
 // ============================================
-// ACTUALIZAR CUBIERTOS AL APROBAR RESERVA (CORREGIDO)
+// ACTUALIZAR CUBIERTOS AL APROBAR RESERVA
 // ============================================
 
 export async function actualizarCubiertosAlAprobar(
     sucursalId: number,
-    personas: number
+    personas: number,
+    fechaTarget?: string
 ): Promise<{ success: boolean; message: string; nuevos_disponibles?: number }> {
     try {
-        // 🔴 1. Verificar disponibilidad en tiempo real
-        const verificacion = await verificarCubiertosSuficientes(sucursalId, personas);
+        const stats = await getCubiertosDisponibles(sucursalId, fechaTarget);
         
-        if (!verificacion.success) {
-            return { 
-                success: false, 
-                message: verificacion.message 
-            };
-        }
-
-        // 🔴 2. Obtener valores actuales sincronizados de la base de datos
-        const stats = await getCubiertosDisponibles(sucursalId);
-
-        // 🔴 3. Calcular nuevos valores
         const nuevosOcupados = stats.ocupados + personas;
         const nuevosDisponibles = stats.total - nuevosOcupados;
 
-        // 🔴 4. Validar que no queden negativos (doble seguridad)
         if (nuevosDisponibles < 0) {
             return {
                 success: false,
@@ -123,18 +130,31 @@ export async function actualizarCubiertosAlAprobar(
             };
         }
 
-        // 🔴 5. Actualizar sucursal
-        await query(
-            `UPDATE sucursales 
-             SET 
-                 cubiertos_ocupados = ?,
-                 cubiertos_disponibles = ?
-             WHERE id = ?`,
-            [nuevosOcupados, nuevosDisponibles, sucursalId]
-        );
+        const hoy = new Date().toISOString().split('T')[0];
+        const targetFecha = fechaTarget || hoy;
 
-        console.log(`✅ Cubiertos actualizados: ${stats.ocupados} → ${nuevosOcupados} ocupados`);
-        console.log(`✅ Disponibles: ${stats.disponibles} → ${nuevosDisponibles}`);
+        if (targetFecha === hoy) {
+            await query(
+                `UPDATE sucursales 
+                 SET 
+                     cubiertos_ocupados = ?,
+                     cubiertos_disponibles = ?
+                 WHERE id = ?`,
+                [nuevosOcupados, nuevosDisponibles, sucursalId]
+            );
+        }
+
+        try {
+            await query(
+                `INSERT INTO cubiertos_por_fecha
+                    (sucursal_id, fecha, capacidad_total, cubiertos_ocupados, cubiertos_disponibles)
+                 VALUES (?, ?, ?, ?, ?)
+                 ON DUPLICATE KEY UPDATE
+                    cubiertos_ocupados = VALUES(cubiertos_ocupados),
+                    cubiertos_disponibles = VALUES(cubiertos_disponibles)`,
+                [sucursalId, targetFecha, stats.total, nuevosOcupados, nuevosDisponibles]
+            );
+        } catch (e) {}
 
         return {
             success: true,
@@ -154,21 +174,39 @@ export async function actualizarCubiertosAlAprobar(
 
 export async function liberarCubiertosAlCancelar(
     sucursalId: number,
-    personas: number
+    personas: number,
+    fechaTarget?: string
 ): Promise<{ success: boolean; message: string }> {
     try {
-        const stats = await getCubiertosDisponibles(sucursalId);
+        const stats = await getCubiertosDisponibles(sucursalId, fechaTarget);
         const nuevosOcupados = Math.max(0, stats.ocupados - personas);
         const nuevosDisponibles = Math.min(stats.total, stats.total - nuevosOcupados);
 
-        await query(
-            `UPDATE sucursales 
-             SET 
-                 cubiertos_ocupados = ?,
-                 cubiertos_disponibles = ?
-             WHERE id = ?`,
-            [nuevosOcupados, nuevosDisponibles, sucursalId]
-        );
+        const hoy = new Date().toISOString().split('T')[0];
+        const targetFecha = fechaTarget || hoy;
+
+        if (targetFecha === hoy) {
+            await query(
+                `UPDATE sucursales 
+                 SET 
+                     cubiertos_ocupados = ?,
+                     cubiertos_disponibles = ?
+                 WHERE id = ?`,
+                [nuevosOcupados, nuevosDisponibles, sucursalId]
+            );
+        }
+
+        try {
+            await query(
+                `INSERT INTO cubiertos_por_fecha
+                    (sucursal_id, fecha, capacidad_total, cubiertos_ocupados, cubiertos_disponibles)
+                 VALUES (?, ?, ?, ?, ?)
+                 ON DUPLICATE KEY UPDATE
+                    cubiertos_ocupados = VALUES(cubiertos_ocupados),
+                    cubiertos_disponibles = VALUES(cubiertos_disponibles)`,
+                [sucursalId, targetFecha, stats.total, nuevosOcupados, nuevosDisponibles]
+            );
+        } catch (e) {}
 
         return { success: true, message: 'Cubiertos liberados correctamente' };
     } catch (error: any) {
@@ -178,12 +216,15 @@ export async function liberarCubiertosAlCancelar(
 }
 
 // ============================================
-// OBTENER ESTADÍSTICAS DE CUBIERTOS
+// OBTENER ESTADÍSTICAS DE CUBIERTOS POR FECHA (POR DEFECTO HOY)
 // ============================================
 
-export async function getEstadisticasCubiertos(sucursalId?: number) {
-    const where = sucursalId ? 'WHERE s.id = ?' : '';
-    const params = sucursalId ? [sucursalId] : [];
+export async function getEstadisticasCubiertos(sucursalId?: number, fechaTarget?: string) {
+    const hoy = new Date().toISOString().split('T')[0];
+    const targetFecha = fechaTarget || hoy;
+
+    const whereClause = sucursalId ? 'WHERE s.id = ? AND s.activo = 1' : 'WHERE s.activo = 1';
+    const params = [targetFecha, ...(sucursalId ? [sucursalId] : [])];
 
     const [results] = await query(
         `SELECT 
@@ -193,7 +234,7 @@ export async function getEstadisticasCubiertos(sucursalId?: number) {
             COALESCE(
                 SUM(
                     CASE 
-                        WHEN r.estado IN ('confirmada', 'en_curso') 
+                        WHEN r.estado IN ('confirmada', 'en_curso') AND r.fecha = ?
                         THEN r.cubiertos_reservados 
                         ELSE 0 
                     END
@@ -203,35 +244,22 @@ export async function getEstadisticasCubiertos(sucursalId?: number) {
                 s.capacidad_total - COALESCE(
                     SUM(
                         CASE 
-                            WHEN r.estado IN ('confirmada', 'en_curso') 
+                            WHEN r.estado IN ('confirmada', 'en_curso') AND r.fecha = ?
                             THEN r.cubiertos_reservados 
                             ELSE 0 
                         END
                     ), 0
                 )
-            ) AS cubiertos_disponibles,
-            ROUND(
-                (
-                    COALESCE(
-                        SUM(
-                            CASE 
-                                WHEN r.estado IN ('confirmada', 'en_curso') 
-                                THEN r.cubiertos_reservados 
-                                ELSE 0 
-                            END
-                        ), 0
-                    ) / s.capacidad_total
-                ) * 100, 1
-            ) AS porcentaje_ocupacion
+            ) AS cubiertos_disponibles
          FROM sucursales s
          LEFT JOIN reservas r ON s.id = r.sucursal_id
-         ${where}
+         ${whereClause}
          GROUP BY s.id, s.nombre, s.capacidad_total
          ORDER BY s.nombre`,
-        params
+        [targetFecha, ...params]
     ) as any[];
 
-    if (results && results.length > 0) {
+    if (results && results.length > 0 && targetFecha === hoy) {
         for (const item of results) {
             await query(
                 `UPDATE sucursales 

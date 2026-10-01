@@ -1,0 +1,245 @@
+---
+// src/components/admin/BurbujaFuturas.astro
+// Burbuja flotante para reservas futuras (Teleport a body + Event Delegation)
+---
+
+<button 
+    id="burbujaFuturas" 
+    class="burbuja-futuras" 
+    type="button"
+    aria-label="Reservas futuras"
+    title="Ver reservas futuras"
+>
+    <span class="burbuja-icon">📅</span>
+    <span class="burbuja-badge" id="burbujaBadge" style="display: none;">0</span>
+    <span class="burbuja-pulse"></span>
+</button>
+
+<script>
+// ============================================
+// TELEPORT A BODY & EVENT DELEGATION
+// ============================================
+
+function moverABody() {
+    const el = document.getElementById('burbujaFuturas');
+    if (el && el.parentElement !== document.body) {
+        document.body.appendChild(el);
+    }
+    const modal = document.getElementById('modalFuturas');
+    if (modal && modal.parentElement !== document.body) {
+        document.body.appendChild(modal);
+    }
+}
+
+function abrirModalFuturas() {
+    moverABody();
+    const modal = document.getElementById('modalFuturas');
+    if (modal) {
+        modal.style.display = 'flex';
+        modal.style.zIndex = '9999999';
+        document.body.style.overflow = 'hidden';
+        
+        if (typeof (window as any).cargarReservasFuturas === 'function') {
+            (window as any).cargarReservasFuturas();
+        }
+    } else {
+        console.error('❌ Elemento #modalFuturas no encontrado');
+    }
+}
+
+async function cargarContadorFuturas() {
+    moverABody();
+    try {
+        const response = await fetch('/api/reservas/futuras');
+        const data = await response.json();
+        
+        if (data.success) {
+            const count = data.totalReservas || 0;
+            
+            const badge = document.getElementById('burbujaBadge');
+            if (badge) {
+                badge.textContent = String(count);
+                badge.style.display = count > 0 ? 'flex' : 'none';
+            }
+
+            const btnBadge = document.getElementById('btnFuturasBadge');
+            if (btnBadge) {
+                btnBadge.textContent = String(count);
+                btnBadge.style.display = count > 0 ? 'inline-flex' : 'none';
+            }
+            
+            const burbuja = document.getElementById('burbujaFuturas');
+            if (burbuja) {
+                if (count > 0) {
+                    burbuja.classList.add('burbuja-activa');
+                } else {
+                    burbuja.classList.remove('burbuja-activa');
+                }
+            }
+        }
+    } catch (error) {
+        console.error('Error cargando contador de reservas futuras:', error);
+    }
+}
+
+// Exponer a window globalmente
+(window as any).cargarContadorFuturas = cargarContadorFuturas;
+(window as any).abrirModalFuturas = abrirModalFuturas;
+
+// Captura segura de eventos de click (Event Delegation)
+document.addEventListener('click', (e) => {
+    const target = (e.target as HTMLElement)?.closest('#burbujaFuturas, .burbuja-futuras, .btn-futuras-action');
+    if (target) {
+        e.preventDefault();
+        e.stopPropagation();
+        abrirModalFuturas();
+    }
+});
+
+// Inicialización
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => {
+        moverABody();
+        cargarContadorFuturas();
+    });
+} else {
+    moverABody();
+    cargarContadorFuturas();
+}
+
+setInterval(cargarContadorFuturas, 30000);
+</script>
+
+<style is:global>
+/* ============================================
+   BURBUJA FLOTANTE EN BODY (Z-INDEX SUPERIOR)
+   ============================================ */
+.burbuja-futuras {
+    position: fixed !important;
+    bottom: 32px !important;
+    right: 32px !important;
+    width: 66px !important;
+    height: 66px !important;
+    border-radius: 50% !important;
+    background: linear-gradient(135deg, #8B1A1A, #5A0F0F) !important;
+    border: 2px solid #C9A87C !important;
+    color: white !important;
+    font-size: 1.7rem !important;
+    cursor: pointer !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    box-shadow: 
+        0 10px 35px rgba(139, 26, 26, 0.5),
+        0 0 20px rgba(201, 168, 124, 0.4) !important;
+    transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94) !important;
+    z-index: 999999 !important;
+}
+
+.burbuja-futuras:hover {
+    transform: scale(1.12) translateY(-4px) !important;
+    box-shadow: 
+        0 16px 45px rgba(139, 26, 26, 0.65),
+        0 0 25px rgba(201, 168, 124, 0.6) !important;
+}
+
+.burbuja-futuras:active {
+    transform: scale(0.95) !important;
+}
+
+.burbuja-icon {
+    position: relative;
+    z-index: 2;
+    font-size: 1.7rem;
+    pointer-events: none;
+}
+
+.burbuja-badge {
+    position: absolute;
+    top: -5px;
+    right: -5px;
+    min-width: 26px;
+    height: 26px;
+    padding: 0 7px;
+    border-radius: 50px;
+    background: #C9A87C;
+    color: #1A1A1A;
+    font-size: 0.78rem;
+    font-weight: 800;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 2px solid white;
+    box-shadow: 0 3px 8px rgba(0,0,0,0.25);
+    z-index: 3;
+    pointer-events: none;
+}
+
+/* Pulso animado */
+.burbuja-pulse {
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    background: rgba(139, 26, 26, 0.4);
+    animation: pulseBurbuja 2s ease-in-out infinite;
+    z-index: 1;
+    pointer-events: none;
+}
+
+.burbuja-pulse::before {
+    content: '';
+    position: absolute;
+    inset: -8px;
+    border-radius: 50%;
+    background: rgba(139, 26, 26, 0.2);
+    animation: pulseBurbuja 2s ease-in-out infinite 0.5s;
+}
+
+.burbuja-pulse::after {
+    content: '';
+    position: absolute;
+    inset: -16px;
+    border-radius: 50%;
+    background: rgba(139, 26, 26, 0.1);
+    animation: pulseBurbuja 2s ease-in-out infinite 1s;
+}
+
+@keyframes pulseBurbuja {
+    0% {
+        transform: scale(1);
+        opacity: 1;
+    }
+    50% {
+        transform: scale(1.35);
+        opacity: 0;
+    }
+    100% {
+        transform: scale(1);
+        opacity: 0;
+    }
+}
+
+.burbuja-activa .burbuja-pulse {
+    animation: pulseBurbuja 1.5s ease-in-out infinite;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .burbuja-futuras {
+        bottom: 85px !important;
+        right: 18px !important;
+        width: 58px !important;
+        height: 58px !important;
+    }
+
+    .burbuja-icon {
+        font-size: 1.4rem;
+    }
+
+    .burbuja-badge {
+        min-width: 22px;
+        height: 22px;
+        font-size: 0.68rem;
+    }
+}
+</style>
