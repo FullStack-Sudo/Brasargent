@@ -6,14 +6,10 @@
 import { query } from '../lib/db';
 
 let visitasTotales = 0;
-let visitasHoy = 0;
 
 try {
     const [result] = await query('SELECT COUNT(*) as total FROM visitas_ip') as any[];
     visitasTotales = result?.[0]?.total || 0;
-
-    const [hoy] = await query("SELECT COUNT(*) as hoy FROM visitas_ip WHERE DATE(fecha_visita) = CURDATE()") as any[];
-    visitasHoy = hoy?.[0]?.hoy || 0;
 } catch (error) {
     console.error('Error al obtener visitas SSR en FooterSimple:', error);
 }
@@ -188,7 +184,7 @@ const currentYear = new Date().getFullYear();
           <div class="footer-visits-content">
             <span class="footer-visits-dot"></span>
             <span class="footer-visits-count bubble-count">{visitasTotales}</span>
-            <span class="footer-visits-label">visitantes únicos</span>
+            <span class="footer-visits-label">visitas al sitio</span>
           </div>
         </div>
       </div>
@@ -431,15 +427,16 @@ const currentYear = new Date().getFullYear();
      ============================================ -->
 <script>
 document.addEventListener('DOMContentLoaded', async () => {
-    // 🔴 Registrar visita y actualizar burbuja en tiempo real
+    // 🔴 Registrar visita y actualizar contador en tiempo real
     try {
         const response = await fetch('/api/visitas');
-        const data = await response.json();
-        
-        if (data.success) {
-            const bubbleCount = document.querySelector('.bubble-count');
-            if (bubbleCount) {
-                bubbleCount.textContent = data.total.toString();
+        if (response.ok) {
+            const data = await response.json();
+            if (data.success && data.total !== undefined) {
+                const bubbleCount = document.querySelector('.bubble-count');
+                if (bubbleCount) {
+                    bubbleCount.textContent = Number(data.total).toLocaleString('es-BO');
+                }
             }
         }
     } catch (error) {
