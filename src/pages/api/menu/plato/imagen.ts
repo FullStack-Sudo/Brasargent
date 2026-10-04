@@ -2,7 +2,6 @@ import type { APIRoute } from 'astro';
 import { actualizarImagenPlato } from '../../../../lib/queries/menu';
 import fs from 'fs/promises';
 import path from 'path';
-import { fileURLToPath } from 'url';
 
 export const POST: APIRoute = async ({ request }) => {
     try {
@@ -41,15 +40,11 @@ export const POST: APIRoute = async ({ request }) => {
         // Determinar extensión y crear nombre único
         const ext = imagen.type.split('/')[1];
         const fileName = `plato_${plato_id}_${Date.now()}.${ext}`;
-        
-        // Asegurar que el directorio exista
-        const __filename = fileURLToPath(import.meta.url);
-        const __dirname = path.dirname(__filename);
-        // Llegar a la raíz del proyecto y luego a public/uploads/platos/
-        // __dirname es src/pages/api/menu/plato
-        const projectRoot = path.resolve(__dirname, '../../../../../');
-        const uploadDir = path.join(projectRoot, 'public', 'uploads', 'platos');
-        
+
+        // ✅ Ruta absoluta correcta en Docker
+        const uploadDir = path.join(process.cwd(), 'public', 'uploads', 'platos');        
+
+
         try {
             await fs.mkdir(uploadDir, { recursive: true });
         } catch (e) {

@@ -19,6 +19,8 @@ services:
       - OPENWA_API_KEY=${OPENWA_API_KEY}
       - OPENWA_ADMIN_KEY=${OPENWA_ADMIN_KEY}
       - OPENWA_DEFAULT_SESSION=${OPENWA_DEFAULT_SESSION:-brasargent}
+    volumes:                                    # ← AGREGAR
+      - ./public/uploads:/app/public/uploads    # ← AGREGAR
     depends_on:
       db:
         condition: service_healthy
@@ -77,6 +79,7 @@ services:
     volumes:
       - ./nginx/conf.d:/etc/nginx/conf.d:ro
       - ./nginx/certbot/www:/var/www/certbot:ro
+      - ./public/uploads:/app/public/uploads:ro
       - /etc/letsencrypt:/etc/letsencrypt:ro
     depends_on:
       - app
