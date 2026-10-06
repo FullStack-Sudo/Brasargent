@@ -1,8 +1,6 @@
 import type { APIRoute } from 'astro';
 import { query } from '../../../lib/db';
-import { openwa } from '../../../lib/whatsapp/openwa';
-import { openwaMulti } from '../../../lib/whatsapp/openwa-multi';
-import { verificarCubiertosSuficientes, actualizarCubiertosAlAprobar } from '../../../lib/cubiertos';
+import { verificarCubiertosSuficientes } from '../../../lib/cubiertos';
 import { generarNumeroReserva } from '../../../lib/reservas';
 
 export const POST: APIRoute = async ({ request }) => {
@@ -57,7 +55,7 @@ export const POST: APIRoute = async ({ request }) => {
         const numeroReserva = await generarNumeroReserva(Number(sucursal_id));
         
         // ============================================
-        // 3. INSERTAR RESERVA COMO CONFIRMADA
+        // 3. INSERTAR RESERVA COMO PENDIENTE
         // ============================================
         
         const finalTelefonoCompleto = telefono_completo || `${codigo_pais || '591'}${telefono.toString().replace(/\D/g, '')}`;
@@ -68,7 +66,7 @@ export const POST: APIRoute = async ({ request }) => {
               fecha, hora, numero_personas, cantidad_ninos,
               necesita_silla_bebe, necesita_menu_infantil, observaciones,
               cubiertos_reservados, numero_reserva, estado, fecha_confirmacion) 
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'confirmada', NOW())`,
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pendiente', NULL)`,
             [
                 sucursal_id,
                 nombre_cliente,
@@ -90,80 +88,14 @@ export const POST: APIRoute = async ({ request }) => {
         const reservaId = insertResult?.insertId || (Array.isArray(insertResult) ? insertResult[0]?.insertId : null);
         
         // ============================================
-        // 4. ACTUALIZAR CUBIERTOS
-        // ============================================
-        
-        await actualizarCubiertosAlAprobar(Number(sucursal_id), cubiertosNecesarios);
-        
-        // ============================================
-        // 5. ENVIAR WHATSAPP AUTOMÁTICAMENTE
-        // ============================================
-        
-        let whatsappResult = { success: false, error: 'No se pudo enviar' };
-        
-        try {
-            const [sucursalDataRows] = await query(
-                `SELECT nombre, direccion, telefono FROM sucursales WHERE id = ?`,
-                [sucursal_id]
-            ) as any[];
-            const sucursalData = Array.isArray(sucursalDataRows) && sucursalDataRows.length > 0 ? sucursalDataRows[0] : null;
-            
-            const mensajeWhatsApp = generarMensajeConfirmacion({
-                nombre_cliente,
-                numero_reserva: numeroReserva,
-                sucursal_nombre: sucursalData?.nombre || 'BRASARGENT',
-                direccion: sucursalData?.direccion || '',
-                fecha,
-                hora,
-                numero_personas,
-                cantidad_ninos: totalNinos,
-                necesita_silla_bebe: necesita_silla_bebe || false,
-                necesita_menu_infantil: necesita_menu_infantil || false
-            });
-            
-            const telefonoCliente = finalTelefonoCompleto;
-            
-            // Enviar por OpenWA multi-sesión por sucursal
-            let result = await openwaMulti.sendMessage(
-                Number(sucursal_id),
-                telefonoCliente,
-                mensajeWhatsApp
-            );
-            if (!result.success) {
-                // Fallback a cliente general
-                const fallbackRes = await openwa.sendMessage({
-                    to: telefonoCliente,
-                    text: mensajeWhatsApp
-                });
-                result = {
-                    success: fallbackRes.success,
-                    messageId: fallbackRes.messageId,
-                    error: fallbackRes.error
-                };
-            }
-            
-            whatsappResult = {
-                success: result.success,
-                error: result.error || null
-            };
-            
-        } catch (error: any) {
-            console.error('❌ Error enviando WhatsApp:', error);
-            whatsappResult = {
-                success: false,
-                error: error.message || 'Error desconocido'
-            };
-        }
-        
-        // ============================================
-        // 6. REGISTRAR EN LOGS
+        // 4. REGISTRAR EN LOGS
         // ============================================
         
         try {
             await query(
                 `INSERT INTO logs_actividad 
                  (accion, tabla_afectada, registro_id, detalles) 
-                 VALUES ('RESERVA_AUTOMATICA', 'reservas', ?, ?)`,
+                 VALUES ('RESERVA_PENDIENTE', 'reservas', ?, ?)`,
                 [
                     reservaId,
                     JSON.stringify({
@@ -171,7 +103,6 @@ export const POST: APIRoute = async ({ request }) => {
                         numero_reserva: numeroReserva,
                         telefono: finalTelefonoCompleto,
                         cubiertos: cubiertosNecesarios,
-                        whatsapp_enviado: whatsappResult.success,
                         fecha,
                         hora
                     })
@@ -182,19 +113,47 @@ export const POST: APIRoute = async ({ request }) => {
         }
         
         // ============================================
-        // 7. RESPUESTA
+        // 5. DISPARAR NOTIFICACIONES AL ADMIN
+        // ============================================
+        
+        try {
+            const { notificarNuevaReserva } = await import('../../../lib/notificaciones');
+            
+            // Need sucursal nombre for notification
+            const [suc] = await query('SELECT nombre FROM sucursales WHERE id = ?', [sucursal_id]) as any[];
+            
+            await notificarNuevaReserva({
+                id: reservaId,
+                numero_reserva: numeroReserva,
+                nombre_cliente,
+                telefono: finalTelefonoCompleto,
+                fecha,
+                hora,
+                numero_personas: parseInt(numero_personas) || 0,
+                cantidad_ninos: parseInt(totalNinos) || 0,
+                cubiertos: cubiertosNecesarios,
+                sucursal_id: Number(sucursal_id),
+                sucursal_nombre: suc?.nombre || '',
+                observaciones: observaciones || ''
+            });
+        } catch (error) {
+            console.error('Error enviando notificaciones al admin:', error);
+            // No fallar la reserva si las notificaciones fallan
+        }
+        
+        // ============================================
+        // 5. RESPUESTA
         // ============================================
         
         return new Response(JSON.stringify({
             success: true,
-            mensaje: '¡Reserva confirmada automáticamente!',
+            mensaje: '¡Reserva solicitada correctamente!',
             reserva_id: reservaId,
             numero_reserva: numeroReserva,
             reserva: {
                 id: reservaId,
                 numero_reserva: numeroReserva,
-                estado: 'confirmada',
-                whatsapp_enviado: whatsappResult.success
+                estado: 'pendiente'
             }
         }), { status: 201 });
         
@@ -206,52 +165,3 @@ export const POST: APIRoute = async ({ request }) => {
         }), { status: 500 });
     }
 };
-
-// ============================================
-// GENERAR MENSAJE DE CONFIRMACIÓN
-// ============================================
-
-function generarMensajeConfirmacion(data: any): string {
-    let fechaFormateada = data.fecha;
-    try {
-        const fechaObj = new Date(data.fecha + 'T12:00:00');
-        if (!isNaN(fechaObj.getTime())) {
-            fechaFormateada = fechaObj.toLocaleDateString('es-ES', {
-                weekday: 'long',
-                year: 'numeric',
-                month: 'long',
-                day: 'numeric'
-            });
-        }
-    } catch (e) {}
-    
-    const totalPersonas = (data.numero_personas || 0) + (data.cantidad_ninos || 0);
-    let personasTexto = `${data.numero_personas || 0} Adultos`;
-    if (data.cantidad_ninos > 0) {
-        personasTexto += `\n${data.cantidad_ninos} Niños (2-12 años)`;
-    }
-    personasTexto += `\nTotal: ${totalPersonas} personas`;
-    
-    return `BRASARGENT - Tu Reserva fue Exitosa!
-
-Hola ${data.nombre_cliente}!
-
-Tu reserva en ${data.sucursal_nombre} ha sido confirmada.
-
-Numero de Reserva: ${data.numero_reserva}
-
-Fecha: ${fechaFormateada}
-Hora: ${data.hora}
-Ubicacion: ${data.direccion}
-
-Detalle de Personas:
-${personasTexto}
-
-Te recordamos que tienes que estar 10 minutos antes de la hora de tu reserva.
-
-¡Te esperamos!
-
-Si no vas a poder asistir, por favor notifica al restaurante.
-
-BRASARGENT - El mejor churrasco de Santa Cruz, Bolivia`;
-}

@@ -1,0 +1,817 @@
+---
+// src/components/admin/ModalReservasDia.astro
+// Modal de reservas del dia con aceptar/cancelar (sin emojis)
+---
+
+<div id="modalReservasDia" class="reservas-dia-overlay" style="display: none;">
+    <div class="reservas-dia-container">
+        <!-- Header -->
+        <div class="reservas-dia-header">
+            <div class="reservas-dia-title">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#8B1A1A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+                    <line x1="16" y1="2" x2="16" y2="6"/>
+                    <line x1="8" y1="2" x2="8" y2="6"/>
+                    <line x1="3" y1="10" x2="21" y2="10"/>
+                </svg>
+                <div>
+                    <h2>Reservas del Dia</h2>
+                    <p id="reservasDiaFecha">Cargando...</p>
+                </div>
+            </div>
+            <button type="button" class="reservas-dia-close" data-action="cerrar-reservas-dia" aria-label="Cerrar">X</button>
+        </div>
+
+        <!-- Estadisticas -->
+        <div class="reservas-dia-estadisticas">
+            <div class="estadistica-item">
+                <span class="estadistica-numero" id="reservasDiaTotal">0</span>
+                <span class="estadistica-label">Total</span>
+            </div>
+            <div class="estadistica-item">
+                <span class="estadistica-numero estadistica-pendiente" id="reservasDiaPendientes">0</span>
+                <span class="estadistica-label">Pendientes</span>
+            </div>
+            <div class="estadistica-item">
+                <span class="estadistica-numero estadistica-confirmada" id="reservasDiaConfirmadas">0</span>
+                <span class="estadistica-label">Confirmadas</span>
+            </div>
+            <div class="estadistica-item">
+                <span class="estadistica-numero estadistica-cancelada" id="reservasDiaCanceladas">0</span>
+                <span class="estadistica-label">Canceladas</span>
+            </div>
+        </div>
+
+        <!-- Filtros -->
+        <div class="reservas-dia-filtros">
+            <button type="button" class="filtro-btn active" data-filtro="todos">Todas</button>
+            <button type="button" class="filtro-btn" data-filtro="pendiente">Pendientes</button>
+            <button type="button" class="filtro-btn" data-filtro="confirmada">Confirmadas</button>
+            <button type="button" class="filtro-btn" data-filtro="cancelada">Canceladas</button>
+        </div>
+
+        <!-- Cuerpo -->
+        <div class="reservas-dia-body" id="reservasDiaBody">
+            <div class="reservas-dia-loading">Cargando reservas...</div>
+        </div>
+    </div>
+</div>
+
+<script>
+// ============================================
+// ESTADO GLOBAL
+// ============================================
+let reservasDiaData: any = null;
+let filtroActual = 'todos';
+
+// ============================================
+// CARGAR RESERVAS DEL DIA
+// ============================================
+async function cargarReservasDia() {
+    const body = document.getElementById('reservasDiaBody');
+    if (!body) return;
+    
+    body.innerHTML = '<div class="reservas-dia-loading">Cargando reservas...</div>';
+    
+    try {
+        const response = await fetch('/api/reservas-dia');
+        const data = await response.json();
+        
+        if (!data.success) {
+            body.innerHTML = '<div class="reservas-dia-error">Error al cargar reservas</div>';
+            return;
+        }
+        
+        reservasDiaData = data;
+        
+        // Actualizar fecha
+        const fechaEl = document.getElementById('reservasDiaFecha');
+        if (fechaEl) fechaEl.textContent = data.fecha_formateada;
+        
+        // Actualizar estadisticas
+        const stats = data.estadisticas;
+        const elTotal = document.getElementById('reservasDiaTotal');
+        const elPend = document.getElementById('reservasDiaPendientes');
+        const elConf = document.getElementById('reservasDiaConfirmadas');
+        const elCanc = document.getElementById('reservasDiaCanceladas');
+
+        if (elTotal) elTotal.textContent = String(stats.total_reservas);
+        if (elPend) elPend.textContent = String(stats.total_pendientes);
+        if (elConf) elConf.textContent = String(stats.total_confirmadas);
+        if (elCanc) elCanc.textContent = String(stats.total_canceladas);
+        
+        // Actualizar badge de la burbuja
+        const badge = document.getElementById('burbujaReservasDiaBadge');
+        if (badge) {
+            badge.textContent = String(stats.total_pendientes);
+            badge.style.display = stats.total_pendientes > 0 ? 'flex' : 'none';
+        }
+        
+        // Renderizar
+        renderizarReservas();
+        
+    } catch (error) {
+        console.error('Error:', error);
+        body.innerHTML = '<div class="reservas-dia-error">Error de conexion</div>';
+    }
+}
+
+// ============================================
+// RENDERIZAR RESERVAS
+// ============================================
+function renderizarReservas() {
+    const body = document.getElementById('reservasDiaBody');
+    if (!body || !reservasDiaData) return;
+    
+    const grupos = reservasDiaData.grupos;
+    
+    if (!grupos || grupos.length === 0) {
+        body.innerHTML = `
+            <div class="reservas-dia-vacio">
+                <p>No hay reservas para el dia de hoy</p>
+                <small>Las reservas apareceran aqui cuando los clientes reserven</small>
+            </div>
+        `;
+        return;
+    }
+    
+    let html = '';
+    let tieneCoincidencias = false;
+    
+    for (const grupo of grupos) {
+        const reservasFiltradas = grupo.reservas.filter(function(r: any) {
+            if (filtroActual === 'todos') return true;
+            return r.estado === filtroActual;
+        });
+        
+        if (reservasFiltradas.length === 0) continue;
+        tieneCoincidencias = true;
+        
+        html += '<div class="grupo-sucursal">';
+        html += '<div class="grupo-header">';
+        html += '<span class="grupo-nombre">' + grupo.sucursal_nombre + '</span>';
+        html += '<span class="grupo-stats">' + reservasFiltradas.length + ' reservas - ' + grupo.total_cubiertos + ' cubiertos</span>';
+        html += '</div>';
+        html += '<div class="grupo-reservas">';
+        
+        for (const reserva of reservasFiltradas) {
+            const estadoClass = 'estado-' + reserva.estado;
+            const estadoTexto = 
+                reserva.estado === 'pendiente' ? 'Pendiente' :
+                reserva.estado === 'confirmada' ? 'Confirmada' :
+                reserva.estado === 'cancelada' ? 'Cancelada' : reserva.estado;
+            
+            const personasTotal = (reserva.numero_personas || 0) + (reserva.cantidad_ninos || 0);
+            const horaCorta = reserva.hora ? reserva.hora.substring(0, 5) : '';
+            const tel = reserva.telefono_completo || reserva.telefono || '';
+            
+            html += '<div class="reserva-item ' + estadoClass + '" data-reserva-id="' + reserva.id + '">';
+            html += '<div class="reserva-hora">' + horaCorta + '</div>';
+            html += '<div class="reserva-info">';
+            html += '<span class="reserva-cliente">' + reserva.nombre_cliente + '</span>';
+            html += '<span class="reserva-detalle">' + personasTotal + ' personas - ' + (reserva.cubiertos_reservados || 0) + ' cubiertos</span>';
+            if (tel) {
+                html += '<span class="reserva-telefono">Tel: ' + tel + '</span>';
+            }
+            if (reserva.observaciones) {
+                html += '<span class="reserva-observaciones">Nota: ' + reserva.observaciones + '</span>';
+            }
+            html += '</div>';
+            html += '<div class="reserva-estado ' + estadoClass + '">' + estadoTexto + '</div>';
+            html += '<div class="reserva-acciones">';
+            
+            if (reserva.estado === 'pendiente') {
+                html += '<button type="button" class="btn-aceptar" data-action="aceptar-reserva" data-id="' + reserva.id + '">Aceptar</button>';
+                html += '<button type="button" class="btn-cancelar" data-action="cancelar-reserva" data-id="' + reserva.id + '">Cancelar</button>';
+            } else if (reserva.estado === 'confirmada') {
+                html += '<button type="button" class="btn-cancelar" data-action="cancelar-reserva" data-id="' + reserva.id + '">Cancelar</button>';
+            }
+            
+            html += '<button type="button" class="btn-eliminar" data-action="eliminar-reserva" data-id="' + reserva.id + '" title="Eliminar permanentemente">Eliminar</button>';
+            
+            html += '</div>';
+            html += '</div>';
+        }
+        
+        html += '</div>';
+        html += '</div>';
+    }
+    
+    if (!tieneCoincidencias) {
+        body.innerHTML = `
+            <div class="reservas-dia-vacio">
+                <p>No se encontraron reservas con el filtro seleccionado</p>
+                <small>Intenta cambiar de filtro para ver otras reservas del dia</small>
+            </div>
+        `;
+        return;
+    }
+    
+    body.innerHTML = html;
+}
+
+// ============================================
+// ACEPTAR RESERVA
+// ============================================
+async function aceptarReserva(reservaId: number) {
+    if (!confirm('Deseas aceptar esta reserva?')) return;
+    
+    try {
+        const response = await fetch('/api/reservas-dia/gestionar', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                reserva_id: reservaId,
+                accion: 'aceptar'
+            })
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            alert('Reserva aceptada correctamente');
+            cargarReservasDia();
+        } else {
+            alert('Error: ' + result.error);
+        }
+    } catch (error) {
+        alert('Error de conexion');
+    }
+}
+
+// ============================================
+// CANCELAR RESERVA
+// ============================================
+async function cancelarReserva(reservaId: number) {
+    const motivo = prompt('Motivo de la cancelacion:', 'Cancelada por el administrador');
+    if (motivo === null) return;
+    
+    if (!confirm('Deseas cancelar esta reserva? Los cubiertos seran liberados si estaba confirmada.')) return;
+    
+    try {
+        const response = await fetch('/api/reservas-dia/gestionar', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                reserva_id: reservaId,
+                accion: 'cancelar',
+                motivo: motivo
+            })
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            alert('Reserva cancelada correctamente');
+            cargarReservasDia();
+        } else {
+            alert('Error: ' + result.error);
+        }
+    } catch (error) {
+        alert('Error de conexion');
+    }
+}
+
+// ============================================
+// ELIMINAR RESERVA
+// ============================================
+async function eliminarReserva(reservaId: number) {
+    if (!confirm('Deseas eliminar completamente esta reserva del sistema? Esta accion no se puede deshacer.')) return;
+    
+    try {
+        const response = await fetch('/api/reservas-dia/gestionar', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                reserva_id: reservaId,
+                accion: 'eliminar',
+                motivo: 'Eliminada por el administrador'
+            })
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            alert('Reserva eliminada correctamente');
+            cargarReservasDia();
+        } else {
+            alert('Error: ' + result.error);
+        }
+    } catch (error) {
+        alert('Error de conexion');
+    }
+}
+
+// ============================================
+// ABRIR MODAL
+// ============================================
+function abrirModalReservasDia() {
+    const modal = document.getElementById('modalReservasDia');
+    if (modal) {
+        if (modal.parentElement !== document.body) {
+            document.body.appendChild(modal);
+        }
+        modal.style.display = 'flex';
+        modal.style.zIndex = '9999999';
+        document.body.style.overflow = 'hidden';
+        cargarReservasDia();
+    }
+}
+
+// ============================================
+// CERRAR MODAL
+// ============================================
+function cerrarModalReservasDia() {
+    const modal = document.getElementById('modalReservasDia');
+    if (modal) {
+        modal.style.display = 'none';
+        document.body.style.overflow = '';
+    }
+}
+
+// Exponer globalmente
+(window as any).cargarReservasDia = cargarReservasDia;
+(window as any).abrirModalReservasDia = abrirModalReservasDia;
+(window as any).cerrarModalReservasDia = cerrarModalReservasDia;
+(window as any).aceptarReservaDia = aceptarReserva;
+(window as any).cancelarReservaDia = cancelarReserva;
+(window as any).eliminarReservaDia = eliminarReserva;
+
+// Delegacion de eventos
+document.addEventListener('click', function(e) {
+    const target = e.target;
+    if (!(target instanceof HTMLElement)) return;
+    
+    const action = target.dataset.action;
+    
+    if (action === 'abrir-modal-reservas-dia') {
+        abrirModalReservasDia();
+        return;
+    }
+    
+    if (action === 'cerrar-reservas-dia') {
+        cerrarModalReservasDia();
+        return;
+    }
+    
+    if (action === 'aceptar-reserva') {
+        const id = parseInt(target.dataset.id || '0', 10);
+        if (id) aceptarReserva(id);
+        return;
+    }
+    
+    if (action === 'cancelar-reserva') {
+        const id = parseInt(target.dataset.id || '0', 10);
+        if (id) cancelarReserva(id);
+        return;
+    }
+    
+    if (action === 'eliminar-reserva') {
+        const id = parseInt(target.dataset.id || '0', 10);
+        if (id) eliminarReserva(id);
+        return;
+    }
+    
+    // Filtros
+    if (target.classList.contains('filtro-btn')) {
+        document.querySelectorAll('.filtro-btn').forEach(function(btn) {
+            btn.classList.remove('active');
+        });
+        target.classList.add('active');
+        filtroActual = target.dataset.filtro || 'todos';
+        renderizarReservas();
+        return;
+    }
+});
+
+// Cerrar con ESC
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+        cerrarModalReservasDia();
+    }
+});
+
+// Cerrar al hacer click fuera
+document.addEventListener('click', function(e) {
+    const modal = document.getElementById('modalReservasDia');
+    if (modal && e.target === modal) {
+        cerrarModalReservasDia();
+    }
+});
+</script>
+
+<style is:global>
+/* ============================================
+   MODAL RESERVAS DEL DIA
+   ============================================ */
+.reservas-dia-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(8px);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999999;
+    padding: 20px;
+}
+
+.reservas-dia-container {
+    background: #FFFFFF;
+    border-radius: 20px;
+    max-width: 760px;
+    width: 100%;
+    max-height: 90vh;
+    overflow-y: auto;
+    box-shadow: 0 24px 80px rgba(0, 0, 0, 0.15);
+    animation: reservasDiaIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes reservasDiaIn {
+    from { opacity: 0; transform: scale(0.95) translateY(20px); }
+    to { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+/* Header */
+.reservas-dia-header {
+    padding: 28px 32px 20px;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.04);
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    position: sticky;
+    top: 0;
+    background: #FFFFFF;
+    border-radius: 20px 20px 0 0;
+    z-index: 10;
+}
+
+.reservas-dia-title {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+}
+
+.reservas-dia-title h2 {
+    font-family: 'Playfair Display', serif, system-ui;
+    font-size: 1.3rem;
+    color: #1A1A1A;
+    margin: 0;
+}
+
+.reservas-dia-title p {
+    font-size: 0.85rem;
+    color: #6B6B6B;
+    margin: 2px 0 0;
+}
+
+.reservas-dia-close {
+    background: transparent;
+    border: none;
+    font-size: 1.2rem;
+    color: #6B6B6B;
+    cursor: pointer;
+    transition: transform 0.3s;
+    padding: 4px 8px;
+    font-family: 'Inter', sans-serif;
+}
+
+.reservas-dia-close:hover {
+    transform: rotate(90deg);
+    color: #8B1A1A;
+}
+
+/* Estadisticas */
+.reservas-dia-estadisticas {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+    padding: 20px 32px;
+    background: rgba(245, 237, 227, 0.4);
+}
+
+.estadistica-item {
+    text-align: center;
+}
+
+.estadistica-numero {
+    display: block;
+    font-size: 1.6rem;
+    font-weight: 700;
+    color: #1A1A1A;
+}
+
+.estadistica-pendiente {
+    color: #F59E0B;
+}
+
+.estadistica-confirmada {
+    color: #10B981;
+}
+
+.estadistica-cancelada {
+    color: #EF4444;
+}
+
+.estadistica-label {
+    font-size: 0.7rem;
+    color: #6B6B6B;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+/* Filtros */
+.reservas-dia-filtros {
+    display: flex;
+    gap: 8px;
+    padding: 16px 32px;
+    overflow-x: auto;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.04);
+}
+
+.filtro-btn {
+    padding: 6px 16px;
+    border: 1.5px solid rgba(0, 0, 0, 0.04);
+    border-radius: 50px;
+    background: transparent;
+    font-size: 0.75rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.3s;
+    color: #6B6B6B;
+    white-space: nowrap;
+    font-family: 'Inter', sans-serif;
+}
+
+.filtro-btn.active {
+    border-color: #8B1A1A;
+    background: #8B1A1A;
+    color: #FFFFFF;
+}
+
+.filtro-btn:hover:not(.active) {
+    border-color: #C9A87C;
+}
+
+/* Cuerpo */
+.reservas-dia-body {
+    padding: 20px 32px 28px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.reservas-dia-loading,
+.reservas-dia-error {
+    text-align: center;
+    padding: 40px;
+    color: #6B6B6B;
+}
+
+.reservas-dia-vacio {
+    text-align: center;
+    padding: 48px 24px;
+}
+
+.reservas-dia-vacio p {
+    font-size: 1rem;
+    font-weight: 500;
+    color: #1A1A1A;
+    margin: 0 0 4px 0;
+}
+
+.reservas-dia-vacio small {
+    color: #6B6B6B;
+    font-size: 0.85rem;
+}
+
+/* Grupo por sucursal */
+.grupo-sucursal {
+    background: rgba(245, 237, 227, 0.3);
+    border-radius: 12px;
+    padding: 16px 18px;
+    border-left: 3px solid #C9A87C;
+}
+
+.grupo-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.04);
+}
+
+.grupo-nombre {
+    font-weight: 600;
+    font-size: 0.95rem;
+    color: #1A1A1A;
+}
+
+.grupo-stats {
+    font-size: 0.75rem;
+    color: #6B6B6B;
+}
+
+.grupo-reservas {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+/* Item de reserva */
+.reserva-item {
+    display: grid;
+    grid-template-columns: 60px 1fr auto auto;
+    gap: 12px;
+    align-items: center;
+    padding: 10px 14px;
+    background: #FFFFFF;
+    border-radius: 8px;
+    border-left: 3px solid #C9A87C;
+}
+
+.reserva-item.estado-pendiente {
+    border-left-color: #F59E0B;
+}
+
+.reserva-item.estado-confirmada {
+    border-left-color: #10B981;
+}
+
+.reserva-item.estado-cancelada {
+    border-left-color: #EF4444;
+    opacity: 0.6;
+}
+
+.reserva-hora {
+    font-weight: 700;
+    color: #8B1A1A;
+    font-size: 0.9rem;
+}
+
+.reserva-info {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.reserva-cliente {
+    font-weight: 500;
+    color: #1A1A1A;
+    font-size: 0.85rem;
+}
+
+.reserva-detalle {
+    font-size: 0.75rem;
+    color: #6B6B6B;
+}
+
+.reserva-telefono {
+    font-size: 0.7rem;
+    color: #C9A87C;
+}
+
+.reserva-observaciones {
+    font-size: 0.7rem;
+    color: #8B1A1A;
+    font-style: italic;
+}
+
+.reserva-estado {
+    padding: 4px 12px;
+    border-radius: 50px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.reserva-estado.estado-pendiente {
+    background: rgba(245, 158, 11, 0.1);
+    color: #F59E0B;
+}
+
+.reserva-estado.estado-confirmada {
+    background: rgba(16, 185, 129, 0.1);
+    color: #10B981;
+}
+
+.reserva-estado.estado-cancelada {
+    background: rgba(239, 68, 68, 0.1);
+    color: #EF4444;
+}
+
+.reserva-acciones {
+    display: flex;
+    gap: 6px;
+}
+
+.btn-aceptar,
+.btn-cancelar,
+.btn-eliminar {
+    padding: 6px 14px;
+    border: none;
+    border-radius: 6px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-family: 'Inter', sans-serif;
+    white-space: nowrap;
+}
+
+.btn-aceptar {
+    background: #10B981;
+    color: #FFFFFF;
+}
+
+.btn-aceptar:hover {
+    background: #059669;
+}
+
+.btn-cancelar {
+    background: rgba(239, 68, 68, 0.1);
+    color: #EF4444;
+}
+
+.btn-cancelar:hover {
+    background: rgba(239, 68, 68, 0.2);
+}
+
+.btn-eliminar {
+    background: transparent;
+    border: 1px solid #EF4444;
+    color: #EF4444;
+}
+
+.btn-eliminar:hover {
+    background: #EF4444;
+    color: #FFFFFF;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .reservas-dia-container {
+        max-width: 100%;
+        margin: 12px;
+        border-radius: 16px;
+    }
+    
+    .reservas-dia-header {
+        padding: 20px 20px 16px;
+    }
+    
+    .reservas-dia-estadisticas {
+        padding: 16px 20px;
+        gap: 8px;
+    }
+    
+    .estadistica-numero {
+        font-size: 1.3rem;
+    }
+    
+    .reservas-dia-filtros {
+        padding: 12px 20px;
+    }
+    
+    .reservas-dia-body {
+        padding: 16px 20px 20px;
+    }
+    
+    .grupo-sucursal {
+        padding: 12px 14px;
+    }
+    
+    .grupo-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 4px;
+    }
+    
+    .reserva-item {
+        grid-template-columns: 1fr;
+        gap: 8px;
+    }
+    
+    .reserva-hora {
+        font-size: 0.8rem;
+    }
+    
+    .reserva-acciones {
+        width: 100%;
+    }
+    
+    .btn-aceptar,
+    .btn-cancelar,
+    .btn-eliminar {
+        flex: 1;
+        text-align: center;
+    }
+}
+
+@media (max-width: 480px) {
+    .reservas-dia-estadisticas {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+</style>

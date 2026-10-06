@@ -12,6 +12,19 @@ export default defineConfig({
     checkOrigin: false
   },
   vite: {
-    plugins: [tailwindcss()]
+    plugins: [tailwindcss()],
+    server: {
+      watch: {
+        // Carpetas que cambian constantemente (Docker/OpenWA, logs, DB)
+        // y provocaban recargas infinitas del navegador
+        ignored: [
+          '**/openwa-data/**',
+          '**/logs/**',
+          '**/database/**',
+          '**/nginx/**',
+          '**/.git/**'
+        ]
+      }
+    }
   }
 });

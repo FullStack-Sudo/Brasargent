@@ -1,0 +1,286 @@
+---
+// src/components/admin/AlertasTiempoReal.astro
+// Alertas en tiempo real con sonido de campana
+---
+
+<div id="contenedorAlertas" class="contenedor-alertas"></div>
+
+<script>
+// ============================================
+// CONFIGURACION
+// ============================================
+let ultimoTimestamp = new Date().toISOString().slice(0, 19).replace('T', ' ');
+let intervaloConsulta: any = null;
+
+// ============================================
+// SOLICITAR PERMISO DE NOTIFICACIONES
+// ============================================
+if ('Notification' in window && Notification.permission === 'default') {
+    Notification.requestPermission();
+}
+
+// ============================================
+// REPRODUCIR SONIDO DE CAMPANA (API AUDIO)
+// ============================================
+function reproducirCampana() {
+    try {
+        const AudioContext = window.AudioContext || (window as any).webkitAudioContext;
+        if (!AudioContext) return;
+        
+        const audioContext = new AudioContext();
+        const oscillator = audioContext.createOscillator();
+        const gainNode = audioContext.createGain();
+        
+        oscillator.connect(gainNode);
+        gainNode.connect(audioContext.destination);
+        
+        oscillator.frequency.value = 800;
+        oscillator.type = 'sine';
+        
+        gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+        gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.5);
+        
+        oscillator.start(audioContext.currentTime);
+        oscillator.stop(audioContext.currentTime + 0.5);
+    } catch (error) {
+        console.log('Error reproduciendo campana:', error);
+    }
+}
+
+// ============================================
+// MOSTRAR NOTIFICACION PUSH DEL NAVEGADOR
+// ============================================
+function mostrarNotificacionPush(titulo: string, mensaje: string) {
+    if ('Notification' in window && Notification.permission === 'granted') {
+        const notificacion = new Notification(titulo, {
+            body: mensaje,
+            icon: '/favicon.ico',
+            badge: '/favicon.ico',
+            vibrate: [200, 100, 200],
+            requireInteraction: true
+        });
+        
+        notificacion.onclick = function() {
+            window.focus();
+            notificacion.close();
+        };
+        
+        // Auto-cerrar despues de 10 segundos
+        setTimeout(function() {
+            notificacion.close();
+        }, 10000);
+    }
+}
+
+// ============================================
+// MOSTRAR ALERTA VISUAL EN EL DASHBOARD
+// ============================================
+function mostrarAlertaVisual(datos: any) {
+    const contenedor = document.getElementById('contenedorAlertas');
+    if (!contenedor) return;
+    
+    const alerta = document.createElement('div');
+    alerta.className = 'alerta-reserva';
+    alerta.innerHTML = 
+        '<div class="alerta-header">' +
+            '<span class="alerta-badge">NUEVA</span>' +
+            '<button class="alerta-cerrar" onclick="this.parentElement.parentElement.remove()">X</button>' +
+        '</div>' +
+        '<div class="alerta-contenido">' +
+            '<p class="alerta-titulo">' + datos.mensaje + '</p>' +
+            '<p class="alerta-detalle">' +
+                'Reserva: ' + datos.numero_reserva + '<br>' +
+                'Personas: ' + datos.personas + ' | Hora: ' + datos.hora +
+            '</p>' +
+        '</div>' +
+        '<div class="alerta-acciones">' +
+            '<a href="/admin/dashboard" class="alerta-ver">Ver reserva</a>' +
+        '</div>';
+    
+    contenedor.appendChild(alerta);
+    
+    // Auto-eliminar despues de 30 segundos
+    setTimeout(function() {
+        if (alerta.parentElement) {
+            alerta.remove();
+        }
+    }, 30000);
+}
+
+// ============================================
+// CONSULTAR EVENTOS CADA 5 SEGUNDOS
+// ============================================
+async function consultarEventos() {
+    try {
+        const response = await fetch('/api/eventos/stream?desde=' + encodeURIComponent(ultimoTimestamp));
+        const data = await response.json();
+        
+        if (!data.success) return;
+        
+        if (data.eventos && data.eventos.length > 0) {
+            ultimoTimestamp = data.timestamp;
+            
+            for (const evento of data.eventos) {
+                if (evento.tipo === 'nueva_reserva') {
+                    // 1. Reproducir campana
+                    reproducirCampana();
+                    
+                    // 2. Mostrar notificacion push
+                    mostrarNotificacionPush(
+                        'Nueva Reserva - BRASARGENT',
+                        evento.datos.mensaje
+                    );
+                    
+                    // 3. Mostrar alerta visual
+                    mostrarAlertaVisual(evento.datos);
+                }
+            }
+        }
+    } catch (error) {
+        console.error('Error consultando eventos:', error);
+    }
+}
+
+// ============================================
+// INICIAR POLLING
+// ============================================
+document.addEventListener('DOMContentLoaded', function() {
+    // Consultar inmediatamente
+    consultarEventos();
+    
+    // Consultar cada 5 segundos
+    intervaloConsulta = setInterval(consultarEventos, 5000);
+});
+
+// Detener al salir de la pagina
+window.addEventListener('beforeunload', function() {
+    if (intervaloConsulta) {
+        clearInterval(intervaloConsulta);
+    }
+});
+</script>
+
+<style>
+/* ============================================
+   CONTENEDOR DE ALERTAS
+   ============================================ */
+.contenedor-alertas {
+    position: fixed;
+    top: 80px;
+    right: 24px;
+    z-index: 9997;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    max-width: 360px;
+}
+
+/* ============================================
+   ALERTA DE RESERVA
+   ============================================ */
+.alerta-reserva {
+    background: #FFFFFF;
+    border-radius: 12px;
+    padding: 16px 18px;
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.15);
+    border-left: 4px solid #8B1A1A;
+    animation: alertaEntrada 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes alertaEntrada {
+    from {
+        opacity: 0;
+        transform: translateX(100px) scale(0.9);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0) scale(1);
+    }
+}
+
+.alerta-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+}
+
+.alerta-badge {
+    background: #8B1A1A;
+    color: #FFFFFF;
+    padding: 3px 10px;
+    border-radius: 50px;
+    font-size: 0.65rem;
+    font-weight: 700;
+    letter-spacing: 1px;
+    animation: pulsoBadge 1.5s ease-in-out infinite;
+}
+
+@keyframes pulsoBadge {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.6; }
+}
+
+.alerta-cerrar {
+    background: transparent;
+    border: none;
+    color: #6B6B6B;
+    font-size: 1rem;
+    cursor: pointer;
+    padding: 4px 8px;
+    transition: color 0.3s;
+}
+
+.alerta-cerrar:hover {
+    color: #8B1A1A;
+}
+
+.alerta-contenido {
+    margin-bottom: 10px;
+}
+
+.alerta-titulo {
+    font-weight: 600;
+    color: #1A1A1A;
+    font-size: 0.9rem;
+    margin: 0 0 4px 0;
+}
+
+.alerta-detalle {
+    font-size: 0.8rem;
+    color: #6B6B6B;
+    margin: 0;
+    line-height: 1.5;
+}
+
+.alerta-acciones {
+    display: flex;
+    justify-content: flex-end;
+}
+
+.alerta-ver {
+    background: #8B1A1A;
+    color: #FFFFFF;
+    padding: 6px 14px;
+    border-radius: 6px;
+    text-decoration: none;
+    font-size: 0.75rem;
+    font-weight: 600;
+    transition: all 0.2s;
+}
+
+.alerta-ver:hover {
+    background: #6B1414;
+    transform: translateY(-1px);
+}
+
+/* Responsive */
+@media (max-width: 640px) {
+    .contenedor-alertas {
+        top: 70px;
+        right: 12px;
+        left: 12px;
+        max-width: none;
+    }
+}
+</style>

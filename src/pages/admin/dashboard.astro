@@ -2,9 +2,12 @@
 // src/pages/admin/dashboard.astro
 // Dashboard rediseñado en columna sin scroll horizontal
 import AdminLayout from '../../layouts/AdminLayout.astro';
+import AlertasTiempoReal from '../../components/admin/AlertasTiempoReal.astro';
 import ModalAlertas from '../../components/admin/ModalAlertas.astro';
 import BurbujaFuturas from '../../components/admin/BurbujaFuturas.astro';
 import ModalFuturas from '../../components/admin/ModalFuturas.astro';
+import BurbujaReservasDia from '../../components/admin/BurbujaReservasDia.astro';
+import ModalReservasDia from '../../components/admin/ModalReservasDia.astro';
 import pool, { query } from '../../lib/db';
 import { getEstadisticasCubiertos } from '../../lib/cubiertos';
 import { getReservasAceptables } from '../../lib/reservas';
@@ -129,28 +132,26 @@ const totalConfirmadasAsistencia = reservasAsistencia.filter((r: any) => r.estad
         <!-- HEADER Y ACCIONES -->
         <div class="dashboard-top-bar">
             <div class="dashboard-title-area">
-                <h2>📊 Dashboard de Gestión</h2>
+                <h2>Dashboard de Gestión</h2>
                 <p>Monitoreo en tiempo real de reservas y cubiertos</p>
             </div>
             <div class="header-actions">
                 <button type="button" class="btn-reporte btn-futuras-action" onclick="window.abrirModalFuturas()">
-                    📅 Futuras <span id="btnFuturasBadge" class="badge-count-pill" style="display:none;">0</span>
+                    Futuras <span id="btnFuturasBadge" class="badge-count-pill" style="display:none;">0</span>
                 </button>
                 <button type="button" class="btn-reporte btn-excel" onclick="window.abrirModalReportes()">
-                    📊 Reportes
+                    Reportes
                 </button>
                 <button type="button" class="btn-reporte btn-imprimir" onclick="window.imprimirReporte()">
-                    🖨️ Imprimir
+                    Imprimir
                 </button>
                 <button type="button" class="btn-reporte btn-pdf" onclick="window.descargarPDF()">
-                    📥 PDF
+                    PDF
                 </button>
                 <a href="/admin/openwa" class="btn-reporte btn-openwa">
-                    💬 WhatsApp
+                    WhatsApp
                 </a>
-                <button type="button" class="btn-reiniciar" onclick="window.reiniciarReservas()">
-                    🔄 Reiniciar
-                </button>
+                
             </div>
         </div>
 
@@ -158,7 +159,7 @@ const totalConfirmadasAsistencia = reservasAsistencia.filter((r: any) => r.estad
         {reservasAceptables.length > 0 && (
             <div class="alerta-aceptables mb-6">
                 <div class="flex items-center gap-3">
-                    <span class="text-2xl">🔔</span>
+                    <span class="text-2xl"></span>
                     <div>
                         <strong>{reservasAceptables.length} reservas listas para confirmar (Ventana 24h)</strong>
                         <p class="text-xs text-amber-800">Estas reservas están dentro de las 24 horas y esperan tu confirmación.</p>
@@ -175,28 +176,28 @@ const totalConfirmadasAsistencia = reservasAsistencia.filter((r: any) => r.estad
         ============================================ -->
         <div class="stats-grid">
             <div class="stat-card">
-                <span class="stat-icon">📋</span>
+                <span class="stat-icon"></span>
                 <div>
                     <span class="stat-number">{stats.total_reservas || 0}</span>
                     <span class="stat-label">Total Reservas</span>
                 </div>
             </div>
             <div class="stat-card">
-                <span class="stat-icon">⏳</span>
+                <span class="stat-icon"></span>
                 <div>
                     <span class="stat-number">{stats.pendientes || 0}</span>
                     <span class="stat-label">Pendientes</span>
                 </div>
             </div>
             <div class="stat-card">
-                <span class="stat-icon">✅</span>
+                <span class="stat-icon"></span>
                 <div>
                     <span class="stat-number">{stats.confirmadas || 0}</span>
                     <span class="stat-label">Confirmadas</span>
                 </div>
             </div>
             <div class="stat-card stat-asistencia-card">
-                <span class="stat-icon">🙋‍♂️</span>
+                <span class="stat-icon"></span>
                 <div>
                     <span class="stat-number">{totalEnCurso} / {reservasAsistencia.length}</span>
                     <span class="stat-label">En Mesa / Total</span>
@@ -210,12 +211,12 @@ const totalConfirmadasAsistencia = reservasAsistencia.filter((r: any) => r.estad
         <div class="section-card asistencia-section">
             <div class="section-header">
                 <div>
-                    <h3>🙋‍♂️ Control de Asistencia y Recepción en Vivo</h3>
+                    <h3>Control de Asistencia y Recepción en Vivo</h3>
                     <p class="section-subtitle">Marca la llegada de tus clientes en tiempo real y ajusta los cubiertos ocupados</p>
                 </div>
                 <div class="asistencia-header-actions">
                     <span class="badge-asistencia-summary">
-                        🟢 <strong>{totalEnCurso}</strong> en mesa | ⏳ <strong>{totalConfirmadasAsistencia}</strong> por llegar
+                        <strong>{totalEnCurso}</strong> en mesa | <strong>{totalConfirmadasAsistencia}</strong> por llegar
                     </span>
                 </div>
             </div>
@@ -225,14 +226,14 @@ const totalConfirmadasAsistencia = reservasAsistencia.filter((r: any) => r.estad
                 <input 
                     type="text" 
                     id="searchAsistenciaInput" 
-                    placeholder="🔍 Buscar cliente por nombre, teléfono o #reserva..." 
+                    placeholder="Buscar cliente por nombre, teléfono o #reserva..." 
                     oninput="window.filtrarAsistenciaCards()"
                 />
             </div>
 
             {reservasAsistencia.length === 0 ? (
                 <div class="empty-state">
-                    <span class="empty-icon">🥂</span>
+                    <span class="empty-icon"></span>
                     <p>No hay reservas confirmadas o en curso para mostrar</p>
                     <span class="empty-sub">Las reservas confirmadas aparecerán aquí para marcar su llegada cuando arriben a la sucursal</span>
                 </div>
@@ -253,23 +254,23 @@ const totalConfirmadasAsistencia = reservasAsistencia.filter((r: any) => r.estad
                                             <strong class="client-name">{r.nombre_cliente}</strong>
                                             <span class="reserva-code">{r.numero_reserva || 'BR-2026'}</span>
                                         </div>
-                                        <span class="sucursal-badge">📍 {r.sucursal_nombre}</span>
+                                        <span class="sucursal-badge">{r.sucursal_nombre}</span>
                                     </div>
                                     <span class={`status-pill ${esEnCurso ? 'pill-en-curso' : 'pill-confirmada'}`}>
-                                        {esEnCurso ? `🟢 En Mesa` : '⏳ Por Llegar'}
+                                        {esEnCurso ? `En Mesa` : 'Por Llegar'}
                                     </span>
                                 </div>
 
                                 <div class="asistencia-card-body">
                                     <div class="info-chips-grid">
-                                        <span class="chip-item">📅 {r.fecha ? new Date(r.fecha).toLocaleDateString('es-ES') : 'Hoy'}</span>
-                                        <span class="chip-item">🕐 Hora: <strong>{r.hora}</strong></span>
+                                        <span class="chip-item">{r.fecha ? new Date(r.fecha).toLocaleDateString('es-ES') : 'Hoy'}</span>
+                                        <span class="chip-item"> Hora: <strong>{r.hora}</strong></span>
                                         <span class="chip-item">👥 Reservado: <strong>{totalPersonas} pers</strong></span>
-                                        {r.cantidad_ninos > 0 && <span class="chip-item">🧒 {r.cantidad_ninos} niños</span>}
+                                        {r.cantidad_ninos > 0 && <span class="chip-item">{r.cantidad_ninos} niños</span>}
                                     </div>
                                     {esEnCurso && horaLlegada && (
                                         <div class="hora-llegada-info">
-                                            ✅ Llegó a las <strong>{horaLlegada}</strong> con <strong>{r.personas_asistentes || cubiertos} personas presentes</strong>
+                                            Llegó a las <strong>{horaLlegada}</strong> con <strong>{r.personas_asistentes || cubiertos} personas presentes</strong>
                                         </div>
                                     )}
                                 </div>
@@ -279,7 +280,7 @@ const totalConfirmadasAsistencia = reservasAsistencia.filter((r: any) => r.estad
                                         type="button"
                                         class={`btn-llegada-action ${esEnCurso ? 'btn-modificar' : 'btn-registrar'}`}
                                         onclick={`window.abrirModalAsistencia(${r.id}, '${String(r.nombre_cliente).replace(/'/g, "\\'")}', ${cubiertos})`}>
-                                        {esEnCurso ? '✏️ Modificar Asistencia' : '🙋‍♂️ Registrar Llegada del Cliente'}
+                                        {esEnCurso ? ' Modificar Asistencia' : ' Registrar Llegada del Cliente'}
                                     </button>
                                     
                                     <button 
@@ -287,14 +288,14 @@ const totalConfirmadasAsistencia = reservasAsistencia.filter((r: any) => r.estad
                                         class="btn-liberar-action"
                                         onclick={`window.liberarCubiertosMesa(${r.id}, '${String(r.nombre_cliente).replace(/'/g, "\\'")}', ${cubiertos})`}
                                         title="Liberar cubiertos de la mesa al finalizar el servicio">
-                                        🔓 Liberar Mesa
+                                        Liberar Mesa
                                     </button>
                                     
                                     <a href={`https://wa.me/${r.telefono_completo || '591' + r.telefono}`} 
                                        target="_blank" 
                                        class="btn-wa-action" 
                                        title="Enviar mensaje por WhatsApp">
-                                        💬
+                                        
                                     </a>
                                 </div>
                             </div>
@@ -309,7 +310,7 @@ const totalConfirmadasAsistencia = reservasAsistencia.filter((r: any) => r.estad
         ============================================ -->
         <div class="section-card">
             <div class="section-header">
-                <h3>🪑 Uso de Cubiertos por Sucursal</h3>
+                <h3>Uso de Cubiertos por Sucursal</h3>
                 <span class="section-badge">Estado actual</span>
             </div>
             
@@ -320,8 +321,8 @@ const totalConfirmadasAsistencia = reservasAsistencia.filter((r: any) => r.estad
                     const disponibles = Number(sucursal.cubiertos_disponibles) || (total - ocupados);
                     const porcentaje = Math.min(100, Math.round((ocupados / total) * 100));
                     const color = porcentaje > 80 ? '#EF4444' : porcentaje > 60 ? '#F59E0B' : '#10B981';
-                    const icono = sucursal.nombre.includes('Churrasquería') || sucursal.nombre.includes('Churrasqueria') ? '🔥' :
-                                 sucursal.nombre.includes('Fast') ? '⚡' : '🥩';
+                    const icono = sucursal.nombre.includes('Churrasquería') || sucursal.nombre.includes('Churrasqueria') ? '' :
+                                 sucursal.nombre.includes('Fast') ? '' : '';
                     
                     return (
                         <div class="cubiertos-item">
@@ -338,9 +339,9 @@ const totalConfirmadasAsistencia = reservasAsistencia.filter((r: any) => r.estad
                             </div>
                             
                             <div class="cubiertos-detalles">
-                                <span>🪑 <strong>{ocupados}</strong> ocupados</span>
-                                <span style="color: #10B981;">✅ <strong>{disponibles}</strong> disponibles</span>
-                                <span style="color: #6B6B6B;">📋 Total: {total} cubiertos</span>
+                                <span><strong>{ocupados}</strong> ocupados</span>
+                                <span style="color: #10B981;"><strong>{disponibles}</strong> disponibles</span>
+                                <span style="color: #6B6B6B;">Total: {total} cubiertos</span>
                             </div>
                         </div>
                     );
@@ -359,7 +360,7 @@ const totalConfirmadasAsistencia = reservasAsistencia.filter((r: any) => r.estad
             
             {reservasRecientes.length === 0 ? (
                 <div class="empty-state">
-                    <span class="empty-icon">📭</span>
+                    <span class="empty-icon"></span>
                     <p>No hay reservas recientes registras en el sistema</p>
                 </div>
             ) : (
@@ -443,6 +444,7 @@ const totalConfirmadasAsistencia = reservasAsistencia.filter((r: any) => r.estad
                 <button type="button" class="btn-generar" onclick="window.generarReporte()">📥 Descargar Reporte</button>
             </div>
         </div>
+    </div>
     <!-- Modal Didáctico para Registrar Asistencia -->
     <div id="modalAsistenciaDashboard" class="modal-reportes" style="display:none;">
         <div class="modal-reportes-content modal-asistencia-content">
@@ -488,8 +490,15 @@ const totalConfirmadasAsistencia = reservasAsistencia.filter((r: any) => r.estad
     <!-- 🔴 MODAL DE RESERVAS FUTURAS -->
     <ModalFuturas />
 
+    <!-- 🔴 BURBUJA Y MODAL RESERVAS DEL DIA -->
+    <BurbujaReservasDia />
+    <ModalReservasDia />
+
     <!-- 🔴 MODAL DE ALERTAS (se muestra automáticamente si hay reservas mañana) -->
     <ModalAlertas />
+
+    <!-- Sistema de alertas en tiempo real -->
+    <AlertasTiempoReal />
 </AdminLayout>
 
 <style>
@@ -1328,6 +1337,25 @@ const totalConfirmadasAsistencia = reservasAsistencia.filter((r: any) => r.estad
     .stat-label { font-size: 0.65rem; }
     
     .section-card { padding: 16px 14px; }
+    
+    .section-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 12px;
+    }
+
+    .asistencia-header-actions {
+        width: 100%;
+        margin-top: 4px;
+    }
+
+    .badge-asistencia-summary {
+        display: block;
+        width: 100%;
+        text-align: center;
+        box-sizing: border-box;
+        padding: 8px 14px;
+    }
 }
 </style>
 

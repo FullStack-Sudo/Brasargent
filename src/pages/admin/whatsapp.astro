@@ -430,7 +430,7 @@ function iniciarAutoRefrescoQR() {
         const qrImg = document.getElementById('qrImage') as HTMLImageElement | null;
         if (modal && modal.style.display !== 'none' && qrImg) {
             try {
-                const res = await fetch('/api/whatsapp/conectar', { method: 'POST' });
+                const res = await fetch('/api/whatsapp/qr', { method: 'GET' });
                 const data = await res.json();
                 if (data.success && data.qr) {
                     qrImg.src = data.qr.startsWith('data:') ? data.qr : `data:image/png;base64,${data.qr}`;

@@ -30,6 +30,7 @@ try {
     let footerLogo = "/img/logo/LOGO1SF.png";
     let featured = false;
     let mapUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(s.name + " " + s.address)}`;
+    let whatsappNumber = s.whatsapp ? s.whatsapp.replace(/\D/g, '') : '';
 
     if (
       s.name.includes("Churrasqueria") ||
@@ -39,15 +40,18 @@ try {
       image = "/img/sucursales/beni.jpeg";
       footerLogo = "/img/logo/LOGO1SF.png";
       mapUrl = "https://maps.app.goo.gl/9pjKcgmrKJvESw2f7?g_st=ac";
+      whatsappNumber = "59178007700";
     } else if (s.name.includes("Fast Grill") || s.type.includes("Fast Grill")) {
       image = "/img/sucursales/fassGrill.jpeg";
       featured = true;
       footerLogo = "/img/logo/LOGO2SF.png";
       mapUrl = "https://maps.app.goo.gl/vZBQXjJqVpYPaL9TA?g_st=ac";
+      whatsappNumber = "59178557004";
     } else if (s.name.includes("Rodizio")) {
       image = "/img/sucursales/RODIZIO.webp";
       footerLogo = "/img/logo/LOGO3SF.png";
       mapUrl = "https://maps.app.goo.gl/YL5CTgSqqguhKezc6?g_st=ac";
+      whatsappNumber = "59178555886";
     }
 
     let hours: string[] | string = agruparHorarios(s.horarios);
@@ -57,6 +61,7 @@ try {
       ...s,
       image,
       mapUrl,
+      whatsappNumber,
       footerLogo,
       featured,
       hours,
@@ -333,9 +338,8 @@ try {
 
                     {/* Botón WhatsApp */}
                     <a
-                      href={`https://wa.me/${sucursal.whatsapp}?text=${encodeURIComponent(`Hola, me gustaría hacer una consulta sobre ${sucursal.name}`)}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
+                      href="#"
+                      onclick={`event.preventDefault(); var h = new Date().getHours(); var s = 'Buenas noches'; if (h >= 5 && h < 12) s = 'Buen día'; else if (h >= 12 && h < 19) s = 'Buenas tardes'; var url = 'https://wa.me/${sucursal.whatsappNumber}?text=' + encodeURIComponent(s + ', quiero más información'); window.open(url, '_blank', 'noopener,noreferrer');`}
                       class="flex flex-col items-center gap-1.5 px-4 py-2.5 rounded-xl hover:bg-gray-50 transition-all duration-300 hover:scale-105 hover:shadow-sm cursor-pointer group focus:outline-none"
                       title="Contactar por WhatsApp"
                     >
@@ -1371,9 +1375,9 @@ try {
                 <div class="modal-confirmacion-content">
                     <div class="confirmacion-icono">✅</div>
                     <h2>¡Reserva Solicitada!</h2>
-                    <p>En breves momentos confirmaremos tu reserva en <strong>${sucursalNombre}</strong></p>
+                    <p>Tu reserva ha sido solicitada. Espera la confirmacion del restaurante por WhatsApp.</p>
                     <p style="font-size: 0.9rem; color: #25d366;">
-                        💬 Espera tu mensaje de confirmación por <strong>WhatsApp</strong>
+                        💬 Tu reserva está pendiente de confirmación por el administrador de la sucursal.
                     </p>
                     <div class="confirmacion-detalles">
                         ${

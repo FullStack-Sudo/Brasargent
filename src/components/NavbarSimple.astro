@@ -3,7 +3,7 @@
 // Navbar Premium — Transparente al inicio → Blanco glassmorphism al scroll
 const whatsappNumber = "59178555886";
 const whatsappMessage = encodeURIComponent(
-  "Hola! Me gustaría hacer una reserva en Brasargent Rodizio"
+  "Hola! Me gustaría hacer una reserva en Brasargent"
 );
 ---
 
@@ -340,16 +340,19 @@ const whatsappMessage = encodeURIComponent(
   background: rgba(26, 26, 26, 0.98);
   backdrop-filter: blur(24px);
   -webkit-backdrop-filter: blur(24px);
-  display: flex;
+  display: none;
   align-items: center;
   justify-content: center;
   opacity: 0;
   pointer-events: none;
+  visibility: hidden;
   transition: opacity 0.5s cubic-bezier(0.4, 0, 0.2, 1);
 }
 .mobile-menu-overlay.open {
+  display: flex;
   opacity: 1;
   pointer-events: auto;
+  visibility: visible;
 }
 
 .mobile-menu-inner {

@@ -109,9 +109,12 @@ class OpenWAMultiClient {
                     if (response.ok) {
                         const created = await response.json();
                         openwaSessionId = created.id;
+                    } else {
+                        return { success: false, error: 'El servidor de OpenWA devolvió un error.' };
                     }
                 } catch (err: any) {
-                    console.warn('OpenWA API not reachable, simulating DB session state:', err.message);
+                    console.error('OpenWA API not reachable:', err.message);
+                    return { success: false, error: 'El servicio de OpenWA no está accesible en el puerto 2785. Verifica que el contenedor esté corriendo.' };
                 }
             }
 
@@ -245,8 +248,22 @@ class OpenWAMultiClient {
                 return { success: false, error: 'Sesión no configurada para esta sucursal' };
             }
 
-            if (session.status !== 'connected') {
-                return { success: false, error: 'La sesión de WhatsApp de esta sucursal no está conectada' };
+            // Verificar el estado REAL en OpenWA (el valor en BD puede estar desactualizado)
+            const liveSession = await this.getOpenWASession(session.session_name);
+            const liveStatus = String(liveSession?.status || '').toLowerCase();
+            const liveConnected = ['ready', 'connected', 'authenticated', 'working', 'inchat'].includes(liveStatus);
+
+            if (liveSession) {
+                await this.updateSessionStatus(
+                    sucursalId,
+                    liveConnected ? 'connected' : 'disconnected',
+                    liveSession.phone || liveSession.me?.user,
+                    liveSession.pushName || liveSession.me?.pushname
+                );
+            }
+
+            if (!liveConnected) {
+                return { success: false, error: 'La sesión de WhatsApp de esta sucursal no está conectada. Vincula el QR en /admin/openwa.' };
             }
 
             const rawDigits = telefono.replace(/\D/g, '');

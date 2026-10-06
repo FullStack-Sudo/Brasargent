@@ -42,7 +42,7 @@ const sesiones = await obtenerSesiones(esSuperAdmin, userSucursal);
                 <div class="sesion-card" data-sucursal={sesion.sucursal_id}>
                     <div class="sesion-header">
                         <div class="sesion-info">
-                            <span class="sesion-icono">{sesion.sucursal_icono || '🏪'}</span>
+                            <span class="sesion-icono">{sesion.sucursal_icono || ''}</span>
                             <div>
                                 <h3>{sesion.sucursal_nombre}</h3>
                                 <span class="sesion-name">Sesión: {sesion.session_name}</span>
@@ -177,14 +177,22 @@ async function conectar(sucursalId) {
 function mostrarQR(qrData) {
     const modal = document.getElementById('modalQR');
     const img = document.getElementById('qrImage');
+    const status = document.getElementById('qrStatus');
     if (!modal || !img) return;
 
     if (qrData === 'cargando') {
-        img.src = 'https://via.placeholder.com/250x250.png?text=Generando+QR...';
-    } else if (qrData.startsWith('data:') || qrData.startsWith('http')) {
-        img.src = qrData;
+        img.style.display = 'none';
+        img.dataset.qrStr = 'cargando';
+        if (status) status.innerHTML = '⏳ Conectando con OpenWA...';
     } else {
-        img.src = 'https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=' + encodeURIComponent(qrData);
+        img.style.display = 'block';
+        img.dataset.qrStr = qrData;
+        if (qrData.startsWith('data:') || qrData.startsWith('http')) {
+            img.src = qrData;
+        } else {
+            img.src = 'https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=' + encodeURIComponent(qrData);
+        }
+        if (status) status.innerHTML = '⏳ Esperando escaneo...';
     }
     
     modal.style.display = 'flex';
@@ -214,12 +222,19 @@ function iniciarVerificacion(sucursalId) {
                 }, 1800);
             } else if (data.qr) {
                 const img = document.getElementById('qrImage');
-                if (img && img.src.includes('Generando')) {
+                const prevQr = img ? img.dataset.qrStr : null;
+                
+                if (img && prevQr !== data.qr) {
+                    img.dataset.qrStr = data.qr;
+                    img.style.display = 'block';
                     if (data.qr.startsWith('data:') || data.qr.startsWith('http')) {
                         img.src = data.qr;
                     } else {
                         img.src = 'https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=' + encodeURIComponent(data.qr);
                     }
+                    
+                    const elStatus = document.getElementById('qrStatus');
+                    if (elStatus) elStatus.innerHTML = '⏳ Esperando escaneo...';
                 }
             }
         } catch (error) {

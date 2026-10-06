@@ -62,7 +62,17 @@ class OpenWAClient {
 
             const sessions: any[] = await res.json();
             if (Array.isArray(sessions)) {
+                const isLive = (s: any) =>
+                    ['ready', 'connected', 'working', 'authenticated', 'inchat'].includes(String(s?.status || '').toLowerCase());
+
                 const found = sessions.find(s => s.name === name || s.id === name);
+                if (found && (sessionName || isLive(found))) return found;
+
+                // Sin sesión explícita: usar cualquier sesión conectada (p. ej. la de la sucursal)
+                if (!sessionName) {
+                    const anyLive = sessions.find(isLive);
+                    if (anyLive) return anyLive;
+                }
                 if (found) return found;
             }
 

@@ -6,6 +6,7 @@ import {
     verificarCubiertosSuficientes 
 } from '../../../../lib/cubiertos';
 import { openwa } from '../../../../lib/whatsapp/openwa';
+import { openwaMulti } from '../../../../lib/whatsapp/openwa-multi';
 import { generarMensajeConfirmacion } from '../../../../lib/whatsapp';
 
 export const POST: APIRoute = async ({ params, request, cookies }) => {
@@ -126,10 +127,21 @@ export const POST: APIRoute = async ({ params, request, cookies }) => {
             const urlWhatsAppFallback = `https://api.whatsapp.com/send/?phone=${telefonoCliente}&text=${encodeURIComponent(mensajeWhatsApp)}&type=phone_number&app_absent=0`;
 
             try {
-                const result = await openwa.sendMessage({
-                    to: telefonoCliente,
-                    text: mensajeWhatsApp
-                });
+                // 1) Sesión propia de la sucursal (la que se vincula en /admin/openwa)
+                let result = await openwaMulti.sendMessage(
+                    reserva.sucursal_id,
+                    telefonoCliente,
+                    mensajeWhatsApp
+                );
+
+                // 2) Respaldo: sesión global por defecto
+                if (!result.success) {
+                    const legacy = await openwa.sendMessage({
+                        to: telefonoCliente,
+                        text: mensajeWhatsApp
+                    });
+                    if (legacy.success) result = legacy;
+                }
                 
                 whatsappResult = {
                     success: result.success,

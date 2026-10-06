@@ -102,7 +102,7 @@ src/
 
 Todos los botones de reserva abren WhatsApp con mensaje pre-configurado:
 
-- "Hola! Me gustaría hacer una reserva en Brasargent Rodizio"
+- "Hola! Me gustaría hacer una reserva en Brasargent"
 
 ---
 

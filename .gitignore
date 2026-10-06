@@ -42,3 +42,9 @@ nginx/certbot/www/.well-known/acme-challenge/
 backups/
 *.sql
 nginx/certbot/www/.well-known/acme-challenge/
+
+# datos de sesion OpenWA (Docker) - contiene credenciales de WhatsApp
+openwa-data/
+
+# logs de la aplicacion
+logs/
