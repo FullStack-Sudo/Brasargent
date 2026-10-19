@@ -2333,202 +2333,6 @@ try {
       '[data-modal-close="menu-modal"]',
     );
 
-    interface MenuItem {
-      name: string;
-      price: string;
-      desc?: string;
-    }
-
-    interface MenuData {
-      [section: string]: MenuItem[] | string | undefined;
-      NOTAS?: string;
-    }
-
-    const MENUS: Record<string, MenuData> = {
-      Churrasqueria: {
-        ENTRADAS: [
-          { name: "EMPANADA TUCUMANAS", price: "10" },
-          { name: "CHORIZO PARRILLERO", price: "16" },
-          { name: "MORCILLA TRADICIONAL", price: "16" },
-          { name: "RIÑONES DE TERNERA", price: "40" },
-          { name: "MOLLEJAS DE TERNERA", price: "50" },
-          { name: "UBRE A LA PARRILLA", price: "40" },
-        ],
-        "CORTES CLÁSICOS": [
-          { name: "BIFE DE CHORIZO", price: "" },
-          { name: "ENTRAÑA CLÁSICA", price: "" },
-          { name: "PUNTA DE “S”", price: "" },
-          { name: "OJO DE BIFE", price: "" },
-          { name: "ASADO DE TIRA CLÁSICO", price: "" },
-          { name: "CUADRIL (Para 1 o 2 personas)", price: "" },
-          {
-            name: "BROCHETA MIXTA",
-            price: "",
-            desc: "Lomo de res, chorizo parrillero, morrones y cebollas asadas.",
-          },
-          {
-            name: "BROCHETA DE RES",
-            price: "",
-            desc: "Lomo de res, morrones y cebollas asadas.",
-          },
-          {
-            name: "MATAMBRE DE RES",
-            price: "",
-            desc: "Salsa a elección: barbacoa, chimichurri o roquefort.",
-          },
-          {
-            name: "ESPECIAL PARA DOS",
-            price: "",
-            desc: "Punta de “S” junior, asado de tira, chorizo, ubre, morcilla y riñones de ternera.",
-          },
-          {
-            name: "BABY BEEF",
-            price: "",
-            desc: "Con papas fritas (no incluye salad bar).",
-          },
-        ],
-        "CORTES DRY AGED": [
-          { name: "ASADO DE TIRA (10 HUESOS DRY AGED)", price: "" },
-          {
-            name: "T BONE DRY AGED",
-            price: "",
-            desc: "Corte con hueso en forma de T, que une al lomo y al lomillo.",
-          },
-          { name: "TOMAHAWK", price: "" },
-        ],
-        "CORTES ARGENTINOS": [
-          { name: "BIFE DE CHORIZO", price: "" },
-          { name: "ASADO DE TIRA", price: "" },
-          { name: "OJO DE BIFE", price: "" },
-          { name: "PUNTA DE “S”", price: "" },
-          {
-            name: "COLITA DE CUADRIL",
-            price: "",
-            desc: "Madurada 14 días a la parrilla con vainitas salteadas, puré de papa y chimichurri de la casa.",
-          },
-        ],
-        "ESPECIAL DE LA CASA": [
-          { name: "TRADICIÓN ARGENTINA (Costeleta)", price: "100" },
-        ],
-        "CORTES BRANGUS": [
-          { name: "BIFE DE CHORIZO", price: "130" },
-          { name: "ASADO DE TIRA", price: "125" },
-          { name: "OJO DE BIFE", price: "130" },
-          { name: "PUNTA DE “S”", price: "150" },
-        ],
-        CERDO: [
-          { name: "MATAMBRITO DE CERDO AL CHIMICHURRI", price: "90" },
-          { name: "MATAMBRITO DE CERDO A LA BBQ", price: "95" },
-          { name: "COSTILLAS BBQ (1 Persona)", price: "100" },
-        ],
-        POLLO: [
-          { name: "PECHUGA DE POLLO", price: "75" },
-          { name: "MUSLO DESHUESADO", price: "65" },
-        ],
-        PESCADO: [
-          {
-            name: "SALMÓN GRILLADO",
-            price: "155",
-            desc: "Toque de mantequilla, ajo y romero, vegetales salteados, micro brócoli, mini berro, micro vegetales encurridos, aceite de hierbas y acompañado con salsa de queso roquefort.",
-          },
-          {
-            name: "TRUCHA SALMONADA GRILLADA",
-            price: "124",
-            desc: "Acompañada con salsa emulsionada de alcaparras, mix de vegetales, micro albahaca, mini mostaza y aceite de carbón.",
-          },
-        ],
-        ESPECIALIDADES: [
-          {
-            name: "LOMITO A LA PIMIENTA",
-            price: "97",
-            desc: "Medallones de lomo Black Angus a la parrilla, clásica salsa a la pimienta, acompañada de mix de vegetales, microgreens, arroz granado y papas fritas.",
-          },
-          {
-            name: "LOMITO EN SALSA DE CHAMPIÑONES",
-            price: "91",
-            desc: "Lomo de res a la parrilla, salsa cremosa de champiñones frescos, vainitas salteadas y puré de papa.",
-          },
-          {
-            name: "MILANESA DE TERNERA BRASARGENT",
-            price: "110",
-            desc: "(Al horno, libre de aceites) Lomito, salsa de tomate, queso mozzarella, queso catupiry, microgreens, pisca de pesto y tomates deshidratados.",
-          },
-          {
-            name: "MILANESA DE TERNERA NAPOLITANA",
-            price: "75",
-            desc: "(Al horno, libre de aceites) Milanesa de lomito, jamón ahumado, salsa de tomate, queso mozzarella, microgreens.",
-          },
-        ],
-        NOTAS:
-          "TODOS LOS CORTES INCLUYEN BAR DE ENSALADAS Y 2 GUARNICIONES CALIENTES. AL COMPARTIR UN PLATO, TIENE UN COSTO ADICIONAL DE BS. 50 POR SALAD BAR.",
-      },
-      "Fast Grill": {
-        ENTRADAS: [
-          { name: "EMPANADAS TUCUMANAS", price: "10" },
-          { name: "MIX DE ACHURAS (Ubre, Riñón y Chinchulí)", price: "59" },
-        ],
-        "CORTES CLÁSICOS": [
-          { name: "PUNTA DE “S”", price: "85" },
-          { name: "BIFE DE CHORIZO", price: "78" },
-          { name: "OJO DE BIFE", price: "76" },
-          { name: "CUADRIL (Para 1 persona)", price: "75" },
-          { name: "CUADRIL (Para 2 personas)", price: "140" },
-          { name: "ASADO DE TIRA", price: "75" },
-          { name: "COSTELETA", price: "75" },
-          { name: "PACUMUTO DE RES", price: "56" },
-          { name: "PACUMUTO MIXTO", price: "54" },
-          { name: "PECHUGA DESHUESADA", price: "52" },
-          { name: "MUSLO DESHUESADO", price: "46" },
-          { name: "MATAMBRITO DE CERDO", price: "68" },
-          { name: "1/2 PACK DE COSTILLAS DE CERDO BBQ", price: "75" },
-          {
-            name: "PLATO VEGETARIANO",
-            price: "45",
-            desc: "Acompañado de 6 guarniciones.",
-          },
-        ],
-        "PLATOS PREMIUM": [
-          { name: "PICAÑA", price: "99" },
-          { name: "OJO DE BIFE", price: "93" },
-          { name: "BIFE DE CHORIZO", price: "87" },
-          { name: "ENTRAÑA", price: "81" },
-          { name: "TRADICIÓN ARGENTINA", price: "85" },
-          { name: "PARRILLA MIXTA (P/DOS)", price: "180" },
-          { name: "TOMAHAWK", price: "140" },
-        ],
-        "CORTES JUNIOR": [
-          { name: "PUNTA DE “S” JUNIOR", price: "63" },
-          { name: "CHURRASQUITO", price: "55" },
-          { name: "BABY BEEF", price: "53" },
-          { name: "ESPETINHO DE PICAÑA", price: "42" },
-          { name: "ESPETINHO DE CUPIM (JIBA)", price: "42" },
-          { name: "TOMAHAWK", price: "75" },
-        ],
-        EXTRAS: [
-          { name: "CHORIZO", price: "10" },
-          { name: "MORCILLA", price: "10" },
-          { name: "GUARNICIÓN (FRIA O CALIENTE)", price: "15" },
-        ],
-        "DOMINGOS Y FERIADOS": [{ name: "SOPA DE MANÍ", price: "25" }],
-        BEBIDAS: [
-          { name: "GASEOSAS", price: "12" },
-          { name: "JUGOS", price: "10" },
-        ],
-        POSTRES: [{ name: "PORCIÓN", price: "22" }],
-        NOTAS:
-          "TODOS LOS PLATOS CLÁSICOS Y PREMIUM VAN ACOMPAÑADOS DE 4 GUARNICIONES. LOS CORTES JUNIOR VIENEN ACOMPAÑADOS DE 3 GUARNICIONES.",
-      },
-      Rodizio: {
-        "EL RODIZIO": [
-          { name: "BUFFET DE ENSALADAS", price: "Incluido" },
-          { name: "GUARNICIONES CALIENTES", price: "Incluido" },
-          { name: "CORTES A LA ESPADA", price: "Incluido" },
-          { name: "RODIZIO TRADICIONAL", price: "80" },
-        ],
-        NOTAS: "Precio por persona. No incluye bebidas ni postres.",
-      },
-    };
-
     const renderLiveMenu = (platos: any[]) => {
       if (!menuItemsContainer || !menuNav) return;
 
@@ -2645,104 +2449,16 @@ try {
       sections.forEach((section) => observer.observe(section));
     };
 
-    const renderMenu = (sucursalName: string) => {
-      const menu = MENUS[sucursalName] || MENUS["Churrasqueria"];
+    const showMenuMessage = (icon: string, title: string, text: string) => {
       if (!menuItemsContainer || !menuNav) return;
-
-      // Renderizar Navegación
-      let navHtml = "";
-      let isFirst = true;
-      for (const sectionTitle of Object.keys(menu)) {
-        if (sectionTitle === "NOTAS") continue;
-        const sectionId = sectionTitle.toLowerCase().replace(/\s+/g, "-");
-        navHtml += `
-          <button
-            data-section="${sectionId}"
-            class="menu-nav-btn group relative px-4 md:px-8 py-5 text-xs md:text-base font-black transition-all duration-300 flex-shrink-0 focus:outline-none tracking-[0.1em] md:tracking-[0.15em] uppercase ${isFirst ? "text-[#9e2a2b] border-b-4 border-[#9e2a2b]" : "text-gray-400 border-b-4 border-transparent hover:text-[#9e2a2b]"}"
-            role="tab"
-          >
-            ${sectionTitle}
-            <span
-              class="absolute inset-x-0 bottom-[-4px] h-1 bg-[#9e2a2b] transform ${isFirst ? "scale-x-100" : "scale-x-0"} group-hover:scale-x-100 transition-transform duration-300"
-            ></span>
-          </button>
-        `;
-        isFirst = false;
-      }
-      menuNav.innerHTML = navHtml;
-
-      // Re-vincular eventos de navegación
-      const newNavButtons = menuNav.querySelectorAll(".menu-nav-btn");
-      newNavButtons.forEach((button) => {
-        button.addEventListener("click", () => {
-          const sectionId = button.getAttribute("data-section");
-          if (!sectionId || !menuContent) return;
-          const section = document.getElementById(sectionId);
-          if (section) {
-            const offsetTop = section.offsetTop - menuContent.offsetTop - 20;
-            menuContent.scrollTo({ top: offsetTop, behavior: "smooth" });
-          }
-        });
-      });
-
-      // Renderizar Contenido
-      let html = '<div class="space-y-16">';
-
-      for (const [sectionTitle, items] of Object.entries(menu)) {
-        if (sectionTitle === "NOTAS" || typeof items === "string") continue;
-
-        const sectionId = sectionTitle.toLowerCase().replace(/\s+/g, "-");
-        html += `
-          <div id="${sectionId}" class="menu-section scroll-mt-32">
-            <h4 class="text-3xl font-black text-[#9e2a2b] mb-10 pb-4 border-b-2 border-[#9e2a2b]/20 tracking-tight flex items-center gap-4">
-              <span class="w-2 h-8 bg-[#9e2a2b] rounded-full"></span>
-              ${sectionTitle}
-            </h4>
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-x-16 gap-y-6">
-              ${(items as MenuItem[])
-                .map(
-                  (item) => `
-                <div class="group/item py-2 border-b border-gray-100 hover:bg-gray-50 transition-all duration-300 p-3 rounded-xl">
-                  <div class="flex justify-between items-start gap-4">
-                    <div class="flex-1">
-                      <span class="text-gray-900 font-bold tracking-wide uppercase text-base block mb-1">
-                        ${item.name}
-                      </span>
-                      ${item.desc ? `<p class="text-gray-500 text-sm font-medium leading-relaxed">${item.desc}</p>` : ""}
-                    </div>
-                    ${item.price ? `<span class="text-[#9e2a2b] font-black text-xl whitespace-nowrap">Bs.${item.price}</span>` : ""}
-                  </div>
-                </div>
-              `,
-                )
-                .join("")}
-            </div>
-          </div>
-        `;
-      }
-
-      if (menu.NOTAS) {
-        html += `
-          <div class="mt-20 mb-8 p-8 bg-gray-50 rounded-[32px] border border-gray-100 shadow-inner">
-            <div class="flex items-start gap-4">
-              <svg class="w-8 h-8 text-[#9e2a2b] shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-              <p class="text-base text-gray-600 font-bold leading-relaxed italic uppercase tracking-wider">
-                ${menu.NOTAS}
-              </p>
-            </div>
-          </div>
-          <div class="h-12"></div>
-        `;
-      }
-
-      html += "</div>";
-      menuItemsContainer.innerHTML = html;
-
-      // Re-vincular el observer después de renderizar
-      const sections = document.querySelectorAll(".menu-section");
-      sections.forEach((section) => observer.observe(section));
+      menuNav.innerHTML = "";
+      menuItemsContainer.innerHTML = `
+        <div class="text-center py-16 bg-white/80 rounded-3xl border border-gray-100 shadow-sm">
+          <span class="text-5xl block mb-4">${icon}</span>
+          <h3 class="text-xl font-bold text-gray-900">${title}</h3>
+          <p class="text-gray-500 mt-2">${text}</p>
+        </div>
+      `;
     };
 
     const loadAndRenderMenu = async (
@@ -2775,33 +2491,11 @@ try {
         ) {
           renderLiveMenu(json.data.platos);
         } else {
-          if (MENUS[sucursalName]) {
-            renderMenu(sucursalName);
-          } else {
-            menuNav.innerHTML = "";
-            menuItemsContainer.innerHTML = `
-              <div class="text-center py-16 bg-white/80 rounded-3xl border border-gray-100 shadow-sm">
-                <span class="text-5xl block mb-4">🍽️</span>
-                <h3 class="text-xl font-bold text-gray-900">No hay platos registrados</h3>
-                <p class="text-gray-500 mt-2">Esta sucursal aún no tiene elementos registrados en su menú.</p>
-              </div>
-            `;
-          }
+          showMenuMessage("🍽️", "No hay platos registrados", "Esta sucursal aún no tiene elementos registrados en su menú.");
         }
       } catch (error) {
         console.error("Error al cargar menú:", error);
-        if (MENUS[sucursalName]) {
-          renderMenu(sucursalName);
-        } else {
-          menuNav.innerHTML = "";
-          menuItemsContainer.innerHTML = `
-            <div class="text-center py-16 bg-white/80 rounded-3xl border border-gray-100 shadow-sm">
-              <span class="text-5xl block mb-4">⚠️</span>
-              <h3 class="text-xl font-bold text-gray-900">Error al cargar el menú</h3>
-              <p class="text-gray-500 mt-2">Inténtalo de nuevo más tarde.</p>
-            </div>
-          `;
-        }
+        showMenuMessage("⚠️", "Error al cargar el menú", "Inténtalo de nuevo más tarde.");
       }
     };
 
@@ -2854,8 +2548,8 @@ try {
 
         if (sucursalId) {
           loadAndRenderMenu(Number(sucursalId), sucursalName || "");
-        } else if (sucursalName) {
-          renderMenu(sucursalName);
+        } else {
+          showMenuMessage("🍽️", "No hay platos registrados", "Esta sucursal aún no tiene elementos registrados en su menú.");
         }
       });
     });

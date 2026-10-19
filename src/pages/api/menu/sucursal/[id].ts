@@ -13,6 +13,12 @@ export const GET: APIRoute = async ({ params }) => {
 
     try {
         const data = await getMenuSucursal(sucursalId);
+        if (!data) {
+            return new Response(JSON.stringify({ success: false, message: 'Sucursal no encontrada' }), {
+                status: 404,
+                headers: { 'Content-Type': 'application/json' }
+            });
+        }
         
         return new Response(JSON.stringify({
             success: true,

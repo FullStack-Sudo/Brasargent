@@ -53,7 +53,10 @@ const categoriasList = await getCategorias();
                 <!-- Categoría + Precio -->
                 <div class="mcr-row-2">
                     <div class="mcr-field">
-                        <label for="create_categoria" class="mcr-field-label">Categoría <span class="mcr-req">*</span></label>
+                        <div class="mcr-field-top">
+                            <label for="create_categoria" class="mcr-field-label" style="margin-bottom:0;">Categoría <span class="mcr-req">*</span></label>
+                            <button type="button" id="btnGestionarCategorias" class="mcr-link-btn">⚙ Gestionar</button>
+                        </div>
                         <select id="create_categoria" name="categoria_id" required class="mcr-input mcr-select">
                             <option value="">Seleccionar categoría</option>
                             {categoriasList.map((cat: any) => (
@@ -70,6 +73,29 @@ const categoriasList = await getCategorias();
                     </div>
                 </div>
 
+                <!-- Gestor de categorías -->
+                <div class="mcr-cat-panel" id="catPanel" style="display:none;">
+                    <div class="mcr-cat-panel-head">
+                        <span>Gestionar categorías</span>
+                        <button type="button" id="btnCerrarCatPanel" class="mcr-link-btn">Cerrar</button>
+                    </div>
+                    <ul class="mcr-cat-list" id="catList">
+                        {categoriasList.map((cat: any) => (
+                            <li class="mcr-cat-item" data-id={cat.id} data-nombre={cat.nombre} data-total={cat.total_platos ?? 0}>
+                                <span class="mcr-cat-name">{cat.nombre}</span>
+                                <span class="mcr-cat-count">{cat.total_platos ?? 0}</span>
+                                <button type="button" class="mcr-cat-btn" data-action="edit" title="Editar">✎</button>
+                                <button type="button" class="mcr-cat-btn mcr-cat-btn--del" data-action="delete" title="Eliminar">🗑</button>
+                            </li>
+                        ))}
+                    </ul>
+                    <div class="mcr-cat-add">
+                        <input type="text" id="catNuevoNombre" class="mcr-input" placeholder="Nueva categoría..." maxlength="60" />
+                        <button type="button" id="btnAgregarCategoria" class="mcr-cat-add-btn">Añadir</button>
+                    </div>
+                    <div id="catMsg" class="mcr-cat-msg" style="display:none;"></div>
+                </div>
+
                 <!-- Descripción -->
                 <div class="mcr-field">
                     <div class="mcr-field-top">
@@ -81,32 +107,16 @@ const categoriasList = await getCategorias();
 
                 <!-- Sucursales & Destacado -->
                 <div class="mcr-row-bottom">
-                    <div class="mcr-field mcr-field-sucursales">
-                        <label class="mcr-field-label">Sucursales disponibles <span class="mcr-req">*</span></label>
-                        <div class="mcr-chips-grid">
-                            <label class="mcr-chip">
-                                <input type="checkbox" name="sucursales" value="1" checked />
-                                <span class="mcr-chip-body"><span class="mcr-chip-icon">🔥</span> Churrasquería</span>
-                            </label>
-                            <label class="mcr-chip">
-                                <input type="checkbox" name="sucursales" value="2" checked />
-                                <span class="mcr-chip-body"><span class="mcr-chip-icon">⚡</span> Fast Grill</span>
-                            </label>
-                            <label class="mcr-chip">
-                                <input type="checkbox" name="sucursales" value="3" checked />
-                                <span class="mcr-chip-body"><span class="mcr-chip-icon">🥩</span> Rodizio</span>
-                            </label>
-                        </div>
-                    </div>
+                   
 
                     <!-- Destacado Switch -->
                     <div class="mcr-featured-card">
                         <label class="mcr-featured-label">
                             <div class="mcr-featured-info">
-                                <span class="mcr-featured-emoji">🔥</span>
+                                <span class="mcr-featured-emoji"></span>
                                 <div>
-                                    <span class="mcr-featured-name">Plato Destacado</span>
-                                    <span class="mcr-featured-hint">Badge en el menú</span>
+                                    <span class="mcr-featured-name">Plato destacado</span>
+                                    <span class="mcr-featured-hint">Popular en el menú</span>
                                 </div>
                             </div>
                             <div class="mcr-toggle-wrap">
@@ -394,6 +404,54 @@ const categoriasList = await getCategorias();
 
     .btn-spinner { animation: spin .8s linear infinite; }
     @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ===== GESTOR DE CATEGORÍAS ===== */
+    .mcr-link-btn {
+        background: none; border: none; cursor: pointer;
+        font-size: .72rem; font-weight: 700; color: #9e2a2b;
+        padding: 0; font-family: inherit;
+    }
+    .mcr-link-btn:hover { text-decoration: underline; }
+    .mcr-cat-panel {
+        background: #faf9f8; border: 1px solid #ece8e4;
+        border-radius: 1rem; padding: 1rem; margin-bottom: 1.1rem;
+    }
+    .mcr-cat-panel-head {
+        display: flex; justify-content: space-between; align-items: center;
+        font-size: .72rem; font-weight: 700; text-transform: uppercase;
+        letter-spacing: .06em; color: #9e2a2b; margin-bottom: .6rem;
+    }
+    .mcr-cat-list {
+        list-style: none; margin: 0 0 .75rem; padding: 0;
+        max-height: 190px; overflow-y: auto; display: flex; flex-direction: column; gap: .35rem;
+    }
+    .mcr-cat-item {
+        display: flex; align-items: center; gap: .5rem;
+        background: #fff; border: 1px solid #eee; border-radius: .6rem;
+        padding: .4rem .6rem;
+    }
+    .mcr-cat-name { flex: 1; font-size: .82rem; font-weight: 600; color: #333; }
+    .mcr-cat-count {
+        font-size: .65rem; font-weight: 700; color: #8b8b94;
+        background: #f3f3f5; border-radius: 999px; padding: .1rem .5rem;
+    }
+    .mcr-cat-edit-input { flex: 1; padding: .3rem .5rem !important; font-size: .8rem !important; }
+    .mcr-cat-btn {
+        border: none; background: #f3f3f5; border-radius: .5rem;
+        width: 28px; height: 28px; cursor: pointer; font-size: .8rem;
+        transition: background .2s;
+    }
+    .mcr-cat-btn:hover { background: #e6e6ea; }
+    .mcr-cat-btn--del:hover { background: #fee2e2; }
+    .mcr-cat-add { display: flex; gap: .5rem; }
+    .mcr-cat-add-btn {
+        padding: 0 1rem; border: none; border-radius: .75rem; cursor: pointer;
+        background: #9e2a2b; color: #fff; font-size: .78rem; font-weight: 600; font-family: inherit;
+    }
+    .mcr-cat-add-btn:hover { background: #7a2021; }
+    .mcr-cat-msg { margin-top: .5rem; font-size: .75rem; font-weight: 600; }
+    .mcr-cat-msg.error { color: #dc2626; }
+    .mcr-cat-msg.ok { color: #059669; }
 </style>
 
 <script>
@@ -406,4 +464,125 @@ const categoriasList = await getCategorias();
             charCounter.textContent = `${desc.value.length}/500`;
         });
     }
+
+    // ===== Gestor de categorías =====
+    const catPanel = document.getElementById('catPanel') as HTMLElement;
+    const catList = document.getElementById('catList') as HTMLElement;
+    const catInput = document.getElementById('catNuevoNombre') as HTMLInputElement;
+    const catMsg = document.getElementById('catMsg') as HTMLElement;
+
+    const esc = (s: string) => s.replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c] as string));
+
+    function setCatMsg(text: string, type: 'error' | 'ok' = 'error') {
+        if (!catMsg) return;
+        catMsg.textContent = text;
+        catMsg.className = `mcr-cat-msg ${type}`;
+        catMsg.style.display = text ? 'block' : 'none';
+    }
+
+    async function catApi(method: string, body?: any) {
+        const res = await fetch('/api/menu/categoria', {
+            method,
+            headers: { 'Content-Type': 'application/json' },
+            body: body ? JSON.stringify(body) : undefined
+        });
+        return res.json();
+    }
+
+    // Reconstruye la lista del gestor y los selects (crear y editar)
+    async function refrescarCategorias() {
+        const r = await catApi('GET');
+        if (!r.success) return;
+        const cats: any[] = r.data;
+
+        catList.innerHTML = cats.map(c => `
+            <li class="mcr-cat-item" data-id="${c.id}" data-nombre="${esc(c.nombre)}" data-total="${c.total_platos}">
+                <span class="mcr-cat-name">${esc(c.nombre)}</span>
+                <span class="mcr-cat-count">${c.total_platos}</span>
+                <button type="button" class="mcr-cat-btn" data-action="edit" title="Editar">✎</button>
+                <button type="button" class="mcr-cat-btn mcr-cat-btn--del" data-action="delete" title="Eliminar">🗑</button>
+            </li>`).join('');
+
+        ['create_categoria', 'edit_categoria'].forEach(id => {
+            const sel = document.getElementById(id) as HTMLSelectElement | null;
+            if (!sel) return;
+            const prev = sel.value;
+            sel.innerHTML = '<option value="">Seleccionar categoría</option>' +
+                cats.map(c => `<option value="${c.id}">${esc(c.nombre)}</option>`).join('');
+            if (cats.some(c => String(c.id) === prev)) sel.value = prev;
+        });
+    }
+
+    document.getElementById('btnGestionarCategorias')?.addEventListener('click', () => {
+        catPanel.style.display = catPanel.style.display === 'none' ? 'block' : 'none';
+        setCatMsg('');
+    });
+    document.getElementById('btnCerrarCatPanel')?.addEventListener('click', () => {
+        catPanel.style.display = 'none';
+    });
+
+    async function agregarCategoria() {
+        const nombre = catInput.value.trim();
+        if (!nombre) return setCatMsg('Escribe un nombre para la categoría');
+        const r = await catApi('POST', { nombre });
+        if (!r.success) return setCatMsg(r.message || 'Error al crear la categoría');
+        catInput.value = '';
+        setCatMsg('Categoría creada', 'ok');
+        await refrescarCategorias();
+        (document.getElementById('create_categoria') as HTMLSelectElement).value = String(r.id);
+    }
+    document.getElementById('btnAgregarCategoria')?.addEventListener('click', agregarCategoria);
+    catInput?.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') { e.preventDefault(); agregarCategoria(); }
+    });
+
+    catList?.addEventListener('click', async (e) => {
+        const btn = (e.target as HTMLElement).closest('button[data-action]') as HTMLButtonElement | null;
+        if (!btn) return;
+        const li = btn.closest('.mcr-cat-item') as HTMLElement;
+        const id = Number(li.dataset.id);
+        const nombre = li.dataset.nombre || '';
+        const action = btn.dataset.action;
+
+        if (action === 'delete') {
+            if (!confirm(`¿Eliminar la categoría "${nombre}"?`)) return;
+            const r = await catApi('DELETE', { id });
+            if (!r.success) return setCatMsg(r.message || 'Error al eliminar');
+            setCatMsg('Categoría eliminada', 'ok');
+            await refrescarCategorias();
+        }
+
+        if (action === 'edit') {
+            if (li.querySelector('.mcr-cat-edit-input')) return;
+            const nameEl = li.querySelector('.mcr-cat-name') as HTMLElement;
+            const input = document.createElement('input');
+            input.type = 'text';
+            input.className = 'mcr-input mcr-cat-edit-input';
+            input.value = nombre;
+            input.maxLength = 60;
+            nameEl.replaceWith(input);
+            input.focus();
+            input.select();
+            btn.textContent = '✔';
+            btn.dataset.action = 'save';
+        } else if (action === 'save') {
+            const input = li.querySelector('.mcr-cat-edit-input') as HTMLInputElement;
+            const r = await catApi('PUT', { id, nombre: input.value });
+            if (!r.success) return setCatMsg(r.message || 'Error al actualizar');
+            setCatMsg('Categoría actualizada', 'ok');
+            await refrescarCategorias();
+        }
+    });
+
+    catList?.addEventListener('keydown', (e) => {
+        const target = e.target as HTMLElement;
+        if (!target.classList.contains('mcr-cat-edit-input')) return;
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            (target.closest('.mcr-cat-item')?.querySelector('button[data-action="save"]') as HTMLButtonElement)?.click();
+        } else if (e.key === 'Escape') {
+            e.preventDefault();
+            refrescarCategorias();
+        }
+    });
 </script>
