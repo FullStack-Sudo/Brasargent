@@ -94,28 +94,38 @@ class OpenWAMultiClient {
                 };
             }
 
-            // Intentar iniciar sesión en OpenWA
-            let qrCodeStr = null;
-            let openwaSessionId = existingSession ? existingSession.id : null;
+            // La sesión NO está conectada: descartar cualquier número vinculado antes
+            // (credenciales guardadas) para que OpenWA muestre un QR nuevo y se pueda
+            // vincular cualquier otro número.
+            let qrCodeStr: string | null = null;
+            let openwaSessionId: string | null = null;
 
-            if (!openwaSessionId) {
-                try {
-                    const response = await fetch(`${this.apiUrl}/sessions`, {
-                        method: 'POST',
-                        headers: this.getHeaders(),
-                        body: JSON.stringify({ name: sessionName })
-                    });
-    
-                    if (response.ok) {
-                        const created = await response.json();
-                        openwaSessionId = created.id;
-                    } else {
-                        return { success: false, error: 'El servidor de OpenWA devolvió un error.' };
-                    }
-                } catch (err: any) {
-                    console.error('OpenWA API not reachable:', err.message);
-                    return { success: false, error: 'El servicio de OpenWA no está accesible en el puerto 2785. Verifica que el contenedor esté corriendo.' };
+            if (existingSession) {
+                await this.deleteOpenWASession(existingSession.id);
+            }
+            await query(
+                'UPDATE openwa_sesiones SET telefono = NULL, push_name = NULL, qr_code = NULL WHERE sucursal_id = ?',
+                [sucursalId]
+            );
+
+            try {
+                const response = await fetch(`${this.apiUrl}/sessions`, {
+                    method: 'POST',
+                    headers: this.getHeaders(),
+                    body: JSON.stringify({ name: sessionName })
+                });
+
+                if (response.ok) {
+                    const created = await response.json();
+                    openwaSessionId = created.id;
+                } else {
+                    const detail = await response.text().catch(() => '');
+                    console.error('OpenWA create session error:', response.status, detail);
+                    return { success: false, error: `El servidor de OpenWA devolvió un error (${response.status}): ${detail.slice(0, 200)}` };
                 }
+            } catch (err: any) {
+                console.error('OpenWA API not reachable:', err.message);
+                return { success: false, error: 'El servicio de OpenWA no está accesible en el puerto 2785. Verifica que el contenedor esté corriendo.' };
             }
 
             if (openwaSessionId) {
@@ -124,26 +134,17 @@ class OpenWAMultiClient {
                         method: 'POST',
                         headers: this.getHeaders()
                     });
-    
                     if (startResponse.ok) {
-                        const startData = await startResponse.json();
+                        const startData = await startResponse.json().catch(() => ({}));
                         qrCodeStr = startData.qr || startData.qrCode || null;
                     }
                 } catch (err: any) {
                     console.warn('OpenWA start session call warning:', err.message);
                 }
-    
-                // Si no obtuvimos el QR de startResponse, intentar endpoint GET /qr
+
+                // El QR tarda unos segundos en generarse tras iniciar el motor
                 if (!qrCodeStr) {
-                    try {
-                        const qrResponse = await fetch(`${this.apiUrl}/sessions/${openwaSessionId}/qr`, {
-                            headers: this.getHeaders()
-                        });
-                        if (qrResponse.ok) {
-                            const qrData = await qrResponse.json();
-                            qrCodeStr = qrData.qr || qrData.qrCode || null;
-                        }
-                    } catch (e) {}
+                    qrCodeStr = await this.fetchQr(openwaSessionId, 30);
                 }
             }
 
@@ -211,7 +212,8 @@ class OpenWAMultiClient {
                     };
                 }
 
-                const fetchedQr = openwaSession.qr || openwaSession.qrCode;
+                const fetchedQr = openwaSession.qr || openwaSession.qrCode
+                    || (statusStr.includes('qr') ? await this.fetchQr(openwaSession.id, 1) : null);
                 if (fetchedQr) {
                     return {
                         success: true,
@@ -343,8 +345,16 @@ class OpenWAMultiClient {
                 );
             } catch (e) {}
 
-            // Actualizar estado en BD
-            await this.updateSessionStatus(sucursalId, 'disconnected');
+            // Eliminar la sesión en OpenWA (borra las credenciales) y olvidar el número
+            try {
+                const openwaSession = await this.getOpenWASession(session.session_name);
+                if (openwaSession) await this.deleteOpenWASession(openwaSession.id);
+            } catch (e) {}
+
+            await query(
+                `UPDATE openwa_sesiones SET status = 'disconnected', telefono = NULL, push_name = NULL, qr_code = NULL WHERE sucursal_id = ?`,
+                [sucursalId]
+            );
 
             return { success: true };
 
@@ -363,6 +373,32 @@ class OpenWAMultiClient {
             .normalize('NFD')
             .replace(/[\u0300-\u036f]/g, '')
             .replace(/[^a-z0-9]/g, '');
+    }
+
+    private async fetchQr(openwaSessionId: string, attempts: number): Promise<string | null> {
+        for (let i = 0; i < attempts; i++) {
+            try {
+                const res = await fetch(`${this.apiUrl}/sessions/${openwaSessionId}/qr`, {
+                    headers: this.getHeaders()
+                });
+                if (res.ok) {
+                    const data = await res.json();
+                    const qr = data.qr || data.qrCode;
+                    if (qr) return qr;
+                }
+            } catch {}
+            if (i < attempts - 1) await new Promise(r => setTimeout(r, 1000));
+        }
+        return null;
+    }
+
+    private async deleteOpenWASession(openwaSessionId: string): Promise<void> {
+        try {
+            await fetch(`${this.apiUrl}/sessions/${openwaSessionId}/stop`, { method: 'POST', headers: this.getHeaders() }).catch(() => {});
+            await fetch(`${this.apiUrl}/sessions/${openwaSessionId}`, { method: 'DELETE', headers: this.getHeaders() });
+        } catch (e) {
+            console.warn('No se pudo eliminar la sesión previa en OpenWA:', e);
+        }
     }
 
     private async getOpenWASession(sessionName: string): Promise<any> {
