@@ -121,6 +121,9 @@ class OpenWAMultiClient {
                 } else {
                     const detail = await response.text().catch(() => '');
                     console.error('OpenWA create session error:', response.status, detail);
+                    if (response.status === 401) {
+                        return { success: false, error: 'OpenWA rechazó la API key (401). La variable OPENWA_API_KEY del servidor no coincide con la key de la instancia de OpenWA (archivo openwa-data/.api-key).' };
+                    }
                     return { success: false, error: `El servidor de OpenWA devolvió un error (${response.status}): ${detail.slice(0, 200)}` };
                 }
             } catch (err: any) {
